@@ -6,7 +6,8 @@ import {
     addDoc, 
     getDocs, 
     deleteDoc, 
-    doc 
+    doc, 
+    updateDoc 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Firebase configuration
@@ -35,66 +36,6 @@ const prospectCountEl = document.getElementById('prospectCount');
 const prospectMRREl = document.getElementById('prospectMRR');
 const prospectsTable = document.getElementById('prospectsTable');
 const addProspectBtn = document.getElementById('addProspectBtn');
-
-// Initialize sort state at the top with other constants
-let currentSort = {
-    column: 4,  // Default to Sales Lead column (index 4)
-    direction: 'asc'
-};
-
-// Modify the sortTable function
-function sortTable(column) {
-    const tbody = document.getElementById('prospectsTable');
-    const rows = Array.from(tbody.rows);
-    
-    // Determine sort direction
-    const direction = currentSort.column === column && currentSort.direction === 'asc' ? 'desc' : 'asc';
-    
-    // Update sort state
-    currentSort.column = column;
-    currentSort.direction = direction;
-
-    // Sort the rows
-    rows.sort((a, b) => {
-        let aValue = a.cells[column].textContent.trim();
-        let bValue = b.cells[column].textContent.trim();
-
-        // Handle different data types
-        if (column === 5) { // Revenue column
-            aValue = parseFloat(aValue.replace(/[$,]/g, ''));
-            bValue = parseFloat(bValue.replace(/[$,]/g, ''));
-        } else if (column === 2) { // Due Date column
-            aValue = new Date(aValue);
-            bValue = new Date(bValue);
-        }
-
-        if (direction === 'asc') {
-            return aValue > bValue ? 1 : -1;
-        } else {
-            return aValue < bValue ? 1 : -1;
-        }
-    });
-
-    // Reorder the table
-    rows.forEach(row => tbody.appendChild(row));
-
-    // Update sort arrows
-    updateSortArrows(column, direction);
-}
-
-// Add this function to update sort arrows
-function updateSortArrows(column, direction) {
-    const headers = document.querySelectorAll('.dashboard-table th');
-    headers.forEach((header, index) => {
-        // Remove existing arrows
-        header.textContent = header.textContent.replace(' ↑', '').replace(' ↓', '');
-        
-        // Add arrow to current sort column
-        if (index === column) {
-            header.textContent += direction === 'asc' ? ' ↑' : ' ↓';
-        }
-    });
-}
 
 // Statistics function
 function updateStatistics() {
@@ -128,7 +69,67 @@ function updateStatistics() {
     daysBeforeMarchEl.textContent = diffDays;
 }
 
-// Add prospect to table
+// Make sure you have these variables at the top with other constants
+let currentSort = {
+    column: 4,  // Default to Sales Lead column
+    direction: 'asc'
+};
+
+// Modify the sortTable function
+function sortTable(column) {
+    const tbody = document.getElementById('prospectsTable');
+    const rows = Array.from(tbody.rows);
+    
+    // Store the current data before sorting
+    const rowData = rows.map(row => ({
+        data: {
+            prospectName: row.cells[0].textContent,
+            nextSteps: row.cells[1].textContent,
+            dueDate: row.cells[2].textContent,
+            signatureExpected: row.cells[3].textContent,
+            salesLead: row.cells[4].textContent,
+            revenueValue: parseFloat(row.cells[5].textContent.replace(/[$,]/g, '')),
+        },
+        docId: row.dataset.docId
+    }));
+
+    // Determine sort direction
+    const direction = currentSort.column === column && currentSort.direction === 'asc' ? 'desc' : 'asc';
+    
+    // Update sort state
+    currentSort.column = column;
+    currentSort.direction = direction;
+
+    // Sort the data
+    rowData.sort((a, b) => {
+        let aValue = Object.values(a.data)[column];
+        let bValue = Object.values(b.data)[column];
+
+        if (column === 5) { // Revenue column
+            aValue = parseFloat(aValue);
+            bValue = parseFloat(bValue);
+        } else if (column === 2) { // Due Date column
+            aValue = new Date(aValue);
+            bValue = new Date(bValue);
+        }
+
+        if (direction === 'asc') {
+            return aValue > bValue ? 1 : -1;
+        } else {
+            return aValue < bValue ? 1 : -1;
+        }
+    });
+
+    // Clear and rebuild table
+    tbody.innerHTML = '';
+    rowData.forEach(({ data, docId }) => {
+        addProspectToTable(data, docId);
+    });
+
+    // Update sort arrows
+    updateSortArrows(column, direction);
+}
+
 function addProspectToTable(data, docId) {
     const newRow = document.createElement("tr");
     newRow.dataset.docId = docId;
@@ -141,10 +142,85 @@ function addProspectToTable(data, docId) {
         <td>${data.salesLead}</td>
         <td>$${data.revenueValue.toLocaleString()}</td>
         <td>
+            <button class="action-btn edit-btn">Edit</button>
             <button class="action-btn delete-btn">Delete</button>
         </td>
     `;
 
+    // Add edit button functionality
+    const editBtn = newRow.querySelector(".edit-btn");
+    editBtn.addEventListener("click", () => {
+        const cells = newRow.cells;
+        const currentData = {
+            prospectName: cells[0].textContent,
+            nextSteps: cells[1].textContent,
+            dueDate: cells[2].textContent,
+            signatureExpected: cells[3].textContent,
+            salesLead: cells[4].textContent,
+            revenueValue: parseFloat(cells[5].textContent.replace(/[$,]/g, ''))
+        };
+
+        // Replace cells with input fields
+        cells[0].innerHTML = `<input type="text" class="editable-input" value="${currentData.prospectName}">`;
+        cells[1].innerHTML = `<input type="text" class="editable-input" value="${currentData.nextSteps}">`;
+        cells[2].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueDate}">`;
+        cells[3].innerHTML = `<select class="editable-input">
+            <option value="February 1st" ${currentData.signatureExpected === 'February 1st' ? 'selected' : ''}>February 1st</option>
+            <option value="March 1st" ${currentData.signatureExpected === 'March 1st' ? 'selected' : ''}>March 1st</option>
+        </select>`;
+        cells[4].innerHTML = `<select class="editable-input">
+            <option value="Robby" ${currentData.salesLead === 'Robby' ? 'selected' : ''}>Robby</option>
+            <option value="Greyson" ${currentData.salesLead === 'Greyson' ? 'selected' : ''}>Greyson</option>
+        </select>`;
+        cells[5].innerHTML = `<input type="number" class="editable-input" value="${currentData.revenueValue}">`;
+
+        // Replace edit/delete buttons with save/cancel buttons
+        cells[6].innerHTML = `
+            <button class="action-btn save-btn">Save</button>
+            <button class="action-btn cancel-btn">Cancel</button>
+        `;
+
+        // Add save functionality
+        const saveBtn = cells[6].querySelector(".save-btn");
+        saveBtn.addEventListener("click", async () => {
+            try {
+                const updatedData = {
+                    prospectName: cells[0].querySelector('input').value.trim(),
+                    nextSteps: cells[1].querySelector('input').value.trim(),
+                    dueDate: cells[2].querySelector('input').value,
+                    signatureExpected: cells[3].querySelector('select').value,
+                    salesLead: cells[4].querySelector('select').value,
+                    revenueValue: parseFloat(cells[5].querySelector('input').value)
+                };
+
+                // Validate data
+                if (!updatedData.prospectName || !updatedData.dueDate || isNaN(updatedData.revenueValue) || updatedData.revenueValue <= 0) {
+                    alert("Please fill in all required fields correctly.");
+                    return;
+                }
+
+                await updateDoc(doc(db, "prospects", docId), updatedData);
+                addProspectToTable(updatedData, docId);
+                newRow.remove();
+                
+                // Re-sort the table after update
+                sortTable(currentSort.column);
+                updateStatistics();
+            } catch (error) {
+                console.error("Error updating prospect:", error);
+                alert("Error updating prospect: " + error.message);
+            }
+        });
+
+        // Add cancel functionality
+        const cancelBtn = cells[6].querySelector(".cancel-btn");
+        cancelBtn.addEventListener("click", () => {
+            addProspectToTable(currentData, docId);
+            newRow.remove();
+        });
+    });
+
+    // Add delete button functionality
     const deleteBtn = newRow.querySelector(".delete-btn");
     deleteBtn.addEventListener("click", async () => {
         try {
@@ -158,7 +234,33 @@ function addProspectToTable(data, docId) {
     });
 
     prospectsTable.appendChild(newRow);
-    updateStatistics();
+}
+
+function updateSortArrows(column, direction) {
+    const headers = document.querySelectorAll('.dashboard-table th');
+    headers.forEach((header, index) => {
+        // Store the original header text without arrows if not already stored
+        if (!header.dataset.originalText) {
+            header.dataset.originalText = header.textContent;
+        }
+        
+        // Reset to original text first
+        header.textContent = header.dataset.originalText;
+        
+        // Add arrow to current sort column
+        if (index === column) {
+            header.textContent += direction === 'asc' ? ' ↑' : ' ↓';
+        }
+    });
+}
+
+// Make sure to call this in your DOMContentLoaded event
+function setupSortableHeaders() {
+    const headers = document.querySelectorAll('.dashboard-table th');
+    headers.forEach((header, index) => {
+        header.style.cursor = 'pointer';
+        header.addEventListener('click', () => sortTable(index));
+    });
 }
 
 // Add new prospect
@@ -219,22 +321,10 @@ async function loadProspects() {
             addProspectToTable(data, doc.id);
         });
         
-        // Apply initial sort to Sales Lead column
-        sortTable(4);
         updateStatistics();
     } catch (error) {
         console.error("Error loading prospects:", error);
-        alert("Error loading prospects: " + error.message);
     }
-}
-
-// Add click handlers to headers
-function setupSortableHeaders() {
-    const headers = document.querySelectorAll('.dashboard-table th');
-    headers.forEach((header, index) => {
-        header.style.cursor = 'pointer';
-        header.addEventListener('click', () => sortTable(index));
-    });
 }
 
 // Event Listeners
