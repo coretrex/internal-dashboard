@@ -24,6 +24,32 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// Login functionality
+document.addEventListener('DOMContentLoaded', () => {
+    const correctPassword = "2020";
+    const loginOverlay = document.getElementById("loginOverlay");
+    const dashboardContent = document.getElementById("dashboardContent");
+    const loginButton = document.getElementById("loginButton");
+    const passwordInput = document.getElementById("passwordInput");
+    const loginError = document.getElementById("loginError");
+
+    loginButton.addEventListener("click", () => {
+        if (passwordInput.value === correctPassword) {
+            loginOverlay.style.display = "none";
+            dashboardContent.style.display = "block";
+        } else {
+            loginError.style.display = "block";
+            loginError.textContent = "Incorrect password. Please try again.";
+        }
+    });
+
+    passwordInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            loginButton.click();
+        }
+    });
+});
+
 // Constants
 const clientGoal = 30;
 const prospectGoal = 30;
