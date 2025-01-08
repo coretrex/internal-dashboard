@@ -1,0 +1,313 @@
+/* 
+  Flat Design with Modern Blue & Poppins Font
+*/
+
+/* Global reset and font */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif; /* Everything uses Poppins */
+}
+
+body {
+  background-color: #fafafa;
+  color: #333;
+  padding: 20px;
+}
+
+/* Main title */
+h1 {
+  text-align: center;
+  margin-bottom: 15px;
+  font-weight: 800; /* Extra Bold */
+  font-size: 2rem;
+  color: #333;
+}
+
+/* Stats container */
+.stats-container {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-bottom: 30px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2979ff; /* Modern blue accent */
+  margin-bottom: 6px;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+/* Dashboard container covers 95% width */
+.dashboard-container {
+  width: 95%;
+  margin: 0 auto;
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  padding: 20px;
+  overflow-x: auto; /* Horizontal scroll if needed */
+}
+
+/* 
+  Input section:
+  Center elements horizontally with justify-content: center
+  Using nowrap for single-line layout
+*/
+.input-section {
+  display: flex;
+  justify-content: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+/* 
+  Input fields:
+  Left-justified text (remove text-align center)
+*/
+.input-field {
+  flex: 0 0 auto;
+  min-width: 100px;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  outline: none;
+  text-align: left; /* Left-justified */
+}
+
+.date-picker {
+  min-width: 140px;
+}
+
+/* Dropdown style */
+.dropdown {
+  min-width: 120px;
+}
+
+/* Add button styling */
+.add-btn {
+  flex: 0 0 auto;
+  padding: 10px 20px;
+  background-color: #2979ff; /* Modern blue */
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  white-space: nowrap;
+}
+
+.add-btn:hover {
+  background-color: #195dcc;
+}
+
+/* Table styling */
+.dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 14px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  overflow: hidden; /* Ensure rounding if needed */
+}
+
+/* Table header styling */
+.dashboard-table thead {
+  background-color: #2979ff; /* Modern blue */
+  color: #fff;
+}
+
+.dashboard-table th {
+  padding: 12px;
+  font-weight: 700;
+  text-align: left;
+  border-bottom: 2px solid #195dcc;
+}
+
+/* Table body styling */
+.dashboard-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+/* Default row colors: We'll override via classes if the row is for Robby or Greyson */
+.dashboard-table tbody tr {
+  background-color: #fff;
+}
+
+/* Very light grey background for Robby's rows */
+.row-robby {
+  background-color: #f9f9f9; 
+}
+
+/* Very light blue background for Greyson's rows */
+.row-greyson {
+  background-color: #ebf4ff;
+}
+
+/* Hover effects (optional if you want a small highlight):
+   If you want to preserve the colored row, you can remove the hover or lighten it. */
+.dashboard-table tbody tr:hover {
+  opacity: 0.95;
+}
+
+/* Action buttons (Edit, Save, etc.) */
+.action-btn {
+  padding: 6px 12px;
+  margin: 0 2px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s ease;
+  color: #fff;
+}
+
+/* Edit button */
+.edit-btn {
+  background-color: #3498db;
+}
+
+.edit-btn:hover {
+  background-color: #2c80b4;
+}
+
+.goal-text {
+  color: lightgrey;
+  font-size: 0.7em;
+  margin-left: 4px;
+}
+
+.due-today {
+  background-color: #ffe6e6; /* Subtle red for due today rows */
+}
+
+
+/* Save button */
+.save-btn {
+  background-color: #2ecc71;
+}
+
+.save-btn:hover {
+  background-color: #27ae60;
+}
+
+/* Cancel button */
+.cancel-btn {
+  background-color: #95a5a6;
+}
+
+.cancel-btn:hover {
+  background-color: #7f8c8d;
+}
+
+/* Delete button */
+.delete-btn {
+  background-color: #e74c3c;
+}
+
+.delete-btn:hover {
+  background-color: #c0392b;
+}
+
+.due-today {
+  background-color: #ffe6e6; /* Subtle red */
+}
+
+
+/* Editable fields: Left-justified text as well */
+.editable-input {
+  width: 90%;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  font-size: 13px;
+  border-radius: 4px;
+  outline: none;
+  text-align: left; /* Left-justified */
+}
+
+/* Login overlay styles */
+.login-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(41, 121, 255, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.login-container {
+    background: white;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+}
+
+.login-container h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.login-container input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+.login-container input:focus {
+    border-color: #2979ff;
+    outline: none;
+}
+
+.login-container button {
+    background: #2979ff;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.login-container button:hover {
+    background: #195dcc;
+}
+
+.login-error {
+    color: #e74c3c;
+    margin-top: 10px;
+    font-size: 14px;
+    display: none;
+}

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sales Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Sales Dashboard</h1>
+  <div class="stats-container">
+    <div class="stat">
+      <span id="clientCount" class="stat-number">0</span>
+      <span class="stat-label">Current Clients</span>
+    </div>
+    <div class="stat">
+      <span id="daysBeforeMarch" class="stat-number">0</span>
+      <span class="stat-label">Days Before March 1st</span>
+    </div>
+    <div class="stat">
+      <span id="prospectCount" class="stat-number">0</span>
+      <span class="stat-label">Prospects</span>
+    </div>
+    <div class="stat">
+      <span id="prospectMRR" class="stat-number">$0</span>
+      <span class="stat-label">Prospect MRR</span>
+    </div>
+  </div>
+
+  <div class="dashboard-container">
+    <div class="input-section">
+      <input type="text" id="prospectName" placeholder="Prospect" class="input-field" />
+      <input type="text" id="nextSteps" placeholder="Next Steps/Initiatives" class="input-field" />
+      <input type="date" id="dueDate" class="input-field date-picker" />
+      <select id="signatureExpected" class="input-field dropdown">
+        <option value="February 1st">February 1st</option>
+        <option value="March 1st">March 1st</option>
+      </select>
+      <select id="salesLead" class="input-field dropdown">
+        <option value="Robby">Robby</option>
+        <option value="Greyson">Greyson</option>
+      </select>
+      <input type="number" step="0.01" id="revenueValue" placeholder="Revenue Value ($)" class="input-field" />
+      <button id="addProspectBtn" class="add-btn">Add Prospect</button>
+    </div>
+
+    <table class="dashboard-table">
+      <thead>
+        <tr>
+          <th>Prospects</th>
+          <th>Next Steps / Initiatives</th>
+          <th>Due Date</th>
+          <th>Signature Expected</th>
+          <th>Sales Lead</th>
+          <th>Revenue Value</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="prospectsTable"></tbody>
+    </table>
+  </div>
+  <script type="module" src="script.js"></script>
+</body>
+</html>
