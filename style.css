@@ -150,8 +150,12 @@ h1 {
   vertical-align: middle;
 }
 
-/* Default row colors: We'll override via classes if the row is for Robby or Greyson */
-.dashboard-table tbody tr {
+/* Default row colors with alternating backgrounds */
+.dashboard-table tbody tr:nth-child(even):not(.row-robby):not(.row-greyson) {
+  background-color: #f5f5f5;
+}
+
+.dashboard-table tbody tr:nth-child(odd):not(.row-robby):not(.row-greyson) {
   background-color: #fff;
 }
 
