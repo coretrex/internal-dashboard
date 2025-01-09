@@ -370,6 +370,7 @@ async function addTask() {
             taskName,
             assignee: taskAssignee,
             dueDate: taskDueDate,
+            completed: false,
             createdAt: new Date().toISOString()
         };
 
@@ -389,16 +390,55 @@ async function addTask() {
 function addTaskToTable(data, docId) {
     const newRow = document.createElement("tr");
     newRow.dataset.docId = docId;
+    
+    // Add completed class if task is completed
+    if (data.completed) {
+        newRow.classList.add('completed-task');
+    }
 
     newRow.innerHTML = `
         <td>${data.taskName}</td>
         <td>${data.assignee}</td>
         <td>${data.dueDate}</td>
         <td>
-            <button class="action-btn edit-btn">Edit</button>
+            ${!data.completed ? `
+                <button class="action-btn complete-btn">Complete</button>
+                <button class="action-btn edit-btn">Edit</button>
+            ` : ''}
             <button class="action-btn delete-btn">Delete</button>
         </td>
     `;
+
+    // Add complete button functionality
+    const completeBtn = newRow.querySelector(".complete-btn");
+    if (completeBtn) {
+        completeBtn.addEventListener("click", async () => {
+            try {
+                // Update the data object
+                const updatedData = {
+                    ...data,
+                    completed: true,
+                    completedAt: new Date().toISOString()
+                };
+
+                // Update in Firebase
+                await updateDoc(doc(db, "tasks", docId), updatedData);
+                
+                // Update the row's appearance immediately
+                newRow.classList.add('completed-task');
+                
+                // Remove the complete and edit buttons
+                completeBtn.remove();
+                newRow.querySelector('.edit-btn')?.remove();
+                
+                // Reload tasks to resort the list
+                await loadTasks();
+            } catch (error) {
+                console.error("Error completing task:", error);
+                alert("Error completing task: " + error.message);
+            }
+        });
+    }
 
     // Add delete button functionality
     const deleteBtn = newRow.querySelector(".delete-btn");
@@ -412,60 +452,62 @@ function addTaskToTable(data, docId) {
         }
     });
 
-    // Add edit button functionality
+    // Add edit button functionality if not completed
     const editBtn = newRow.querySelector(".edit-btn");
-    editBtn.addEventListener("click", () => {
-        const cells = newRow.cells;
-        const currentData = {
-            taskName: cells[0].textContent,
-            assignee: cells[1].textContent,
-            dueDate: cells[2].textContent
-        };
+    if (editBtn) {
+        editBtn.addEventListener("click", () => {
+            const cells = newRow.cells;
+            const currentData = {
+                taskName: cells[0].textContent,
+                assignee: cells[1].textContent,
+                dueDate: cells[2].textContent
+            };
 
-        cells[0].innerHTML = `<input type="text" class="editable-input" value="${currentData.taskName}">`;
-        cells[1].innerHTML = `<select class="editable-input">
-            <option value="Greyson" ${currentData.assignee === 'Greyson' ? 'selected' : ''}>Greyson</option>
-            <option value="Robby" ${currentData.assignee === 'Robby' ? 'selected' : ''}>Robby</option>
-            <option value="Stephen" ${currentData.assignee === 'Stephen' ? 'selected' : ''}>Stephen</option>
-        </select>`;
-        cells[2].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueDate}">`;
+            cells[0].innerHTML = `<input type="text" class="editable-input" value="${currentData.taskName}">`;
+            cells[1].innerHTML = `<select class="editable-input">
+                <option value="Greyson" ${currentData.assignee === 'Greyson' ? 'selected' : ''}>Greyson</option>
+                <option value="Robby" ${currentData.assignee === 'Robby' ? 'selected' : ''}>Robby</option>
+                <option value="Stephen" ${currentData.assignee === 'Stephen' ? 'selected' : ''}>Stephen</option>
+            </select>`;
+            cells[2].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueDate}">`;
 
-        cells[3].innerHTML = `
-            <button class="action-btn save-btn">Save</button>
-            <button class="action-btn cancel-btn">Cancel</button>
-        `;
+            cells[3].innerHTML = `
+                <button class="action-btn save-btn">Save</button>
+                <button class="action-btn cancel-btn">Cancel</button>
+            `;
 
-        // Add save functionality
-        const saveBtn = cells[3].querySelector(".save-btn");
-        saveBtn.addEventListener("click", async () => {
-            try {
-                const updatedData = {
-                    taskName: cells[0].querySelector('input').value.trim(),
-                    assignee: cells[1].querySelector('select').value,
-                    dueDate: cells[2].querySelector('input').value
-                };
+            // Add save functionality
+            const saveBtn = cells[3].querySelector(".save-btn");
+            saveBtn.addEventListener("click", async () => {
+                try {
+                    const updatedData = {
+                        taskName: cells[0].querySelector('input').value.trim(),
+                        assignee: cells[1].querySelector('select').value,
+                        dueDate: cells[2].querySelector('input').value
+                    };
 
-                if (!updatedData.taskName || !updatedData.dueDate) {
-                    alert("Please fill in all required fields.");
-                    return;
+                    if (!updatedData.taskName || !updatedData.dueDate) {
+                        alert("Please fill in all required fields.");
+                        return;
+                    }
+
+                    await updateDoc(doc(db, "tasks", docId), updatedData);
+                    addTaskToTable(updatedData, docId);
+                    newRow.remove();
+                } catch (error) {
+                    console.error("Error updating task:", error);
+                    alert("Error updating task: " + error.message);
                 }
+            });
 
-                await updateDoc(doc(db, "tasks", docId), updatedData);
-                addTaskToTable(updatedData, docId);
+            // Add cancel functionality
+            const cancelBtn = cells[3].querySelector(".cancel-btn");
+            cancelBtn.addEventListener("click", () => {
+                addTaskToTable(currentData, docId);
                 newRow.remove();
-            } catch (error) {
-                console.error("Error updating task:", error);
-                alert("Error updating task: " + error.message);
-            }
+            });
         });
-
-        // Add cancel functionality
-        const cancelBtn = cells[3].querySelector(".cancel-btn");
-        cancelBtn.addEventListener("click", () => {
-            addTaskToTable(currentData, docId);
-            newRow.remove();
-        });
-    });
+    }
 
     tasksTable.appendChild(newRow);
 }
@@ -475,9 +517,26 @@ async function loadTasks() {
         const querySnapshot = await getDocs(collection(db, "tasks"));
         tasksTable.innerHTML = '';
         
+        // Convert to array and sort
+        const tasks = [];
         querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            addTaskToTable(data, doc.id);
+            tasks.push({
+                ...doc.data(),
+                id: doc.id
+            });
+        });
+
+        // Sort tasks: incomplete first, then by date
+        tasks.sort((a, b) => {
+            if (a.completed === b.completed) {
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            }
+            return a.completed ? 1 : -1;
+        });
+
+        // Add to table
+        tasks.forEach(task => {
+            addTaskToTable(task, task.id);
         });
     } catch (error) {
         console.error("Error loading tasks:", error);

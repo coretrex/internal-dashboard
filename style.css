@@ -390,3 +390,22 @@ h1 {
 .nav-btn.active {
   background: #2979ff;
 }
+
+/* Add these new styles */
+.completed-task {
+  background-color: #f0f0f0;
+  color: #888;
+}
+
+.completed-task td:first-child {
+  text-decoration: line-through;
+}
+
+/* Modify the action-btn class to add a new button style */
+.complete-btn {
+  background-color: #27ae60;
+}
+
+.complete-btn:hover {
+  background-color: #219a52;
+}
