@@ -62,6 +62,7 @@ const prospectCountEl = document.getElementById('prospectCount');
 const prospectMRREl = document.getElementById('prospectMRR');
 const prospectsTable = document.getElementById('prospectsTable');
 const addProspectBtn = document.getElementById('addProspectBtn');
+let tasksTable, addTaskBtn;
 
 // Statistics function
 function updateStatistics() {
@@ -159,21 +160,6 @@ function sortTable(column) {
 function addProspectToTable(data, docId) {
     const newRow = document.createElement("tr");
     newRow.dataset.docId = docId;
-    
-    // Check if due date is today or past
-    const today = new Date().toISOString().split('T')[0];
-    const dueDate = new Date(data.dueDate);
-    const currentDate = new Date();
-    
-    // Reset hours to compare just the dates
-    currentDate.setHours(0, 0, 0, 0);
-    dueDate.setHours(0, 0, 0, 0);
-    
-    if (data.dueDate === today) {
-        newRow.classList.add('due-today');
-    } else if (dueDate < currentDate) {
-        newRow.classList.add('overdue');
-    }
 
     newRow.innerHTML = `
         <td>${data.prospectName}</td>
@@ -368,11 +354,171 @@ async function loadProspects() {
     }
 }
 
-// Event Listeners
-window.addEventListener("DOMContentLoaded", async () => {
+// Add these new functions after your existing functions
+async function addTask() {
+    try {
+        const taskName = document.getElementById('taskName').value.trim();
+        const taskAssignee = document.getElementById('taskAssignee').value;
+        const taskDueDate = document.getElementById('taskDueDate').value;
+
+        if (!taskName || !taskDueDate) {
+            alert("Please fill in all required fields.");
+            return;
+        }
+
+        const taskData = {
+            taskName,
+            assignee: taskAssignee,
+            dueDate: taskDueDate,
+            createdAt: new Date().toISOString()
+        };
+
+        const docRef = await addDoc(collection(db, "tasks"), taskData);
+        addTaskToTable(taskData, docRef.id);
+
+        // Clear form
+        document.getElementById('taskName').value = "";
+        document.getElementById('taskAssignee').value = "Greyson";
+        document.getElementById('taskDueDate').value = "";
+    } catch (error) {
+        console.error("Error adding task:", error);
+        alert("Error adding task: " + error.message);
+    }
+}
+
+function addTaskToTable(data, docId) {
+    const newRow = document.createElement("tr");
+    newRow.dataset.docId = docId;
+
+    newRow.innerHTML = `
+        <td>${data.taskName}</td>
+        <td>${data.assignee}</td>
+        <td>${data.dueDate}</td>
+        <td>
+            <button class="action-btn edit-btn">Edit</button>
+            <button class="action-btn delete-btn">Delete</button>
+        </td>
+    `;
+
+    // Add delete button functionality
+    const deleteBtn = newRow.querySelector(".delete-btn");
+    deleteBtn.addEventListener("click", async () => {
+        try {
+            await deleteDoc(doc(db, "tasks", docId));
+            newRow.remove();
+        } catch (error) {
+            console.error("Error deleting task:", error);
+            alert("Error deleting task: " + error.message);
+        }
+    });
+
+    // Add edit button functionality
+    const editBtn = newRow.querySelector(".edit-btn");
+    editBtn.addEventListener("click", () => {
+        const cells = newRow.cells;
+        const currentData = {
+            taskName: cells[0].textContent,
+            assignee: cells[1].textContent,
+            dueDate: cells[2].textContent
+        };
+
+        cells[0].innerHTML = `<input type="text" class="editable-input" value="${currentData.taskName}">`;
+        cells[1].innerHTML = `<select class="editable-input">
+            <option value="Greyson" ${currentData.assignee === 'Greyson' ? 'selected' : ''}>Greyson</option>
+            <option value="Robby" ${currentData.assignee === 'Robby' ? 'selected' : ''}>Robby</option>
+            <option value="Stephen" ${currentData.assignee === 'Stephen' ? 'selected' : ''}>Stephen</option>
+        </select>`;
+        cells[2].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueDate}">`;
+
+        cells[3].innerHTML = `
+            <button class="action-btn save-btn">Save</button>
+            <button class="action-btn cancel-btn">Cancel</button>
+        `;
+
+        // Add save functionality
+        const saveBtn = cells[3].querySelector(".save-btn");
+        saveBtn.addEventListener("click", async () => {
+            try {
+                const updatedData = {
+                    taskName: cells[0].querySelector('input').value.trim(),
+                    assignee: cells[1].querySelector('select').value,
+                    dueDate: cells[2].querySelector('input').value
+                };
+
+                if (!updatedData.taskName || !updatedData.dueDate) {
+                    alert("Please fill in all required fields.");
+                    return;
+                }
+
+                await updateDoc(doc(db, "tasks", docId), updatedData);
+                addTaskToTable(updatedData, docId);
+                newRow.remove();
+            } catch (error) {
+                console.error("Error updating task:", error);
+                alert("Error updating task: " + error.message);
+            }
+        });
+
+        // Add cancel functionality
+        const cancelBtn = cells[3].querySelector(".cancel-btn");
+        cancelBtn.addEventListener("click", () => {
+            addTaskToTable(currentData, docId);
+            newRow.remove();
+        });
+    });
+
+    tasksTable.appendChild(newRow);
+}
+
+async function loadTasks() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "tasks"));
+        tasksTable.innerHTML = '';
+        
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            addTaskToTable(data, doc.id);
+        });
+    } catch (error) {
+        console.error("Error loading tasks:", error);
+    }
+}
+
+// Modify your existing DOMContentLoaded event listener to include this:
+document.addEventListener('DOMContentLoaded', async () => {
     console.log("Page loading...");
+    
+    // Initialize elements
+    tasksTable = document.getElementById('tasksTable');
+    addTaskBtn = document.getElementById('addTaskBtn');
+    
+    // Set up task button listener
+    if (addTaskBtn) {
+        addTaskBtn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            console.log("Add task button clicked");
+            await addTask();
+        });
+    }
+
+    // Set up navigation
+    const navButtons = document.querySelectorAll('.nav-btn');
+    const pages = document.querySelectorAll('.page');
+
+    navButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const pageId = button.getAttribute('data-page');
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            pages.forEach(page => page.classList.remove('active'));
+            button.classList.add('active');
+            document.getElementById(pageId).classList.add('active');
+        });
+    });
+
+    // Load initial data
     setupSortableHeaders();
     await loadProspects();
+    await loadTasks();
     console.log("Initial load complete");
 });
 

@@ -24,25 +24,29 @@
   </div>
 
   <div id="dashboardContent" style="display: none;">
-    <h1>Sales Dashboard</h1>
-    <div class="stats-container">
-      <div class="stat">
-        <span id="clientCount" class="stat-number">0</span>
-        <span class="stat-label">Current Clients</span>
-      </div>
-      <div class="stat">
-        <span id="daysBeforeMarch" class="stat-number">0</span>
-        <span class="stat-label">Days Before March 1st</span>
-      </div>
-      <div class="stat">
-        <span id="prospectCount" class="stat-number">0</span>
-        <span class="stat-label">Prospects</span>
-      </div>
-      <div class="stat">
-        <span id="prospectMRR" class="stat-number">$0</span>
-        <span class="stat-label">Prospect MRR</span>
-      </div>
-    </div>
+    <!-- Page Navigation -->
+    <div id="pageContent">
+      <!-- Sales Dashboard Page -->
+      <div id="salesDashboard" class="page active">
+        <h1>Sales Dashboard</h1>
+        <div class="stats-container">
+          <div class="stat">
+            <span id="clientCount" class="stat-number">0</span>
+            <span class="stat-label">Current Clients</span>
+          </div>
+          <div class="stat">
+            <span id="daysBeforeMarch" class="stat-number">0</span>
+            <span class="stat-label">Days Before March 1st</span>
+          </div>
+          <div class="stat">
+            <span id="prospectCount" class="stat-number">0</span>
+            <span class="stat-label">Prospects</span>
+          </div>
+          <div class="stat">
+            <span id="prospectMRR" class="stat-number">$0</span>
+            <span class="stat-label">Prospect MRR</span>
+          </div>
+        </div>
 
     <div class="dashboard-container">
       <div class="input-section">
@@ -61,20 +65,64 @@
         <button id="addProspectBtn" class="add-btn">Add Prospect</button>
       </div>
 
-      <table class="dashboard-table">
-        <thead>
-          <tr>
-            <th>Prospects</th>
-            <th>Next Steps / Initiatives</th>
-            <th>Due Date</th>
-            <th>Signature Expected</th>
-            <th>Sales Lead</th>
-            <th>Revenue Value</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="prospectsTable"></tbody>
-      </table>
+          <table class="dashboard-table">
+            <thead>
+              <tr>
+                <th>Prospects</th>
+                <th>Next Steps / Initiatives</th>
+                <th>Due Date</th>
+                <th>Signature Expected</th>
+                <th>Sales Lead</th>
+                <th>Revenue Value</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="prospectsTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Sales To-Do Page -->
+      <div id="salesTodo" class="page">
+        <h1>Sales To-Do</h1>
+        <div class="dashboard-container">
+            <div class="input-section">
+                <input type="text" id="taskName" placeholder="Task Name" class="input-field task-name-field" style="width: 300px;" />
+                <select id="taskAssignee" class="input-field dropdown">
+                    <option value="Greyson">Greyson</option>
+                    <option value="Robby">Robby</option>
+                    <option value="Stephen">Stephen</option>
+                </select>
+                <input type="date" id="taskDueDate" class="input-field date-picker" />
+                <button id="addTaskBtn" class="add-btn">Add Task</button>
+            </div>
+
+            <table class="dashboard-table">
+                <thead>
+                    <tr>
+                        <th>Task</th>
+                        <th>Assignee</th>
+                        <th>Due Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tasksTable"></tbody>
+            </table>
+        </div>
+      </div>
+
+      <!-- Brand Growth Dashboard Page -->
+      <div id="brandGrowth" class="page">
+        <h1>Brand Growth Dashboard</h1>
+        <!-- Add your brand growth content here -->
+      </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="nav-buttons">
+      <button class="nav-btn active" data-page="salesDashboard">Sales Dashboard</button>
+      <button class="nav-btn" data-page="salesTodo">Sales To-Do</button>
+      <button class="nav-btn" data-page="brandGrowth">Brand Growth</button>
     </div>
   </div>
   <script type="module" src="script.js"></script>
