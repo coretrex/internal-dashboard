@@ -70,11 +70,32 @@ h1 {
 .input-section {
   display: flex;
   justify-content: center;
+  align-items: flex-end;  /* Keep elements aligned at the bottom */
   flex-wrap: nowrap;
   white-space: nowrap;
   gap: 10px;
   margin-bottom: 20px;
-  align-items: center;
+}
+
+/* Input field group for date fields */
+.input-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 140px;
+  margin-bottom: 0;
+  height: fit-content; /* Add this to prevent extra space */
+}
+
+.input-field-group label {
+  font-size: 0.7rem;
+  color: #666;
+  margin-bottom: 0;
+  line-height: 1; /* Add this to reduce vertical space */
+}
+
+.input-field-group .input-field {
+  width: 100%;
 }
 
 /* 
@@ -124,10 +145,11 @@ h1 {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
+  margin-bottom: 20px; /* Add margin at bottom of tables */
   font-size: 14px;
   border: 1px solid #eee;
   border-radius: 4px;
-  overflow: hidden; /* Ensure rounding if needed */
+  overflow: hidden;
 }
 
 /* Table header styling */
@@ -351,6 +373,8 @@ h1 {
 .page {
   display: none;
   padding: 20px;
+  padding-bottom: 80px; /* Add extra padding at bottom for nav menu */
+  min-height: 100vh;
 }
 
 .page.active {
@@ -408,4 +432,29 @@ h1 {
 
 .complete-btn:hover {
   background-color: #219a52;
+}
+
+/* Brand Growth specific styles */
+#brandGrowth {
+  width: 100%;
+}
+
+#brandGrowth .dashboard-container {
+  padding: 10px;
+  background: white;
+  border-radius: 6px;
+  margin-top: 20px;
+}
+
+#brandGrowth .input-section {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 20px;
+}
+
+#brandGrowth .dashboard-table {
+  width: 100%;
+  margin-top: 20px;
 }

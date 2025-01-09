@@ -543,6 +543,214 @@ async function loadTasks() {
     }
 }
 
+// Add these new functions for Brand Growth Dashboard
+async function addBrand() {
+    try {
+        const brandName = document.getElementById('brandName').value.trim();
+        const teamResponsible = document.getElementById('teamResponsible').value;
+        const relationshipStatus = document.getElementById('relationshipStatus').value;
+        const currentSensitivity = document.getElementById('currentSensitivity').value;
+        const correctiveAction = document.getElementById('correctiveAction').value.trim();
+        const dueBy = document.getElementById('dueBy').value;
+        const trailing30Revenue = parseFloat(document.getElementById('trailing30Revenue').value);
+        const yoyPercentage = parseFloat(document.getElementById('yoyPercentage').value);
+        const nextMeetingDate = document.getElementById('nextMeetingDate').value;
+        const taskStatus = document.getElementById('taskStatus').value;
+
+        if (!brandName || !dueBy || !nextMeetingDate) {
+            alert("Please fill in all required fields.");
+            return;
+        }
+
+        const brandData = {
+            brandName,
+            teamResponsible,
+            relationshipStatus,
+            currentSensitivity,
+            correctiveAction: correctiveAction || "None",
+            dueBy,
+            trailing30Revenue: trailing30Revenue || 0,
+            yoyPercentage: yoyPercentage || 0,
+            nextMeetingDate,
+            taskStatus,
+            createdAt: new Date().toISOString()
+        };
+
+        const docRef = await addDoc(collection(db, "brands"), brandData);
+        addBrandToTable(brandData, docRef.id);
+
+        // Clear form
+        document.getElementById('brandName').value = "";
+        document.getElementById('teamResponsible').value = "Pod 1";
+        document.getElementById('relationshipStatus').value = "Medium";
+        document.getElementById('currentSensitivity').value = "Poor Profit";
+        document.getElementById('correctiveAction').value = "";
+        document.getElementById('dueBy').value = "";
+        document.getElementById('trailing30Revenue').value = "";
+        document.getElementById('yoyPercentage').value = "";
+        document.getElementById('nextMeetingDate').value = "";
+        document.getElementById('taskStatus').value = "In Progress";
+
+    } catch (error) {
+        console.error("Error adding brand:", error);
+        alert("Error adding brand: " + error.message);
+    }
+}
+
+function addBrandToTable(data, docId) {
+    const brandsTable = document.getElementById('brandsTable');
+    const newRow = document.createElement("tr");
+    newRow.dataset.docId = docId;
+
+    newRow.innerHTML = `
+        <td>${data.brandName}</td>
+        <td>${data.teamResponsible}</td>
+        <td>${data.relationshipStatus}</td>
+        <td>${data.currentSensitivity}</td>
+        <td>${data.correctiveAction}</td>
+        <td>${data.dueBy}</td>
+        <td>$${data.trailing30Revenue.toLocaleString()}</td>
+        <td>${data.yoyPercentage}%</td>
+        <td>${data.nextMeetingDate}</td>
+        <td>${data.taskStatus}</td>
+        <td>
+            <button class="action-btn edit-btn">Edit</button>
+            <button class="action-btn delete-btn">Delete</button>
+        </td>
+    `;
+
+    // Add edit button functionality
+    const editBtn = newRow.querySelector(".edit-btn");
+    editBtn.addEventListener("click", () => {
+        const cells = newRow.cells;
+        const currentData = {
+            brandName: cells[0].textContent,
+            teamResponsible: cells[1].textContent,
+            relationshipStatus: cells[2].textContent,
+            currentSensitivity: cells[3].textContent,
+            correctiveAction: cells[4].textContent,
+            dueBy: cells[5].textContent,
+            trailing30Revenue: parseFloat(cells[6].textContent.replace(/[$,]/g, '')),
+            yoyPercentage: parseFloat(cells[7].textContent),
+            nextMeetingDate: cells[8].textContent,
+            taskStatus: cells[9].textContent
+        };
+
+        // Replace cells with input fields
+        cells[0].innerHTML = `<input type="text" class="editable-input" value="${currentData.brandName}">`;
+        cells[1].innerHTML = createSelectHTML('teamResponsible', ['Pod 1', 'Pod 2'], currentData.teamResponsible);
+        cells[2].innerHTML = createSelectHTML('relationshipStatus', ['Poor', 'Medium', 'Strong'], currentData.relationshipStatus);
+        cells[3].innerHTML = createSelectHTML('currentSensitivity', 
+            ['Poor Profit', 'Stagnant Sales', 'Lack of Clarity', 'CoreTrex Cost', 'Lack of Trust'], 
+            currentData.currentSensitivity);
+        cells[4].innerHTML = `<input type="text" class="editable-input" value="${currentData.correctiveAction}">`;
+        cells[5].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueBy}">`;
+        cells[6].innerHTML = `<input type="number" step="0.01" class="editable-input" value="${currentData.trailing30Revenue}">`;
+        cells[7].innerHTML = `<input type="number" step="0.01" class="editable-input" value="${currentData.yoyPercentage}">`;
+        cells[8].innerHTML = `<input type="date" class="editable-input" value="${currentData.nextMeetingDate}">`;
+        cells[9].innerHTML = createSelectHTML('taskStatus', 
+            ['In Progress', 'Done', 'Waiting on Client'], 
+            currentData.taskStatus);
+
+        // Replace edit/delete buttons with save/cancel buttons
+        cells[10].innerHTML = `
+            <button class="action-btn save-btn">Save</button>
+            <button class="action-btn cancel-btn">Cancel</button>
+        `;
+
+        // Add save functionality
+        const saveBtn = cells[10].querySelector(".save-btn");
+        saveBtn.addEventListener("click", async () => {
+            try {
+                const updatedData = {
+                    brandName: cells[0].querySelector('input').value.trim(),
+                    teamResponsible: cells[1].querySelector('select').value,
+                    relationshipStatus: cells[2].querySelector('select').value,
+                    currentSensitivity: cells[3].querySelector('select').value,
+                    correctiveAction: cells[4].querySelector('input').value.trim(),
+                    dueBy: cells[5].querySelector('input').value,
+                    trailing30Revenue: parseFloat(cells[6].querySelector('input').value),
+                    yoyPercentage: parseFloat(cells[7].querySelector('input').value),
+                    nextMeetingDate: cells[8].querySelector('input').value,
+                    taskStatus: cells[9].querySelector('select').value
+                };
+
+                await updateDoc(doc(db, "brands", docId), updatedData);
+                addBrandToTable(updatedData, docId);
+                newRow.remove();
+            } catch (error) {
+                console.error("Error updating brand:", error);
+                alert("Error updating brand: " + error.message);
+            }
+        });
+
+        // Add cancel functionality
+        const cancelBtn = cells[10].querySelector(".cancel-btn");
+        cancelBtn.addEventListener("click", () => {
+            addBrandToTable(currentData, docId);
+            newRow.remove();
+        });
+    });
+
+    // Add delete button functionality
+    const deleteBtn = newRow.querySelector(".delete-btn");
+    deleteBtn.addEventListener("click", async () => {
+        if (confirm("Are you sure you want to delete this brand?")) {
+            try {
+                await deleteDoc(doc(db, "brands", docId));
+                newRow.remove();
+            } catch (error) {
+                console.error("Error deleting brand:", error);
+                alert("Error deleting brand: " + error.message);
+            }
+        }
+    });
+
+    brandsTable.appendChild(newRow);
+}
+
+// Helper function to create select HTML
+function createSelectHTML(name, options, currentValue) {
+    const optionsHTML = options.map(option => 
+        `<option value="${option}" ${currentValue === option ? 'selected' : ''}>${option}</option>`
+    ).join('');
+    return `<select class="editable-input">${optionsHTML}</select>`;
+}
+
+async function loadBrands() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "brands"));
+        const brandsTable = document.getElementById('brandsTable');
+        brandsTable.innerHTML = '';
+        
+        // Convert to array and sort
+        const brands = [];
+        querySnapshot.forEach((doc) => {
+            brands.push({
+                ...doc.data(),
+                id: doc.id
+            });
+        });
+
+        // Sort brands: First by team (Pod 1 first), then by brand name
+        brands.sort((a, b) => {
+            // First sort by team
+            if (a.teamResponsible !== b.teamResponsible) {
+                return a.teamResponsible === "Pod 1" ? -1 : 1;
+            }
+            // Then sort alphabetically by brand name within each team
+            return a.brandName.localeCompare(b.brandName);
+        });
+
+        // Add to table
+        brands.forEach(brand => {
+            addBrandToTable(brand, brand.id);
+        });
+    } catch (error) {
+        console.error("Error loading brands:", error);
+    }
+}
+
 // Modify your existing DOMContentLoaded event listener to include this:
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("Page loading...");
@@ -579,6 +787,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadProspects();
     await loadTasks();
     console.log("Initial load complete");
+
+    // Set up brand button listener
+    const addBrandBtn = document.getElementById('addBrandBtn');
+    if (addBrandBtn) {
+        addBrandBtn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            await addBrand();
+        });
+    }
+
+    // Load brands
+    await loadBrands();
 });
 
 addProspectBtn.addEventListener("click", async (e) => {

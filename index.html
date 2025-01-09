@@ -50,18 +50,21 @@
 
     <div class="dashboard-container">
       <div class="input-section">
-        <input type="text" id="prospectName" placeholder="Prospect" class="input-field" />
-        <input type="text" id="nextSteps" placeholder="Next Steps/Initiatives" class="input-field" />
-        <input type="date" id="dueDate" class="input-field date-picker" />
+        <input type="text" id="prospectName" class="input-field" placeholder="Prospect Name">
+        <input type="text" id="nextSteps" class="input-field" placeholder="Next Steps">
+        <div class="input-field-group">
+            <label for="dueDate">Due Date</label>
+            <input type="date" id="dueDate" class="input-field date-picker">
+        </div>
         <select id="signatureExpected" class="input-field dropdown">
-          <option value="February 1st">February 1st</option>
-          <option value="March 1st">March 1st</option>
+            <option value="February 1st">February 1st</option>
+            <option value="March 1st">March 1st</option>
         </select>
         <select id="salesLead" class="input-field dropdown">
-          <option value="Robby">Robby</option>
-          <option value="Greyson">Greyson</option>
+            <option value="Robby">Robby</option>
+            <option value="Greyson">Greyson</option>
         </select>
-        <input type="number" step="0.01" id="revenueValue" placeholder="Revenue Value ($)" class="input-field" />
+        <input type="number" id="revenueValue" class="input-field" placeholder="Revenue Value">
         <button id="addProspectBtn" class="add-btn">Add Prospect</button>
       </div>
 
@@ -93,7 +96,10 @@
                     <option value="Robby">Robby</option>
                     <option value="Stephen">Stephen</option>
                 </select>
-                <input type="date" id="taskDueDate" class="input-field date-picker" />
+                <div class="input-field-group">
+                    <label for="taskDueDate">Due Date</label>
+                    <input type="date" id="taskDueDate" class="input-field date-picker" />
+                </div>
                 <button id="addTaskBtn" class="add-btn">Add Task</button>
             </div>
 
@@ -114,7 +120,67 @@
       <!-- Brand Growth Dashboard Page -->
       <div id="brandGrowth" class="page">
         <h1>Brand Growth Dashboard</h1>
-        <!-- Add your brand growth content here -->
+        <div class="dashboard-container">
+          <div class="input-section">
+            <!-- Row 1 -->
+            <input type="text" id="brandName" placeholder="Brand Name" class="input-field" />
+            <select id="teamResponsible" class="input-field dropdown">
+              <option value="Pod 1">Pod 1</option>
+              <option value="Pod 2">Pod 2</option>
+            </select>
+            <select id="relationshipStatus" class="input-field dropdown">
+              <option value="Poor">Poor</option>
+              <option value="Medium">Medium</option>
+              <option value="Strong">Strong</option>
+            </select>
+            <select id="currentSensitivity" class="input-field dropdown">
+              <option value="Poor Profit">Poor Profit</option>
+              <option value="Stagnant Sales">Stagnant Sales</option>
+              <option value="Lack of Clarity">Lack of Clarity</option>
+              <option value="CoreTrex Cost">CoreTrex Cost</option>
+              <option value="Lack of Trust">Lack of Trust</option>
+            </select>
+            <input type="text" id="correctiveAction" placeholder="Corrective Action" class="input-field" />
+            
+            <!-- Row 2 -->
+            <div class="input-field-group">
+                <label for="dueBy">Due Date</label>
+                <input type="date" id="dueBy" class="input-field date-picker" />
+            </div>
+            <input type="number" step="0.01" id="trailing30Revenue" placeholder="30 Day Revenue ($)" class="input-field" />
+            <input type="number" step="0.01" id="yoyPercentage" placeholder="YoY %" class="input-field" />
+            <div class="input-field-group">
+                <label for="nextMeetingDate">Next Meeting</label>
+                <input type="date" id="nextMeetingDate" class="input-field date-picker" />
+            </div>
+            <select id="taskStatus" class="input-field dropdown">
+              <option value="In Progress">In Progress</option>
+              <option value="Done">Done</option>
+              <option value="Waiting on Client">Waiting on Client</option>
+            </select>
+
+            <button id="addBrandBtn" class="add-btn">Add Brand</button>
+          </div>
+
+          <table class="dashboard-table">
+            <thead>
+              <tr>
+                <th>Brand Name</th>
+                <th>Team</th>
+                <th>Relationship</th>
+                <th>Sensitivity</th>
+                <th>Corrective Action</th>
+                <th>Due By</th>
+                <th>30 Day Revenue</th>
+                <th>YoY %</th>
+                <th>Next Meeting</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="brandsTable"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
