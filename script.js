@@ -601,6 +601,9 @@ function addBrandToTable(data, docId) {
     const brandsTable = document.getElementById('brandsTable');
     const newRow = document.createElement("tr");
     newRow.dataset.docId = docId;
+    
+    // Add pod-specific class
+    newRow.classList.add(data.teamResponsible === "Pod 1" ? 'row-pod1' : 'row-pod2');
 
     newRow.innerHTML = `
         <td>${data.brandName}</td>

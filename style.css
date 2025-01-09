@@ -458,3 +458,17 @@ h1 {
   width: 100%;
   margin-top: 20px;
 }
+
+/* Pod-specific row colors */
+.row-pod1 {
+    background-color: #e8f4ff !important; /* Light blue */
+}
+
+.row-pod2 {
+    background-color: #ffe8f0 !important; /* Light pink */
+}
+
+/* Override hover effect to maintain pod colors */
+.row-pod1:hover, .row-pod2:hover {
+    opacity: 0.9;
+}
