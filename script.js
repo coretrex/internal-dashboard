@@ -159,6 +159,21 @@ function sortTable(column) {
 function addProspectToTable(data, docId) {
     const newRow = document.createElement("tr");
     newRow.dataset.docId = docId;
+    
+    // Check if due date is today or past
+    const today = new Date().toISOString().split('T')[0];
+    const dueDate = new Date(data.dueDate);
+    const currentDate = new Date();
+    
+    // Reset hours to compare just the dates
+    currentDate.setHours(0, 0, 0, 0);
+    dueDate.setHours(0, 0, 0, 0);
+    
+    if (data.dueDate === today) {
+        newRow.classList.add('due-today');
+    } else if (dueDate < currentDate) {
+        newRow.classList.add('overdue');
+    }
 
     newRow.innerHTML = `
         <td>${data.prospectName}</td>
