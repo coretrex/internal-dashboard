@@ -81,8 +81,18 @@ function updateStatistics() {
     });
     prospectMRREl.innerHTML = `$${totalRevenue.toLocaleString()}<span class="goal-text">/$${prospectMRRGoal.toLocaleString()}</span>`;
     
-    // Update client count
-    clientCountEl.innerHTML = `15<span class="goal-text">/${clientGoal}</span>`;
+    // Update client count by counting Pod 1 + Pod 2 clients from Brand Growth
+    const brandsTable = document.getElementById('brandsTable');
+    let totalClients = 0;
+    if (brandsTable) {
+        Array.from(brandsTable.rows).forEach(row => {
+            const team = row.cells[1].textContent;
+            if (team === 'Pod 1' || team === 'Pod 2') {
+                totalClients++;
+            }
+        });
+    }
+    clientCountEl.innerHTML = `${totalClients}<span class="goal-text">/${clientGoal}</span>`;
     
     // Update days before March
     const today = new Date();
@@ -722,6 +732,7 @@ function addBrandToTable(data, docId) {
 
     brandsTable.appendChild(newRow);
     updateBrandStatistics();
+    updateStatistics();
 }
 
 // Helper function to create select HTML
@@ -763,6 +774,7 @@ async function loadBrands() {
         });
         
         updateBrandStatistics();
+        updateStatistics();
     } catch (error) {
         console.error("Error loading brands:", error);
     }
