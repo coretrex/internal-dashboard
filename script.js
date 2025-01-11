@@ -284,8 +284,8 @@ function addProspectToTable(data, docId) {
 
         // Replace edit/delete buttons with save/cancel buttons
         cells[6].innerHTML = `
-            <button class="action-btn save-btn" title="Save"><i class="fas fa-save"></i></button>
-            <button class="action-btn cancel-btn" title="Cancel"><i class="fas fa-times"></i></button>
+            <button class="action-btn save-btn">Save</button>
+            <button class="action-btn cancel-btn">Cancel</button>
         `;
 
         // Add save functionality
@@ -567,8 +567,8 @@ function addTaskToTable(data, docId) {
             cells[2].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueDate}">`;
 
             cells[3].innerHTML = `
-                <button class="action-btn save-btn" title="Save"><i class="fas fa-save"></i></button>
-                <button class="action-btn cancel-btn" title="Cancel"><i class="fas fa-times"></i></button>
+                <button class="action-btn save-btn">Save</button>
+                <button class="action-btn cancel-btn">Cancel</button>
             `;
 
             // Add save functionality
@@ -705,7 +705,7 @@ function addBrandToTable(data, docId) {
         <td>${data.teamResponsible}</td>
         <td>${data.relationshipStatus}</td>
         <td>${data.currentSensitivity}</td>
-        <td>${data.correctiveAction}</td>
+        <td title="${data.correctiveAction}">${data.correctiveAction}</td>
         <td>${data.dueBy}</td>
         <td>$${data.trailing30Revenue.toLocaleString()}</td>
         <td>${data.yoyPercentage}%</td>
@@ -752,8 +752,8 @@ function addBrandToTable(data, docId) {
 
         // Replace edit/delete buttons with save/cancel buttons
         cells[10].innerHTML = `
-            <button class="action-btn save-btn" title="Save"><i class="fas fa-save"></i></button>
-            <button class="action-btn cancel-btn" title="Cancel"><i class="fas fa-times"></i></button>
+            <button class="action-btn save-btn">Save</button>
+            <button class="action-btn cancel-btn">Cancel</button>
         `;
 
         // Add save functionality
