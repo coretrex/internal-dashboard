@@ -229,8 +229,7 @@ function addProspectToTable(data, docId) {
         `;
 
         // Add save functionality
-        const saveBtn = cells[6].querySelector(".save-btn");
-        saveBtn.addEventListener("click", async () => {
+        cells[6].querySelector(".save-btn").addEventListener("click", async () => {
             try {
                 const updatedData = {
                     prospectName: cells[0].querySelector('input').value.trim(),
@@ -241,18 +240,33 @@ function addProspectToTable(data, docId) {
                     revenueValue: parseFloat(cells[5].querySelector('input').value)
                 };
 
-                // Validate data
                 if (!updatedData.prospectName || !updatedData.dueDate || isNaN(updatedData.revenueValue) || updatedData.revenueValue <= 0) {
                     alert("Please fill in all required fields correctly.");
                     return;
                 }
 
                 await updateDoc(doc(db, "prospects", docId), updatedData);
-                addProspectToTable(updatedData, docId);
-                newRow.remove();
                 
-                // Re-sort the table after update
-                sortTable(currentSort.column);
+                // Update cells directly
+                cells[0].textContent = updatedData.prospectName;
+                cells[1].textContent = updatedData.nextSteps;
+                cells[2].textContent = updatedData.dueDate;
+                cells[3].textContent = updatedData.signatureExpected;
+                cells[4].textContent = updatedData.salesLead;
+                cells[5].textContent = `$${updatedData.revenueValue.toLocaleString()}`;
+                
+                // Restore action buttons
+                cells[6].innerHTML = `
+                    <button class="action-btn edit-btn">Edit</button>
+                    <button class="action-btn delete-btn">Delete</button>
+                `;
+
+                // Reattach event listeners
+                const newEditBtn = cells[6].querySelector(".edit-btn");
+                const newDeleteBtn = cells[6].querySelector(".delete-btn");
+                newEditBtn.addEventListener("click", editBtn.onclick);
+                newDeleteBtn.addEventListener("click", deleteBtn.onclick);
+
                 updateStatistics();
             } catch (error) {
                 console.error("Error updating prospect:", error);
@@ -683,8 +697,7 @@ function addBrandToTable(data, docId) {
         `;
 
         // Add save functionality
-        const saveBtn = cells[10].querySelector(".save-btn");
-        saveBtn.addEventListener("click", async () => {
+        cells[10].querySelector(".save-btn").addEventListener("click", async () => {
             try {
                 const updatedData = {
                     brandName: cells[0].querySelector('input').value.trim(),
@@ -699,9 +712,42 @@ function addBrandToTable(data, docId) {
                     taskStatus: cells[9].querySelector('select').value
                 };
 
+                if (!updatedData.brandName || !updatedData.dueBy || !updatedData.nextMeetingDate) {
+                    alert("Please fill in all required fields.");
+                    return;
+                }
+
                 await updateDoc(doc(db, "brands", docId), updatedData);
-                addBrandToTable(updatedData, docId);
-                newRow.remove();
+                
+                // Update cells directly
+                cells[0].textContent = updatedData.brandName;
+                cells[1].textContent = updatedData.teamResponsible;
+                cells[2].textContent = updatedData.relationshipStatus;
+                cells[3].textContent = updatedData.currentSensitivity;
+                cells[4].textContent = updatedData.correctiveAction;
+                cells[5].textContent = updatedData.dueBy;
+                cells[6].textContent = `$${updatedData.trailing30Revenue.toLocaleString()}`;
+                cells[7].textContent = `${updatedData.yoyPercentage}%`;
+                cells[8].textContent = updatedData.nextMeetingDate;
+                cells[9].textContent = updatedData.taskStatus;
+                
+                // Restore action buttons
+                cells[10].innerHTML = `
+                    <button class="action-btn edit-btn">Edit</button>
+                    <button class="action-btn delete-btn">Delete</button>
+                `;
+
+                // Update row class
+                newRow.className = updatedData.teamResponsible === "Pod 1" ? 'row-pod1' : 'row-pod2';
+
+                // Reattach event listeners
+                const newEditBtn = cells[10].querySelector(".edit-btn");
+                const newDeleteBtn = cells[10].querySelector(".delete-btn");
+                newEditBtn.addEventListener("click", editBtn.onclick);
+                newDeleteBtn.addEventListener("click", deleteBtn.onclick);
+
+                updateBrandStatistics();
+                updateStatistics();
             } catch (error) {
                 console.error("Error updating brand:", error);
                 alert("Error updating brand: " + error.message);
