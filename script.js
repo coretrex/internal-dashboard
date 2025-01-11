@@ -33,22 +33,82 @@ document.addEventListener('DOMContentLoaded', () => {
     const passwordInput = document.getElementById("passwordInput");
     const loginError = document.getElementById("loginError");
 
-    loginButton.addEventListener("click", () => {
-        if (passwordInput.value === correctPassword) {
-            loginOverlay.style.display = "none";
-            dashboardContent.style.display = "block";
-        } else {
-            loginError.style.display = "block";
-            loginError.textContent = "Incorrect password. Please try again.";
-        }
+    // Hide error message initially
+    if (loginError) loginError.style.display = "none";
+
+    // Login button click handler
+    if (loginButton) {
+        loginButton.addEventListener("click", () => {
+            if (passwordInput.value === correctPassword) {
+                loginOverlay.style.display = "none";
+                dashboardContent.style.display = "block";
+                // Initialize dashboard after successful login
+                initializeDashboard();
+            } else {
+                loginError.style.display = "block";
+                loginError.textContent = "Incorrect password. Please try again.";
+            }
+        });
+    }
+
+    // Enter key handler for password input
+    if (passwordInput) {
+        passwordInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                loginButton.click();
+            }
+        });
+    }
+});
+
+// Separate function to initialize dashboard components
+async function initializeDashboard() {
+    setupSortableHeaders();
+    await loadProspects();
+    await loadTasks();
+    await loadBrands();
+    
+    // Set up navigation
+    const navButtons = document.querySelectorAll('.nav-btn');
+    const pages = document.querySelectorAll('.page');
+
+    navButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const pageId = button.getAttribute('data-page');
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            pages.forEach(page => page.classList.remove('active'));
+            button.classList.add('active');
+            document.getElementById(pageId).classList.add('active');
+        });
     });
 
-    passwordInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") {
-            loginButton.click();
-        }
-    });
-});
+    // Set up task button listener
+    const addTaskBtn = document.getElementById('addTaskBtn');
+    if (addTaskBtn) {
+        addTaskBtn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            await addTask();
+        });
+    }
+
+    // Set up brand button listener
+    const addBrandBtn = document.getElementById('addBrandBtn');
+    if (addBrandBtn) {
+        addBrandBtn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            await addBrand();
+        });
+    }
+
+    // Set up prospect button listener
+    const addProspectBtn = document.getElementById('addProspectBtn');
+    if (addProspectBtn) {
+        addProspectBtn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            await addProspect();
+        });
+    }
+}
 
 // Constants
 const clientGoal = 30;
@@ -190,8 +250,8 @@ function addProspectToTable(data, docId) {
         <td>${data.salesLead}</td>
         <td>$${data.revenueValue.toLocaleString()}</td>
         <td>
-            <button class="action-btn edit-btn">Edit</button>
-            <button class="action-btn delete-btn">Delete</button>
+            <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+            <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
         </td>
     `;
 
@@ -224,8 +284,8 @@ function addProspectToTable(data, docId) {
 
         // Replace edit/delete buttons with save/cancel buttons
         cells[6].innerHTML = `
-            <button class="action-btn save-btn">Save</button>
-            <button class="action-btn cancel-btn">Cancel</button>
+            <button class="action-btn save-btn" title="Save"><i class="fas fa-save"></i></button>
+            <button class="action-btn cancel-btn" title="Cancel"><i class="fas fa-times"></i></button>
         `;
 
         // Add save functionality
@@ -257,8 +317,8 @@ function addProspectToTable(data, docId) {
                 
                 // Restore action buttons
                 cells[6].innerHTML = `
-                    <button class="action-btn edit-btn">Edit</button>
-                    <button class="action-btn delete-btn">Delete</button>
+                    <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
                 `;
 
                 // Reattach event listeners
@@ -437,10 +497,10 @@ function addTaskToTable(data, docId) {
         <td>${data.dueDate}</td>
         <td>
             ${!data.completed ? `
-                <button class="action-btn complete-btn">Complete</button>
-                <button class="action-btn edit-btn">Edit</button>
+                <button class="action-btn complete-btn" title="Complete"><i class="fas fa-check"></i></button>
+                <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
             ` : ''}
-            <button class="action-btn delete-btn">Delete</button>
+            <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
         </td>
     `;
 
@@ -507,8 +567,8 @@ function addTaskToTable(data, docId) {
             cells[2].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueDate}">`;
 
             cells[3].innerHTML = `
-                <button class="action-btn save-btn">Save</button>
-                <button class="action-btn cancel-btn">Cancel</button>
+                <button class="action-btn save-btn" title="Save"><i class="fas fa-save"></i></button>
+                <button class="action-btn cancel-btn" title="Cancel"><i class="fas fa-times"></i></button>
             `;
 
             // Add save functionality
@@ -652,8 +712,8 @@ function addBrandToTable(data, docId) {
         <td>${data.nextMeetingDate}</td>
         <td>${data.taskStatus}</td>
         <td>
-            <button class="action-btn edit-btn">Edit</button>
-            <button class="action-btn delete-btn">Delete</button>
+            <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+            <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
         </td>
     `;
 
@@ -692,8 +752,8 @@ function addBrandToTable(data, docId) {
 
         // Replace edit/delete buttons with save/cancel buttons
         cells[10].innerHTML = `
-            <button class="action-btn save-btn">Save</button>
-            <button class="action-btn cancel-btn">Cancel</button>
+            <button class="action-btn save-btn" title="Save"><i class="fas fa-save"></i></button>
+            <button class="action-btn cancel-btn" title="Cancel"><i class="fas fa-times"></i></button>
         `;
 
         // Add save functionality
@@ -733,8 +793,8 @@ function addBrandToTable(data, docId) {
                 
                 // Restore action buttons
                 cells[10].innerHTML = `
-                    <button class="action-btn edit-btn">Edit</button>
-                    <button class="action-btn delete-btn">Delete</button>
+                    <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
                 `;
 
                 // Update row class
