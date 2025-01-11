@@ -133,12 +133,16 @@ function updateStatistics() {
     // Update prospect MRR
     let totalRevenue = 0;
     Array.from(prospectsTable.rows).forEach(row => {
-        const revenueCell = row.cells[5];
-        if (revenueCell) {
-            const revenue = parseInt(revenueCell.textContent.replace(/[$,]/g, '')) || 0;
-            totalRevenue += revenue;
+        const statusDropdown = row.querySelector('.status-dropdown');
+        if (statusDropdown && statusDropdown.value === 'In-Progress') {
+            const revenueCell = row.cells[5];
+            if (revenueCell) {
+                const revenue = parseInt(revenueCell.textContent.replace(/[^0-9]/g, '')) || 0;
+                totalRevenue += revenue;
+            }
         }
     });
+    
     prospectMRREl.innerHTML = `$${totalRevenue.toLocaleString()}<span class="goal-text">/$${prospectMRRGoal.toLocaleString()}</span>`;
     
     // Update client count by counting Pod 1 + Pod 2 clients from Brand Growth
@@ -250,10 +254,33 @@ function addProspectToTable(data, docId) {
         <td>${data.salesLead}</td>
         <td>$${data.revenueValue.toLocaleString()}</td>
         <td>
+            <select class="status-dropdown">
+                <option value="In-Progress" ${(data.status || 'In-Progress') === 'In-Progress' ? 'selected' : ''}>In-Progress</option>
+                <option value="Stalled" ${data.status === 'Stalled' ? 'selected' : ''}>Stalled</option>
+                <option value="Won" ${data.status === 'Won' ? 'selected' : ''}>Won</option>
+                <option value="Lost" ${data.status === 'Lost' ? 'selected' : ''}>Lost</option>
+            </select>
+        </td>
+        <td>
             <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
             <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
         </td>
     `;
+
+    // Add status change handler
+    const statusDropdown = newRow.querySelector('.status-dropdown');
+    statusDropdown.addEventListener('change', async () => {
+        try {
+            const newStatus = statusDropdown.value;
+            await updateDoc(doc(db, "prospects", docId), {
+                status: newStatus
+            });
+            updateStatistics();
+        } catch (error) {
+            console.error("Error updating status:", error);
+            alert("Error updating status: " + error.message);
+        }
+    });
 
     // Add edit button functionality
     const editBtn = newRow.querySelector(".edit-btn");
@@ -436,10 +463,14 @@ async function addProspect() {
 async function loadProspects() {
     try {
         const querySnapshot = await getDocs(collection(db, "prospects"));
-        prospectsTable.innerHTML = '';
+        prospectsTable.innerHTML = ''; // Clear the table
         
         querySnapshot.forEach((doc) => {
             const data = doc.data();
+            // Ensure status is set for existing records
+            if (!data.status) {
+                data.status = 'In-Progress';
+            }
             addProspectToTable(data, doc.id);
         });
         
