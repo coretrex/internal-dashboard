@@ -479,3 +479,29 @@ h1 {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* Status-based row styles */
+.status-lost {
+    background-color: #ffebee !important; /* Light red */
+    opacity: 0.8;
+}
+
+.status-won {
+    background-color: #e8f5e9 !important; /* Light green */
+    opacity: 0.8;
+}
+
+.status-stalled {
+    background-color: #fff3e0 !important; /* Light yellow */
+    opacity: 0.8;
+}
+
+/* Override the alternating row colors for status rows */
+.dashboard-table tbody tr.status-lost:nth-child(even),
+.dashboard-table tbody tr.status-lost:nth-child(odd),
+.dashboard-table tbody tr.status-won:nth-child(even),
+.dashboard-table tbody tr.status-won:nth-child(odd),
+.dashboard-table tbody tr.status-stalled:nth-child(even),
+.dashboard-table tbody tr.status-stalled:nth-child(odd) {
+    background-color: inherit;
+}

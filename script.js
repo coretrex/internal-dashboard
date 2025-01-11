@@ -245,6 +245,9 @@ function sortTable(column) {
 function addProspectToTable(data, docId) {
     const newRow = document.createElement("tr");
     newRow.dataset.docId = docId;
+    
+    // Set initial status class
+    updateRowStatusClass(newRow, data.status || 'In-Progress');
 
     newRow.innerHTML = `
         <td>${data.prospectName}</td>
@@ -267,7 +270,7 @@ function addProspectToTable(data, docId) {
         </td>
     `;
 
-    // Add status change handler
+    // Update status change handler
     const statusDropdown = newRow.querySelector('.status-dropdown');
     statusDropdown.addEventListener('change', async () => {
         try {
@@ -275,6 +278,8 @@ function addProspectToTable(data, docId) {
             await updateDoc(doc(db, "prospects", docId), {
                 status: newStatus
             });
+            updateRowStatusClass(newRow, newStatus);
+            sortProspectsByStatus();
             updateStatistics();
         } catch (error) {
             console.error("Error updating status:", error);
@@ -463,17 +468,17 @@ async function addProspect() {
 async function loadProspects() {
     try {
         const querySnapshot = await getDocs(collection(db, "prospects"));
-        prospectsTable.innerHTML = ''; // Clear the table
+        prospectsTable.innerHTML = '';
         
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            // Ensure status is set for existing records
             if (!data.status) {
                 data.status = 'In-Progress';
             }
             addProspectToTable(data, doc.id);
         });
         
+        sortProspectsByStatus();
         updateStatistics();
     } catch (error) {
         console.error("Error loading prospects:", error);
@@ -1004,3 +1009,47 @@ addProspectBtn.addEventListener("click", async (e) => {
     e.preventDefault();
     await addProspect();
 });
+
+// Add this function to sort prospects
+function sortProspectsByStatus() {
+    const tbody = document.getElementById('prospectsTable');
+    const rows = Array.from(tbody.rows);
+    
+    // Define status priority (In-Progress first, others at the bottom)
+    const statusPriority = {
+        'In-Progress': 0,
+        'Stalled': 1,
+        'Won': 2,
+        'Lost': 3
+    };
+    
+    // Sort rows based on status priority
+    rows.sort((a, b) => {
+        const statusA = a.querySelector('.status-dropdown').value;
+        const statusB = b.querySelector('.status-dropdown').value;
+        return statusPriority[statusA] - statusPriority[statusB];
+    });
+    
+    // Clear and re-append rows in new order
+    tbody.innerHTML = '';
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// Add this helper function to update row status classes
+function updateRowStatusClass(row, status) {
+    // Remove all status classes
+    row.classList.remove('status-lost', 'status-won', 'status-stalled');
+    
+    // Add appropriate status class
+    switch(status) {
+        case 'Lost':
+            row.classList.add('status-lost');
+            break;
+        case 'Won':
+            row.classList.add('status-won');
+            break;
+        case 'Stalled':
+            row.classList.add('status-stalled');
+            break;
+    }
+}
