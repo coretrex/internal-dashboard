@@ -169,13 +169,21 @@ function updateStatistics() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     daysBeforeMarchEl.textContent = diffDays;
 
-    // Add Tasks Due Today count
-    const todayString = today.toISOString().split('T')[0];
+    // Update Tasks Due Today count
+    today.setHours(0, 0, 0, 0);
     let tasksDueToday = 0;
+    
     Array.from(prospectsTable.rows).forEach(row => {
         const dueDateCell = row.cells[2];
-        if (dueDateCell && dueDateCell.textContent === todayString) {
-            tasksDueToday++;
+        if (dueDateCell && dueDateCell.textContent) {
+            const dueDate = new Date(dueDateCell.textContent);
+            // Check if it's a valid date before comparing
+            if (!isNaN(dueDate.getTime())) {
+                dueDate.setHours(0, 0, 0, 0);
+                if (dueDate <= today) {
+                    tasksDueToday++;
+                }
+            }
         }
     });
     document.getElementById('salesTasksDueToday').textContent = tasksDueToday;
@@ -927,28 +935,35 @@ function updateBrandStatistics() {
     const brandsTable = document.getElementById('brandsTable');
     const rows = Array.from(brandsTable.rows);
     
-    // Count Pod 1 and Pod 2 clients
     let pod1Count = 0;
     let pod2Count = 0;
     let poorRelationships = 0;
     let tasksDueToday = 0;
     
-    // Get today's date in YYYY-MM-DD format
     const today = new Date();
-    const todayString = today.toISOString().split('T')[0];
+    today.setHours(0, 0, 0, 0);
     
     rows.forEach(row => {
         const team = row.cells[1].textContent;
         const relationship = row.cells[2].textContent;
-        const dueDate = row.cells[5].textContent; // "Due By" column
+        const dueDateText = row.cells[5].textContent;
         
         if (team === 'Pod 1') pod1Count++;
         if (team === 'Pod 2') pod2Count++;
         if (relationship === 'Poor') poorRelationships++;
-        if (dueDate === todayString) tasksDueToday++;
+        
+        // Check for valid date before comparing
+        if (dueDateText) {
+            const dueDate = new Date(dueDateText);
+            if (!isNaN(dueDate.getTime())) {
+                dueDate.setHours(0, 0, 0, 0);
+                if (dueDate <= today) {
+                    tasksDueToday++;
+                }
+            }
+        }
     });
     
-    // Update the statistics
     document.getElementById('pod1Count').textContent = pod1Count;
     document.getElementById('pod2Count').textContent = pod2Count;
     document.getElementById('poorRelationships').textContent = poorRelationships;
