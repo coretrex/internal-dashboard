@@ -63,7 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Separate function to initialize dashboard components
 async function initializeDashboard() {
-    setupSortableHeaders();
     await loadProspects();
     await loadTasks();
     await loadBrands();
@@ -494,12 +493,30 @@ async function loadProspects() {
         const querySnapshot = await getDocs(collection(db, "prospects"));
         prospectsTable.innerHTML = '';
         
+        // Convert to array
+        const prospects = [];
         querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            if (!data.status) {
-                data.status = 'In-Progress';
-            }
-            addProspectToTable(data, doc.id);
+            prospects.push({
+                ...doc.data(),
+                id: doc.id
+            });
+        });
+
+        // Sort by Sales Lead and date
+        prospects.sort((a, b) => {
+            // First compare by Sales Lead
+            const leadCompare = (a.salesLead || '').localeCompare(b.salesLead || '');
+            if (leadCompare !== 0) return leadCompare;
+            
+            // If same Sales Lead, compare by date
+            const dateA = new Date(a.dueDate || 0);
+            const dateB = new Date(b.dueDate || 0);
+            return dateA - dateB;
+        });
+        
+        // Add to table
+        prospects.forEach(data => {
+            addProspectToTable(data, data.id);
         });
         
         sortProspectsByStatus();
@@ -1018,7 +1035,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Load initial data
-    setupSortableHeaders();
     await loadProspects();
     await loadTasks();
     console.log("Initial load complete");
