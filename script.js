@@ -1020,11 +1020,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadBrands();
 });
 
-addProspectBtn.addEventListener("click", async (e) => {
-    e.preventDefault();
-    await addProspect();
-});
-
 // Add this function to sort prospects
 function sortProspectsByStatus() {
     const tbody = document.getElementById('prospectsTable');
