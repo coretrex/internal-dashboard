@@ -164,8 +164,10 @@ function updateStatistics() {
     }
     clientCountEl.innerHTML = `${totalClients}<span class="goal-text">/${clientGoal}</span>`;
     
-    // Update days before March
+    // Get today's date once for all calculations
     const today = new Date();
+    
+    // Update days before March
     const year = today.getFullYear();
     const marchFirst = new Date(year, 2, 1);
     if (today > marchFirst) {
@@ -176,23 +178,25 @@ function updateStatistics() {
     daysBeforeMarchEl.textContent = diffDays;
 
     // Update Tasks Due Today count
-    today.setHours(0, 0, 0, 0);
+    const todayString = new Date().toISOString().split('T')[0];
     let tasksDueToday = 0;
     
     Array.from(prospectsTable.rows).forEach(row => {
+        const nextStepsCell = row.cells[1];
         const dueDateCell = row.cells[2];
-        if (dueDateCell && dueDateCell.textContent) {
-            const dueDate = new Date(dueDateCell.textContent);
-            // Check if it's a valid date before comparing
-            if (!isNaN(dueDate.getTime())) {
-                dueDate.setHours(0, 0, 0, 0);
-                if (dueDate <= today) {
-                    tasksDueToday++;
-                }
-            }
+        const statusDropdown = row.querySelector('.status-dropdown');
+        
+        if (statusDropdown?.value === 'In-Progress' && 
+            nextStepsCell?.textContent.trim() && 
+            dueDateCell?.textContent && 
+            dueDateCell.textContent <= todayString) {
+            tasksDueToday++;
         }
     });
-    document.getElementById('salesTasksDueToday').textContent = tasksDueToday;
+    
+    if (document.getElementById('salesTasksDueToday')) {
+        document.getElementById('salesTasksDueToday').textContent = tasksDueToday;
+    }
 }
 
 // Make sure you have these variables at the top with other constants
@@ -973,27 +977,24 @@ function updateBrandStatistics() {
     let poorRelationships = 0;
     let tasksDueToday = 0;
     
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Get today's date string in YYYY-MM-DD format
+    const todayString = new Date().toISOString().split('T')[0];
     
     rows.forEach(row => {
-        const team = row.cells[1].textContent;
-        const relationship = row.cells[2].textContent;
-        const dueDateText = row.cells[5].textContent;
+        const team = row.cells[1]?.textContent;
+        const relationship = row.cells[2]?.textContent;
+        const dueDateText = row.cells[5]?.textContent;
+        const correctiveAction = row.cells[4]?.textContent;
         
         if (team === 'Pod 1') pod1Count++;
         if (team === 'Pod 2') pod2Count++;
         if (relationship === 'Poor') poorRelationships++;
         
-        // Check for valid date before comparing
-        if (dueDateText) {
-            const dueDate = new Date(dueDateText);
-            if (!isNaN(dueDate.getTime())) {
-                dueDate.setHours(0, 0, 0, 0);
-                if (dueDate <= today) {
-                    tasksDueToday++;
-                }
-            }
+        // Only count tasks that have a corrective action and are due today or earlier
+        if (correctiveAction?.trim() && 
+            dueDateText && 
+            dueDateText <= todayString) {
+            tasksDueToday++;
         }
     });
     
