@@ -126,20 +126,23 @@ let tasksTable, addTaskBtn;
 
 // Statistics function
 function updateStatistics() {
-    // Update prospect count
-    const prospectCount = prospectsTable.rows.length;
-    prospectCountEl.innerHTML = `${prospectCount}<span class="goal-text">/${prospectGoal}</span>`;
-    
-    // Update prospect MRR
-    let totalRevenue = 0;
-    Array.from(prospectsTable.rows).forEach(row => {
+    // Update prospect count - only count In-Progress prospects
+    const inProgressProspects = Array.from(prospectsTable.rows).filter(row => {
         const statusDropdown = row.querySelector('.status-dropdown');
-        if (statusDropdown && statusDropdown.value === 'In-Progress') {
-            const revenueCell = row.cells[5];
-            if (revenueCell) {
-                const revenue = parseInt(revenueCell.textContent.replace(/[^0-9]/g, '')) || 0;
-                totalRevenue += revenue;
-            }
+        return statusDropdown && statusDropdown.value === 'In-Progress';
+    });
+    
+    // Update prospect count
+    const inProgressCount = inProgressProspects.length;
+    prospectCountEl.innerHTML = `${inProgressCount}<span class="goal-text">/${prospectGoal}</span>`;
+    
+    // Update prospect MRR - only sum revenue from In-Progress prospects
+    let totalRevenue = 0;
+    inProgressProspects.forEach(row => {
+        const revenueCell = row.cells[5];
+        if (revenueCell) {
+            const revenue = parseFloat(revenueCell.textContent.replace(/[^0-9.]/g, '')) || 0;
+            totalRevenue += revenue;
         }
     });
     
@@ -337,7 +340,8 @@ function addProspectToTable(data, docId) {
                     dueDate: cells[2].querySelector('input').value,
                     signatureExpected: cells[3].querySelector('select').value,
                     salesLead: cells[4].querySelector('select').value,
-                    revenueValue: parseFloat(cells[5].querySelector('input').value)
+                    revenueValue: parseFloat(cells[5].querySelector('input').value),
+                    status: statusDropdown.value // Use the status from the original dropdown
                 };
 
                 if (!updatedData.prospectName || !updatedData.dueDate || isNaN(updatedData.revenueValue) || updatedData.revenueValue <= 0) {
@@ -347,9 +351,14 @@ function addProspectToTable(data, docId) {
 
                 await updateDoc(doc(db, "prospects", docId), updatedData);
                 
-                // Get the current status before updating cells
-                const currentStatus = statusDropdown.value;
-
+                // Store the reference to the current row
+                const currentRow = newRow;
+                
+                // Create and add the new row
+                addProspectToTable(updatedData, docId);
+                
+                // Remove the old row after adding the new one
+                currentRow.remove();
                 // Update cells directly
                 cells[0].textContent = updatedData.prospectName;
                 cells[1].textContent = updatedData.nextSteps;
@@ -358,44 +367,17 @@ function addProspectToTable(data, docId) {
                 cells[4].textContent = updatedData.salesLead;
                 cells[5].textContent = `$${updatedData.revenueValue.toLocaleString()}`;
                 
-                // Restore the status dropdown
-                cells[6].innerHTML = `
-                    <select class="status-dropdown">
-                        <option value="In-Progress" ${currentStatus === 'In-Progress' ? 'selected' : ''}>In-Progress</option>
-                        <option value="Stalled" ${currentStatus === 'Stalled' ? 'selected' : ''}>Stalled</option>
-                        <option value="Won" ${currentStatus === 'Won' ? 'selected' : ''}>Won</option>
-                        <option value="Lost" ${currentStatus === 'Lost' ? 'selected' : ''}>Lost</option>
-                    </select>
-                `;
-
                 // Restore action buttons
-                cells[7].innerHTML = `
+                cells[6].innerHTML = `
                     <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
                 `;
 
                 // Reattach event listeners
-                const newStatusDropdown = cells[6].querySelector('.status-dropdown');
-                newStatusDropdown.addEventListener('change', async () => {
-                    try {
-                        const newStatus = newStatusDropdown.value;
-                        await updateDoc(doc(db, "prospects", docId), {
-                            status: newStatus
-                        });
-                        updateRowStatusClass(newRow, newStatus);
-                        sortProspectsByStatus();
-                        updateStatistics();
-                    } catch (error) {
-                        console.error("Error updating status:", error);
-                        alert("Error updating status: " + error.message);
-                    }
-                });
-
-                const newEditBtn = cells[7].querySelector(".edit-btn");
-                const newDeleteBtn = cells[7].querySelector(".delete-btn");
-                
-                newEditBtn.addEventListener("click", () => editBtn.onclick());
-                newDeleteBtn.addEventListener("click", () => deleteBtn.onclick());
+                const newEditBtn = cells[6].querySelector(".edit-btn");
+                const newDeleteBtn = cells[6].querySelector(".delete-btn");
+                newEditBtn.addEventListener("click", editBtn.onclick);
+                newDeleteBtn.addEventListener("click", deleteBtn.onclick);
 
                 updateStatistics();
             } catch (error) {
@@ -856,7 +838,7 @@ function addBrandToTable(data, docId) {
                 // Update cells directly
                 cells[0].textContent = updatedData.brandName;
                 cells[1].textContent = updatedData.teamResponsible;
-                cells[2].textContent = updatedData.dueBy;
+                cells[2].textContent = updatedData.relationshipStatus;
                 cells[3].textContent = updatedData.currentSensitivity;
                 cells[4].textContent = updatedData.correctiveAction;
                 cells[5].textContent = updatedData.dueBy;
