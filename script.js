@@ -962,7 +962,7 @@ async function loadBrands() {
         const brandsTable = document.getElementById('brandsTable');
         brandsTable.innerHTML = '';
         
-        // Convert to array and sort
+        // Convert to array
         const brands = [];
         querySnapshot.forEach((doc) => {
             brands.push({
@@ -971,23 +971,24 @@ async function loadBrands() {
             });
         });
 
-        // Sort brands: First by team (Pod 1 first), then by brand name
+        // Sort by Pod first, then by due date
         brands.sort((a, b) => {
-            // First sort by team
-            if (a.teamResponsible !== b.teamResponsible) {
-                return a.teamResponsible === "Pod 1" ? -1 : 1;
-            }
-            // Then sort alphabetically by brand name within each team
-            return a.brandName.localeCompare(b.brandName);
+            // First compare by team (Pod)
+            const teamCompare = a.teamResponsible.localeCompare(b.teamResponsible);
+            if (teamCompare !== 0) return teamCompare;
+            
+            // If same team, compare by due date
+            const dateA = a.dueBy || '';
+            const dateB = b.dueBy || '';
+            return dateA.localeCompare(dateB);
         });
-
+        
         // Add to table
         brands.forEach(brand => {
             addBrandToTable(brand, brand.id);
         });
         
         updateBrandStatistics();
-        updateStatistics();
     } catch (error) {
         console.error("Error loading brands:", error);
     }
