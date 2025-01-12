@@ -24,6 +24,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// Add this CSS to your stylesheet or add it inline
+const style = document.createElement('style');
+style.textContent = `
+    .overdue {
+        background-color: #ff0000 !important;
+        color: white !important;
+    }
+`;
+document.head.appendChild(style);
+
 // Login functionality
 document.addEventListener('DOMContentLoaded', () => {
     const correctPassword = "2020";
@@ -267,10 +277,13 @@ function addProspectToTable(data, docId) {
     // Set initial status class
     updateRowStatusClass(newRow, data.status || 'In-Progress');
 
+    // Get today's date string for comparison
+    const todayString = new Date().toISOString().split('T')[0];
+
     newRow.innerHTML = `
         <td>${data.prospectName}</td>
         <td>${data.nextSteps}</td>
-        <td>${data.dueDate}</td>
+        <td class="${data.dueDate <= todayString ? 'overdue' : ''}">${data.dueDate}</td>
         <td>${data.signatureExpected}</td>
         <td>${data.salesLead}</td>
         <td>$${data.revenueValue.toLocaleString()}</td>
@@ -781,13 +794,16 @@ function addBrandToTable(data, docId) {
     // Add pod-specific class
     newRow.classList.add(data.teamResponsible === "Pod 1" ? 'row-pod1' : 'row-pod2');
 
+    // Get today's date string for comparison
+    const todayString = new Date().toISOString().split('T')[0];
+
     newRow.innerHTML = `
         <td>${data.brandName}</td>
         <td>${data.teamResponsible}</td>
         <td>${data.relationshipStatus}</td>
         <td>${data.currentSensitivity}</td>
-        <td title="${data.correctiveAction}">${data.correctiveAction}</td>
-        <td>${data.dueBy}</td>
+        <td>${data.correctiveAction}</td>
+        <td class="${data.dueBy <= todayString ? 'overdue' : ''}">${data.dueBy}</td>
         <td>$${data.trailing30Revenue.toLocaleString()}</td>
         <td>${data.yoyPercentage}%</td>
         <td>${data.nextMeetingDate}</td>
