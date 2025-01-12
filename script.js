@@ -361,7 +361,7 @@ function addProspectToTable(data, docId) {
                     signatureExpected: cells[3].querySelector('select').value,
                     salesLead: cells[4].querySelector('select').value,
                     revenueValue: parseFloat(cells[5].querySelector('input').value),
-                    status: statusDropdown.value // Use the status from the original dropdown
+                    status: statusDropdown.value
                 };
 
                 if (!updatedData.prospectName || !updatedData.dueDate || isNaN(updatedData.revenueValue) || updatedData.revenueValue <= 0) {
@@ -371,31 +371,41 @@ function addProspectToTable(data, docId) {
 
                 await updateDoc(doc(db, "prospects", docId), updatedData);
                 
-                // Store the reference to the current row
-                const currentRow = newRow;
+                // Get today's date string for comparison
+                const todayString = new Date().toISOString().split('T')[0];
                 
-                // Create and add the new row
-                addProspectToTable(updatedData, docId);
-                
-                // Remove the old row after adding the new one
-                currentRow.remove();
-                // Update cells directly
+                // Update cells directly without nesting td tags
                 cells[0].textContent = updatedData.prospectName;
                 cells[1].textContent = updatedData.nextSteps;
                 cells[2].textContent = updatedData.dueDate;
+                cells[2].className = updatedData.dueDate <= todayString ? 'overdue' : '';
                 cells[3].textContent = updatedData.signatureExpected;
                 cells[4].textContent = updatedData.salesLead;
                 cells[5].textContent = `$${updatedData.revenueValue.toLocaleString()}`;
                 
-                // Restore action buttons
+                // Restore status dropdown
                 cells[6].innerHTML = `
+                    <select class="status-dropdown">
+                        <option value="In-Progress" ${updatedData.status === 'In-Progress' ? 'selected' : ''}>In-Progress</option>
+                        <option value="Stalled" ${updatedData.status === 'Stalled' ? 'selected' : ''}>Stalled</option>
+                        <option value="Won" ${updatedData.status === 'Won' ? 'selected' : ''}>Won</option>
+                        <option value="Lost" ${updatedData.status === 'Lost' ? 'selected' : ''}>Lost</option>
+                    </select>
+                `;
+
+                // Restore action buttons in the correct cell
+                cells[7].innerHTML = `
                     <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
                 `;
 
                 // Reattach event listeners
-                const newEditBtn = cells[6].querySelector(".edit-btn");
-                const newDeleteBtn = cells[6].querySelector(".delete-btn");
+                const newStatusDropdown = cells[6].querySelector('.status-dropdown');
+                const newEditBtn = cells[7].querySelector(".edit-btn");
+                const newDeleteBtn = cells[7].querySelector(".delete-btn");
+                
+                // Reattach status change handler
+                newStatusDropdown.addEventListener('change', statusDropdown.onchange);
                 newEditBtn.addEventListener("click", editBtn.onclick);
                 newDeleteBtn.addEventListener("click", deleteBtn.onclick);
 
