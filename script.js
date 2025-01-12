@@ -347,6 +347,9 @@ function addProspectToTable(data, docId) {
 
                 await updateDoc(doc(db, "prospects", docId), updatedData);
                 
+                // Get the current status before updating cells
+                const currentStatus = statusDropdown.value;
+
                 // Update cells directly
                 cells[0].textContent = updatedData.prospectName;
                 cells[1].textContent = updatedData.nextSteps;
@@ -355,17 +358,44 @@ function addProspectToTable(data, docId) {
                 cells[4].textContent = updatedData.salesLead;
                 cells[5].textContent = `$${updatedData.revenueValue.toLocaleString()}`;
                 
-                // Restore action buttons
+                // Restore the status dropdown
                 cells[6].innerHTML = `
+                    <select class="status-dropdown">
+                        <option value="In-Progress" ${currentStatus === 'In-Progress' ? 'selected' : ''}>In-Progress</option>
+                        <option value="Stalled" ${currentStatus === 'Stalled' ? 'selected' : ''}>Stalled</option>
+                        <option value="Won" ${currentStatus === 'Won' ? 'selected' : ''}>Won</option>
+                        <option value="Lost" ${currentStatus === 'Lost' ? 'selected' : ''}>Lost</option>
+                    </select>
+                `;
+
+                // Restore action buttons
+                cells[7].innerHTML = `
                     <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
                 `;
 
                 // Reattach event listeners
-                const newEditBtn = cells[6].querySelector(".edit-btn");
-                const newDeleteBtn = cells[6].querySelector(".delete-btn");
-                newEditBtn.addEventListener("click", editBtn.onclick);
-                newDeleteBtn.addEventListener("click", deleteBtn.onclick);
+                const newStatusDropdown = cells[6].querySelector('.status-dropdown');
+                newStatusDropdown.addEventListener('change', async () => {
+                    try {
+                        const newStatus = newStatusDropdown.value;
+                        await updateDoc(doc(db, "prospects", docId), {
+                            status: newStatus
+                        });
+                        updateRowStatusClass(newRow, newStatus);
+                        sortProspectsByStatus();
+                        updateStatistics();
+                    } catch (error) {
+                        console.error("Error updating status:", error);
+                        alert("Error updating status: " + error.message);
+                    }
+                });
+
+                const newEditBtn = cells[7].querySelector(".edit-btn");
+                const newDeleteBtn = cells[7].querySelector(".delete-btn");
+                
+                newEditBtn.addEventListener("click", () => editBtn.onclick());
+                newDeleteBtn.addEventListener("click", () => deleteBtn.onclick());
 
                 updateStatistics();
             } catch (error) {
@@ -826,7 +856,7 @@ function addBrandToTable(data, docId) {
                 // Update cells directly
                 cells[0].textContent = updatedData.brandName;
                 cells[1].textContent = updatedData.teamResponsible;
-                cells[2].textContent = updatedData.relationshipStatus;
+                cells[2].textContent = updatedData.dueBy;
                 cells[3].textContent = updatedData.currentSensitivity;
                 cells[4].textContent = updatedData.correctiveAction;
                 cells[5].textContent = updatedData.dueBy;
