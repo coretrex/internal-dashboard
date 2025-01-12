@@ -82,10 +82,14 @@ async function initializeDashboard() {
         });
     });
 
-    // Set up task button listener
+    // Single place to initialize task button
     const addTaskBtn = document.getElementById('addTaskBtn');
     if (addTaskBtn) {
-        addTaskBtn.addEventListener("click", async (e) => {
+        // Remove any existing listeners
+        const newAddTaskBtn = addTaskBtn.cloneNode(true);
+        addTaskBtn.parentNode.replaceChild(newAddTaskBtn, addTaskBtn);
+        
+        newAddTaskBtn.addEventListener("click", async (e) => {
             e.preventDefault();
             await addTask();
         });
