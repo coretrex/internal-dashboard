@@ -1003,19 +1003,40 @@ function updateBrandStatistics() {
     let pod2Count = 0;
     let poorRelationships = 0;
     let tasksDueToday = 0;
+    let meetingsThisWeek = 0;
     
     // Get today's date string in YYYY-MM-DD format
-    const todayString = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+    
+    // Calculate the start and end of the current work week (Monday-Friday)
+    const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
+    const friday = new Date(monday);
+    friday.setDate(monday.getDate() + 4);
+    
+    // Format dates for comparison
+    const mondayString = monday.toISOString().split('T')[0];
+    const fridayString = friday.toISOString().split('T')[0];
     
     rows.forEach(row => {
         const team = row.cells[1]?.textContent;
         const relationship = row.cells[2]?.textContent;
         const dueDateText = row.cells[5]?.textContent;
         const correctiveAction = row.cells[4]?.textContent;
+        const nextMeetingDate = row.cells[8]?.textContent;
         
         if (team === 'Pod 1') pod1Count++;
         if (team === 'Pod 2') pod2Count++;
         if (relationship === 'Poor') poorRelationships++;
+        
+        // Count meetings scheduled for this work week
+        if (nextMeetingDate && 
+            nextMeetingDate >= mondayString && 
+            nextMeetingDate <= fridayString) {
+            meetingsThisWeek++;
+        }
         
         // Only count tasks that have a corrective action and are due today or earlier
         if (correctiveAction?.trim() && 
@@ -1029,6 +1050,7 @@ function updateBrandStatistics() {
     document.getElementById('pod2Count').textContent = pod2Count;
     document.getElementById('poorRelationships').textContent = poorRelationships;
     document.getElementById('tasksDueToday').textContent = tasksDueToday;
+    document.getElementById('meetingsThisWeek').textContent = meetingsThisWeek;
 }
 
 // Modify your existing DOMContentLoaded event listener to include this:
