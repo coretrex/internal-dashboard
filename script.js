@@ -807,6 +807,9 @@ function addBrandToTable(data, docId) {
     // Get today's date string for comparison
     const todayString = new Date().toISOString().split('T')[0];
 
+    // Check if meeting date is in the past
+    const isPastMeeting = data.nextMeetingDate < todayString;
+
     newRow.innerHTML = `
         <td>${data.brandName}</td>
         <td>${data.teamResponsible}</td>
@@ -816,7 +819,7 @@ function addBrandToTable(data, docId) {
         <td class="${data.dueBy <= todayString ? 'overdue' : ''}">${data.dueBy}</td>
         <td>$${data.trailing30Revenue.toLocaleString()}</td>
         <td>${data.yoyPercentage}%</td>
-        <td>${data.nextMeetingDate}</td>
+        <td class="${isPastMeeting ? 'past-meeting' : ''}">${data.nextMeetingDate}</td>
         <td>${data.taskStatus}</td>
         <td>
             <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>

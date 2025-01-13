@@ -505,3 +505,9 @@ h1 {
 .dashboard-table tbody tr.status-stalled:nth-child(odd) {
     background-color: inherit;
 }
+
+/* Add this new style for past meetings */
+.past-meeting {
+    color: #ff0000;
+    font-weight: bold;
+}
