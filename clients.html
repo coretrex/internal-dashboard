@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>CoreTrex - Clients</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="page-content">
+        <h1>Clients Dashboard</h1>
+        
+        <!-- Stats Container -->
+        <div class="stats-container">
+            <div class="stat">
+                <div class="stat-number" id="pod1Count">0</div>
+                <div class="stat-label">Pod 1 Clients</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="pod2Count">0</div>
+                <div class="stat-label">Pod 2 Clients</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="poorRelationships">0</div>
+                <div class="stat-label">Poor Relationships</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="meetingsThisWeek">0</div>
+                <div class="stat-label">Meetings This Week</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="tasksDueToday">0</div>
+                <div class="stat-label">Tasks Due Today</div>
+            </div>
+        </div>
+
+        <div class="clients-container">
+            <!-- Input Section -->
+            <div class="input-section">
+                <input type="text" id="brandName" placeholder="Brand Name" class="input-field" />
+                <select id="teamResponsible" class="input-field dropdown">
+                    <option value="Pod 1">Pod 1</option>
+                    <option value="Pod 2">Pod 2</option>
+                </select>
+                <select id="relationshipStatus" class="input-field dropdown">
+                    <option value="Poor">Poor</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Strong">Strong</option>
+                </select>
+                <select id="currentSensitivity" class="input-field dropdown">
+                    <option value="Poor Profit">Poor Profit</option>
+                    <option value="Stagnant Sales">Stagnant Sales</option>
+                    <option value="Lack of Clarity">Lack of Clarity</option>
+                    <option value="CoreTrex Cost">CoreTrex Cost</option>
+                    <option value="Lack of Trust">Lack of Trust</option>
+                </select>
+                <input type="text" id="correctiveAction" placeholder="Corrective Action" class="input-field" />
+                <div class="input-field-group">
+                    <label for="dueBy">Due Date</label>
+                    <input type="date" id="dueBy" class="input-field date-picker" />
+                </div>
+                <input type="number" step="0.01" id="trailing30Revenue" placeholder="30 Day Revenue ($)" class="input-field" />
+                <input type="number" step="0.01" id="yoyPercentage" placeholder="YoY %" class="input-field" />
+                <div class="input-field-group">
+                    <label for="nextMeetingDate">Next Meeting</label>
+                    <input type="date" id="nextMeetingDate" class="input-field date-picker" />
+                </div>
+                <select id="taskStatus" class="input-field dropdown">
+                    <option value="In Progress">In Progress</option>
+                    <option value="Done">Done</option>
+                    <option value="Waiting on Client">Waiting on Client</option>
+                </select>
+                <button id="addClientBtn" class="add-btn">Add Client</button>
+            </div>
+
+            <!-- Clients Table -->
+            <table class="dashboard-table" id="clientsTable">
+                <thead>
+                    <tr>
+                        <th>Brand Name</th>
+                        <th class="hide-column">Team</th>
+                        <th>Relationship</th>
+                        <th>Sensitivity</th>
+                        <th>Corrective Action</th>
+                        <th>Due By</th>
+                        <th>30 Day Revenue</th>
+                        <th>YoY %</th>
+                        <th>Next Meeting</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    <!-- Navigation -->
+    <nav class="nav-buttons">
+        <a href="prospects.html" class="nav-btn">Prospects</a>
+        <a href="tasks.html" class="nav-btn">Tasks</a>
+        <a href="clients.html" class="nav-btn active">Clients</a>
+    </nav>
+    <script type="module" src="clients.js"></script>
+</body>
+</html> 

@@ -73,10 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Separate function to initialize dashboard components
 async function initializeDashboard() {
-    await loadProspects();
-    await loadTasks();
-    await loadBrands();
-    
     // Set up navigation
     const navButtons = document.querySelectorAll('.nav-btn');
     const pages = document.querySelectorAll('.page');
@@ -90,37 +86,6 @@ async function initializeDashboard() {
             document.getElementById(pageId).classList.add('active');
         });
     });
-
-    // Single place to initialize task button
-    const addTaskBtn = document.getElementById('addTaskBtn');
-    if (addTaskBtn) {
-        // Remove any existing listeners
-        const newAddTaskBtn = addTaskBtn.cloneNode(true);
-        addTaskBtn.parentNode.replaceChild(newAddTaskBtn, addTaskBtn);
-        
-        newAddTaskBtn.addEventListener("click", async (e) => {
-            e.preventDefault();
-            await addTask();
-        });
-    }
-
-    // Set up brand button listener
-    const addBrandBtn = document.getElementById('addBrandBtn');
-    if (addBrandBtn) {
-        addBrandBtn.addEventListener("click", async (e) => {
-            e.preventDefault();
-            await addBrand();
-        });
-    }
-
-    // Set up prospect button listener
-    const addProspectBtn = document.getElementById('addProspectBtn');
-    if (addProspectBtn) {
-        addProspectBtn.addEventListener("click", async (e) => {
-            e.preventDefault();
-            await addProspect();
-        });
-    }
 }
 
 // Constants

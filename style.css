@@ -2,7 +2,9 @@
   Flat Design with Modern Blue & Poppins Font
 */
 
-/* Global reset and font */
+/* =================
+   COMMON STYLES 
+   ================= */
 * {
   margin: 0;
   padding: 0;
@@ -81,14 +83,14 @@ h1 {
 .input-field-group {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 140px;
+  gap: 1px;
+  min-width: 120px;
   margin-bottom: 0;
   height: fit-content; /* Add this to prevent extra space */
 }
 
 .input-field-group label {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: #666;
   margin-bottom: 0;
   line-height: 1; /* Add this to reduce vertical space */
@@ -104,33 +106,33 @@ h1 {
 */
 .input-field {
   flex: 0 0 auto;
-  min-width: 100px;
-  padding: 10px;
+  min-width: 90px;
+  padding: 6px 8px;
   border-radius: 4px;
   border: 1px solid #ccc;
-  font-size: 14px;
+  font-size: 13px;
   outline: none;
   text-align: left; /* Left-justified */
 }
 
 .date-picker {
-  min-width: 140px;
+  min-width: 120px;
 }
 
 /* Dropdown style */
 .dropdown {
-  min-width: 120px;
+  min-width: 100px;
 }
 
 /* Add button styling */
 .add-btn {
   flex: 0 0 auto;
-  padding: 10px 20px;
+  padding: 6px 15px;
   background-color: #2979ff; /* Modern blue */
   color: #fff;
   border: none;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: background-color 0.3s ease;
   white-space: nowrap;
@@ -272,7 +274,9 @@ h1 {
   text-align: left; /* Left-justified */
 }
 
-/* Add these new styles */
+/* =================
+   LOGIN PAGE 
+   ================= */
 .login-overlay {
   position: fixed;
   top: 0;
@@ -369,6 +373,114 @@ h1 {
   animation: pulse 1.5s infinite;
 }
 
+/* =================
+   PROSPECTS PAGE 
+   ================= */
+.prospects-container {
+  width: 95%;
+  margin: 0 auto;
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.prospects-table tbody tr:nth-child(even) {
+  background-color: #f5f5f5;
+}
+
+.prospects-table tbody tr:nth-child(odd) {
+  background-color: #fff;
+}
+
+/* Status-based styles for prospects */
+.status-lost {
+  background-color: #ffebee !important;
+  opacity: 0.8;
+}
+
+.status-won {
+  background-color: #80be84 !important;
+  opacity: 0.8;
+}
+
+.status-stalled {
+  background-color: #fff3e0 !important;
+  opacity: 0.8;
+}
+
+/* =================
+   TASKS PAGE 
+   ================= */
+.tasks-container {
+  width: 95%;
+  margin: 0 auto;
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.completed-task {
+  background-color: #f0f0f0;
+  color: #888;
+}
+
+.completed-task td:first-child {
+  text-decoration: line-through;
+}
+
+.complete-btn {
+  background-color: #27ae60;
+}
+
+.complete-btn:hover {
+  background-color: #219a52;
+}
+
+/* =================
+   CLIENTS PAGE 
+   ================= */
+.clients-container {
+  width: 95%;
+  margin: 0 auto;
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  padding: 20px;
+  overflow-x: auto;
+}
+
+/* Pod-specific styles */
+.row-pod1 {
+  background-color: #e8f4ff !important;
+}
+
+.row-pod2 {
+  background-color: #ffe8f0 !important;
+}
+
+/* Override hover effect for pods */
+.row-pod1:hover,
+.row-pod2:hover {
+  opacity: 0.9;
+}
+
+.past-meeting {
+  color: #ff0000;
+  font-weight: bold;
+}
+
+/* =================
+   UTILITY CLASSES 
+   ================= */
+.overdue {
+  background-color: #ff0000 !important;
+  color: white !important;
+}
+
 /* Add these new styles */
 .page {
   display: none;
@@ -405,10 +517,11 @@ h1 {
   font-size: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
+  text-decoration: none;
 }
 
 .nav-btn:hover {
-  background: rgba(41, 121, 255, 0.3);
+  background: rgba(41, 121, 255, 0.5);
 }
 
 .nav-btn.active {
@@ -423,15 +536,6 @@ h1 {
 
 .completed-task td:first-child {
   text-decoration: line-through;
-}
-
-/* Modify the action-btn class to add a new button style */
-.complete-btn {
-  background-color: #27ae60;
-}
-
-.complete-btn:hover {
-  background-color: #219a52;
 }
 
 /* Brand Growth specific styles */
@@ -510,4 +614,26 @@ h1 {
 .past-meeting {
     color: #ff0000;
     font-weight: bold;
+}
+
+/* Pod header styling */
+.pod-header {
+    background-color: #dbdbdb !important; /* Dark gray instead of blue */
+    color: rgb(0, 0, 0) !important;
+    font-weight: 700;
+    font-size: 1.1em;
+    padding: 10px 12px !important;
+    border-top: 2px solid #616161; /* Slightly lighter gray for border */
+}
+
+/* Hide Team column specifically in the clients table */
+#clientsTable th.hide-column,
+#clientsTable td:nth-child(2) {
+    display: none;
+}
+
+/* Hide Sales Lead column specifically in the prospects table */
+#prospectsTable th:nth-child(5),
+#prospectsTable td:nth-child(5) {
+    display: none;
 }
