@@ -32,29 +32,26 @@ const totalTasksEl = document.getElementById('totalTasks');
 
 // Add task function
 async function addTask() {
-    const taskInput = document.getElementById('taskInput');
-    const assigneeInput = document.getElementById('assigneeInput');
-    const dueDateInput = document.getElementById('dueDateInput');
+    const taskInput = document.getElementById('taskDescription');
+    const assigneeInput = document.getElementById('taskAssignee');
+    const dueDateInput = document.getElementById('taskDueDate');
 
     const taskText = taskInput.value.trim();
     const assignee = assigneeInput.value.trim();
     const dueDate = dueDateInput.value;
 
-    if (!taskText) {
-        alert("Please enter a task description");
+    if (!taskText || !dueDate || !assignee) {
+        alert("Please fill in all required fields");
         return;
     }
 
     try {
         const docRef = await addDoc(collection(db, "tasks"), {
-            taskText: taskText,
-            assignee: assignee,
-            dueDate: dueDate,
-            completed: false,
-            createdAt: new Date().toISOString()
+            task: taskText,
+            dueDate,
+            assignee,
+            completed: false
         });
-
-        console.log("Task added with ID:", docRef.id);
 
         // Clear inputs
         taskInput.value = '';
@@ -69,46 +66,15 @@ async function addTask() {
     }
 }
 
-// Load tasks function
-async function loadTasks() {
-    console.log('Starting loadTasks function');
-    const tbody = document.getElementById('tasksTable').querySelector('tbody');
-    
-    if (!tbody) {
-        console.error('Could not find table body element');
-        return;
-    }
-    
-    tbody.innerHTML = '';
-
-    try {
-        const querySnapshot = await getDocs(collection(db, "tasks"));
-        console.log('Number of tasks found:', querySnapshot.size);
-
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            console.log('Task data:', data);
-            const row = createTaskRow(data, doc.id);
-            tbody.appendChild(row);
-        });
-
-        updateTaskStatistics();
-    } catch (error) {
-        console.error("Error loading tasks:", error);
-    }
-}
-
-// Create task row function
+// Create task row
 function createTaskRow(data, id) {
     console.log('Creating row for task:', data);
     
     const row = document.createElement('tr');
-    row.dataset.docId = id;
-    
     row.innerHTML = `
-        <td>${data.taskText || ''}</td>
-        <td>${data.assignee || ''}</td>
-        <td>${data.dueDate || ''}</td>
+        <td>${data.task}</td>
+        <td>${data.assignee}</td>
+        <td>${data.dueDate}</td>
         <td>
             <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
             <button class="action-btn delete-btn"><i class="fas fa-trash"></i></button>
@@ -122,48 +88,33 @@ function createTaskRow(data, id) {
     // Add complete functionality
     row.querySelector('.complete-btn').addEventListener('click', () => completeTask(id));
 
-    // Add edit functionality
-    row.querySelector('.edit-btn').addEventListener('click', () => {
-        const cells = row.cells;
-        const currentData = {
-            taskText: cells[0].textContent,
-            assignee: cells[1].textContent,
-            dueDate: cells[2].textContent
-        };
-
-        cells[0].innerHTML = `<input type="text" class="editable-input" value="${currentData.taskText}">`;
-        cells[1].innerHTML = `<input type="text" class="editable-input" value="${currentData.assignee}">`;
-        cells[2].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueDate}">`;
-        cells[3].innerHTML = `
-            <button class="action-btn save-btn"><i class="fas fa-save"></i></button>
-            <button class="action-btn cancel-btn"><i class="fas fa-times"></i></button>
-        `;
-
-        // Add save functionality
-        cells[3].querySelector('.save-btn').addEventListener('click', async () => {
-            try {
-                const updatedData = {
-                    taskText: cells[0].querySelector('input').value,
-                    assignee: cells[1].querySelector('input').value,
-                    dueDate: cells[2].querySelector('input').value
-                };
-
-                await updateDoc(doc(db, "tasks", id), updatedData);
-                loadTasks();
-            } catch (error) {
-                console.error("Error updating task:", error);
-                alert("Error updating task: " + error.message);
-            }
-        });
-
-        // Add cancel functionality
-        cells[3].querySelector('.cancel-btn').addEventListener('click', loadTasks);
-    });
-
     return row;
 }
 
-// Delete task function
+// Load tasks
+async function loadTasks() {
+    console.log('Loading tasks...');
+    const tbody = tasksTable.querySelector('tbody');
+    tbody.innerHTML = ''; // Clear existing tasks
+
+    try {
+        const querySnapshot = await getDocs(collection(db, "tasks"));
+        console.log('Found tasks:', querySnapshot.size);
+
+        querySnapshot.forEach((doc) => {
+            const taskData = doc.data();
+            console.log('Task data:', taskData);
+            const row = createTaskRow(taskData, doc.id);
+            tbody.appendChild(row);
+        });
+
+        updateTaskStatistics();
+    } catch (error) {
+        console.error("Error loading tasks:", error);
+    }
+}
+
+// Delete task
 async function deleteTask(id) {
     if (confirm('Are you sure you want to delete this task?')) {
         try {
@@ -176,7 +127,7 @@ async function deleteTask(id) {
     }
 }
 
-// Complete task function
+// Complete task
 async function completeTask(id) {
     try {
         await updateDoc(doc(db, "tasks", id), {
@@ -203,15 +154,9 @@ function updateTaskStatistics() {
     totalTasksEl.textContent = rows.length - 1; // Subtract header row
 }
 
-// Initialize when the page loads
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Initializing tasks page...');
+    console.log('Initializing...');
     loadTasks();
-    
-    const addTaskBtn = document.getElementById('addTaskBtn');
-    if (addTaskBtn) {
-        addTaskBtn.addEventListener('click', addTask);
-    } else {
-        console.error('Add Task button not found');
-    }
+    addTaskBtn.addEventListener('click', addTask);
 }); 
