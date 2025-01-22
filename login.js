@@ -12,7 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginButton) {
         loginButton.addEventListener("click", () => {
             if (passwordInput.value === correctPassword) {
-                window.location.href = "prospects.html";
+                // Store login state if needed
+                localStorage.setItem('isLoggedIn', 'true');
+                
+                // Redirect to leads page
+                window.location.href = 'leads.html';
             } else {
                 loginError.style.display = "block";
                 loginError.textContent = "Incorrect password. Please try again.";
