@@ -485,21 +485,36 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // Add event listeners for remove activity buttons
-        document.addEventListener('click', function(e) {
+        // Update the event listener for remove activity buttons
+        document.addEventListener('click', async function(e) {
             if (e.target.classList.contains('remove-activity-btn')) {
-                e.target.closest('.activity-entry').remove();
+                const activityEntry = e.target.closest('.activity-entry');
+                const leadId = e.target.closest('tr')
+                    .previousElementSibling
+                    .querySelector('.expand-control')
+                    .dataset.leadId;
+                
+                // Remove from UI
+                activityEntry.remove();
+                
+                // Save the updated activities to Firebase
+                await saveActivities(leadId);
             }
         });
     }
 
-    // Add this function to save activities
+    // Update saveActivities function to handle empty activities
     async function saveActivities(leadId) {
-        const activitiesRow = document.querySelector(`[data-lead-id="${leadId}"]`).closest('tr').nextElementSibling;
-        const activities = Array.from(activitiesRow.querySelectorAll('.activity-entry')).map(entry => ({
-            description: entry.querySelector('.activity-description').value,
-            date: entry.querySelector('.activity-date').value
-        }));
+        const activitiesRow = document.querySelector(`[data-lead-id="${leadId}"]`)
+            .closest('tr')
+            .nextElementSibling;
+        
+        const activities = Array.from(activitiesRow.querySelectorAll('.activity-entry'))
+            .map(entry => ({
+                description: entry.querySelector('.activity-description').value,
+                date: entry.querySelector('.activity-date').value
+            }))
+            .filter(activity => activity.description || activity.date); // Only save non-empty activities
 
         try {
             await updateDoc(doc(db, 'leads', leadId), {
