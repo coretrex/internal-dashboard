@@ -88,7 +88,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Move helper functions outside of viewContact
     function createViewHTML(lead) {
-        const createdDate = new Date(lead.createdAt).toLocaleString();
+        // Handle Firebase Timestamp or string date
+        let createdDate = 'N/A';
+        if (lead.createdAt) {
+            // Check if it's a Firebase Timestamp
+            if (lead.createdAt.toDate) {
+                createdDate = lead.createdAt.toDate().toLocaleString();
+            } else if (lead.createdAt.seconds) {
+                // Handle server timestamp format
+                createdDate = new Date(lead.createdAt.seconds * 1000).toLocaleString();
+            } else {
+                // Handle string date
+                createdDate = new Date(lead.createdAt).toLocaleString();
+            }
+        }
+
         return `
             <div class="contact-info">
                 <p><strong>Brand Name:</strong> ${lead.brandName}</p>
