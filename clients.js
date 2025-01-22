@@ -81,22 +81,22 @@ async function loadClients() {
 
             const mappedData = {
                 brandName: rawData.brandName || rawData.name || rawData.company || rawData.client || '',
-                team: rawData.teamResponsible || rawData.team || '',
-                relationship: rawData.relationshipStatus || rawData.relationship || '',
-                sensitivity: rawData.currentSensitivity || rawData.sensitivity || '',
-                action: rawData.correctiveAction || rawData.action || '',
+                teamResponsible: rawData.teamResponsible || rawData.team || '',
+                relationshipStatus: rawData.relationshipStatus || rawData.relationship || '',
+                currentSensitivity: rawData.currentSensitivity || rawData.sensitivity || '',
+                correctiveAction: rawData.correctiveAction || rawData.action || '',
                 dueBy: rawData.dueBy || '',
-                revenue: rawData.trailing30Revenue || rawData.revenue || 0,
-                yoy: rawData.yoyPercentage || rawData.yoy || 0,
-                nextMeeting: rawData.nextMeetingDate || rawData.nextMeeting || '',
-                status: rawData.taskStatus || rawData.status || '',
+                trailing30Revenue: rawData.trailing30Revenue || rawData.revenue || 0,
+                yoyPercentage: rawData.yoyPercentage || rawData.yoy || 0,
+                nextMeetingDate: rawData.nextMeetingDate || rawData.nextMeeting || '',
+                taskStatus: rawData.taskStatus || rawData.status || '',
                 docId: doc.id
             };
 
             // Sort into pod arrays
-            if (mappedData.team === 'Pod 1') {
+            if (mappedData.teamResponsible === 'Pod 1') {
                 pod1Clients.push(mappedData);
-            } else if (mappedData.team === 'Pod 2') {
+            } else if (mappedData.teamResponsible === 'Pod 2') {
                 pod2Clients.push(mappedData);
             }
         });
@@ -142,31 +142,129 @@ async function loadClients() {
 }
 
 // Create client row function with additional logging
-function createClientRow(data, id) {
-    console.log('Creating row for:', data); // Debug log
-    
+function createClientRow(data, docId) {
+    console.log('Creating row for:', data);
     const row = document.createElement('tr');
-    row.dataset.docId = id;
+    row.dataset.docId = docId;
     
-    const brandName = data.brandName || data.name || ''; // Try both fields
-    console.log('Using brand name:', brandName); // Debug log
+    // Map the data consistently
+    const mappedData = {
+        brandName: data.brandName || '',
+        teamResponsible: data.teamResponsible || '',
+        relationshipStatus: data.relationshipStatus || '',
+        currentSensitivity: data.currentSensitivity || '',
+        correctiveAction: data.correctiveAction || '',
+        dueBy: data.dueBy || '',
+        trailing30Revenue: data.trailing30Revenue || 0,
+        yoyPercentage: data.yoyPercentage || 0,
+        nextMeetingDate: data.nextMeetingDate || '',
+        taskStatus: data.taskStatus || ''
+    };
     
     row.innerHTML = `
-        <td>${brandName}</td>
-        <td>${data.team || ''}</td>
-        <td>${data.relationship || ''}</td>
-        <td>${data.sensitivity || ''}</td>
-        <td>${data.action || ''}</td>
-        <td>${data.dueBy || ''}</td>
-        <td>$${(data.revenue || 0).toLocaleString()}</td>
-        <td>${data.yoy || 0}%</td>
-        <td>${data.nextMeeting || ''}</td>
-        <td>${data.status || ''}</td>
+        <td>${mappedData.brandName}</td>
+        <td class="hide-column">${mappedData.teamResponsible}</td>
+        <td>${mappedData.relationshipStatus}</td>
+        <td>${mappedData.currentSensitivity}</td>
+        <td>${mappedData.correctiveAction}</td>
+        <td>${mappedData.dueBy}</td>
+        <td>$${(mappedData.trailing30Revenue).toLocaleString()}</td>
+        <td>${mappedData.yoyPercentage}%</td>
+        <td>${mappedData.nextMeetingDate}</td>
+        <td>${mappedData.taskStatus}</td>
         <td>
             <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
             <button class="action-btn delete-btn"><i class="fas fa-trash"></i></button>
         </td>
     `;
+
+    // Add edit button functionality
+    const editBtn = row.querySelector('.edit-btn');
+    if (editBtn) {
+        editBtn.addEventListener('click', () => {
+            const cells = row.cells;
+            const currentData = {
+                brandName: mappedData.brandName,
+                teamResponsible: mappedData.teamResponsible,
+                relationshipStatus: mappedData.relationshipStatus,
+                currentSensitivity: mappedData.currentSensitivity,
+                correctiveAction: mappedData.correctiveAction,
+                dueBy: mappedData.dueBy,
+                trailing30Revenue: mappedData.trailing30Revenue,
+                yoyPercentage: mappedData.yoyPercentage,
+                nextMeetingDate: mappedData.nextMeetingDate,
+                taskStatus: mappedData.taskStatus
+            };
+
+            // Replace cells with input fields
+            cells[0].innerHTML = `<input type="text" class="editable-input" value="${currentData.brandName}">`;
+            cells[1].innerHTML = `<select class="editable-input">
+                <option value="Pod 1" ${currentData.teamResponsible === 'Pod 1' ? 'selected' : ''}>Pod 1</option>
+                <option value="Pod 2" ${currentData.teamResponsible === 'Pod 2' ? 'selected' : ''}>Pod 2</option>
+            </select>`;
+            cells[2].innerHTML = `<select class="editable-input">
+                <option value="Poor" ${currentData.relationshipStatus === 'Poor' ? 'selected' : ''}>Poor</option>
+                <option value="Medium" ${currentData.relationshipStatus === 'Medium' ? 'selected' : ''}>Medium</option>
+                <option value="Strong" ${currentData.relationshipStatus === 'Strong' ? 'selected' : ''}>Strong</option>
+            </select>`;
+            cells[3].innerHTML = `<select class="editable-input">
+                <option value="Poor Profit" ${currentData.currentSensitivity === 'Poor Profit' ? 'selected' : ''}>Poor Profit</option>
+                <option value="Stagnant Sales" ${currentData.currentSensitivity === 'Stagnant Sales' ? 'selected' : ''}>Stagnant Sales</option>
+                <option value="Lack of Clarity" ${currentData.currentSensitivity === 'Lack of Clarity' ? 'selected' : ''}>Lack of Clarity</option>
+                <option value="CoreTrex Cost" ${currentData.currentSensitivity === 'CoreTrex Cost' ? 'selected' : ''}>CoreTrex Cost</option>
+                <option value="Lack of Trust" ${currentData.currentSensitivity === 'Lack of Trust' ? 'selected' : ''}>Lack of Trust</option>
+            </select>`;
+            cells[4].innerHTML = `<input type="text" class="editable-input" value="${currentData.correctiveAction}">`;
+            cells[5].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueBy}">`;
+            cells[6].innerHTML = `<input type="number" step="0.01" class="editable-input" value="${currentData.trailing30Revenue}">`;
+            cells[7].innerHTML = `<input type="number" step="0.01" class="editable-input" value="${currentData.yoyPercentage}">`;
+            cells[8].innerHTML = `<input type="date" class="editable-input" value="${currentData.nextMeetingDate}">`;
+            cells[9].innerHTML = `<select class="editable-input">
+                <option value="In Progress" ${currentData.taskStatus === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                <option value="Done" ${currentData.taskStatus === 'Done' ? 'selected' : ''}>Done</option>
+                <option value="Waiting on Client" ${currentData.taskStatus === 'Waiting on Client' ? 'selected' : ''}>Waiting on Client</option>
+            </select>`;
+
+            // Replace action buttons with save/cancel
+            cells[10].innerHTML = `
+                <button class="action-btn save-btn">Save</button>
+                <button class="action-btn cancel-btn">Cancel</button>
+            `;
+
+            // Add save functionality
+            const saveBtn = cells[10].querySelector('.save-btn');
+            saveBtn.addEventListener('click', async () => {
+                try {
+                    const updatedData = {
+                        brandName: cells[0].querySelector('input').value.trim(),
+                        teamResponsible: cells[1].querySelector('select').value,
+                        relationshipStatus: cells[2].querySelector('select').value,
+                        currentSensitivity: cells[3].querySelector('select').value,
+                        correctiveAction: cells[4].querySelector('input').value.trim(),
+                        dueBy: cells[5].querySelector('input').value,
+                        trailing30Revenue: parseFloat(cells[6].querySelector('input').value) || 0,
+                        yoyPercentage: parseFloat(cells[7].querySelector('input').value) || 0,
+                        nextMeetingDate: cells[8].querySelector('input').value,
+                        taskStatus: cells[9].querySelector('select').value
+                    };
+
+                    await updateDoc(doc(db, "brands", docId), updatedData);
+                    await loadClients(); // Reload the table to reflect changes
+                } catch (error) {
+                    console.error("Error updating client:", error);
+                    alert("Error updating client: " + error.message);
+                }
+            });
+
+            // Add cancel functionality
+            const cancelBtn = cells[10].querySelector('.cancel-btn');
+            cancelBtn.addEventListener('click', () => {
+                loadClients(); // Reload the table to revert changes
+            });
+        });
+    }
+
+    // ... rest of the delete button functionality ...
 
     return row;
 }
