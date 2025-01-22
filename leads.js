@@ -396,18 +396,11 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Sort leads by creation date if createdAt exists
-        filteredLeads.sort((a, b) => {
-            const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
-            const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
-            return dateB - dateA;
-        });
-        
         filteredLeads.forEach(lead => {
+            // Create main lead row
             const tr = document.createElement('tr');
             tr.className = `row-${lead.owner?.toLowerCase()}`;
             
-            // Format the date safely
             let formattedDate = '';
             try {
                 const date = lead.dueDate ? new Date(lead.dueDate) : new Date();
@@ -418,6 +411,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             tr.innerHTML = `
+                <td>
+                    <span class="expand-control" data-lead-id="${lead.id}">+</span>
+                </td>
                 <td>${lead.brandName || ''}</td>
                 <td>${lead.firstName || ''} ${lead.lastName || ''}</td>
                 <td>${lead.status || ''}</td>
@@ -435,10 +431,97 @@ document.addEventListener('DOMContentLoaded', function() {
                 </td>
             `;
             tbody.appendChild(tr);
+
+            // Create activities row
+            const activitiesRow = document.createElement('tr');
+            activitiesRow.className = 'activities-row';
+            activitiesRow.innerHTML = `
+                <td colspan="9" class="activities-cell">
+                    <div class="activities-container">
+                        <div class="activities-list">
+                            ${(lead.activities || []).map(activity => `
+                                <div class="activity-entry">
+                                    <input type="text" value="${activity.description}" placeholder="Enter activity description" class="activity-description">
+                                    <input type="date" value="${activity.date}" class="activity-date">
+                                    <button class="remove-activity-btn">Remove</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button class="add-activity-btn">Add Activity</button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(activitiesRow);
         });
 
-        console.log(`Displayed ${filteredLeads.length} leads`); // Debug log
+        // Add event listeners for expansion controls
+        document.querySelectorAll('.expand-control').forEach(control => {
+            control.addEventListener('click', function() {
+                const leadId = this.dataset.leadId;
+                const activitiesRow = this.closest('tr').nextElementSibling;
+                
+                if (this.textContent === '+') {
+                    this.textContent = '-';
+                    activitiesRow.classList.add('expanded');
+                } else {
+                    this.textContent = '+';
+                    activitiesRow.classList.remove('expanded');
+                }
+            });
+        });
+
+        // Add event listeners for activity buttons
+        document.querySelectorAll('.add-activity-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const activitiesList = this.previousElementSibling;
+                const newActivity = document.createElement('div');
+                newActivity.className = 'activity-entry';
+                newActivity.innerHTML = `
+                    <input type="text" placeholder="Enter activity description" class="activity-description">
+                    <input type="date" class="activity-date">
+                    <button class="remove-activity-btn">Remove</button>
+                `;
+                activitiesList.appendChild(newActivity);
+            });
+        });
+
+        // Add event listeners for remove activity buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-activity-btn')) {
+                e.target.closest('.activity-entry').remove();
+            }
+        });
     }
+
+    // Add this function to save activities
+    async function saveActivities(leadId) {
+        const activitiesRow = document.querySelector(`[data-lead-id="${leadId}"]`).closest('tr').nextElementSibling;
+        const activities = Array.from(activitiesRow.querySelectorAll('.activity-entry')).map(entry => ({
+            description: entry.querySelector('.activity-description').value,
+            date: entry.querySelector('.activity-date').value
+        }));
+
+        try {
+            await updateDoc(doc(db, 'leads', leadId), {
+                activities: activities
+            });
+        } catch (error) {
+            console.error("Error saving activities:", error);
+            alert('Error saving activities. Please try again.');
+        }
+    }
+
+    // Add auto-save functionality for activities
+    document.addEventListener('change', async function(e) {
+        if (e.target.classList.contains('activity-description') || 
+            e.target.classList.contains('activity-date')) {
+            const leadId = e.target.closest('tr')
+                .previousElementSibling
+                .querySelector('.expand-control')
+                .dataset.leadId;
+            await saveActivities(leadId);
+        }
+    });
 
     // Initial load
     loadLeads();

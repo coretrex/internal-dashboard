@@ -672,13 +672,13 @@ h1 {
 
 .modal-content {
     background-color: #fefefe;
-    margin: 5% auto;
-    padding: 30px;
-    border: none;
-    width: 90%;
-    max-width: 600px;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
     border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    position: relative;
 }
 
 .close {
@@ -701,15 +701,7 @@ h1 {
 }
 
 .contact-info p {
-    margin: 12px 0;
-    font-size: 14px;
-    color: #444;
-}
-
-.contact-info strong {
-    color: #333;
-    width: 120px;
-    display: inline-block;
+    margin: 10px 0;
 }
 
 .view-btn {
@@ -791,66 +783,84 @@ h1 {
     pointer-events: none;  /* Makes the icon not interfere with input */
 }
 
-/* Modal footer and button styling */
-.modal-footer {
-    margin-top: 20px;
+/* Expansion controls and activities styling */
+.expand-control {
+    cursor: pointer;
+    padding: 0 8px;
+    color: #2979ff;
+    font-weight: bold;
+    font-size: 1.2em;
+    display: inline-block; /* Ensure clickable area */
+    width: 20px;
+    text-align: center;
+}
+
+.expand-control:hover {
+    color: #195dcc;
+}
+
+.activities-row {
+    display: none; /* Hidden by default */
+}
+
+.activities-row.expanded {
+    display: table-row !important; /* Force display when expanded */
+}
+
+.activities-cell {
+    padding: 15px !important;
+}
+
+.activities-container {
+    padding: 10px;
+}
+
+.activity-entry {
     display: flex;
     gap: 10px;
-    justify-content: flex-end;
+    margin-bottom: 10px;
+    align-items: center;
 }
 
-.edit-btn, .save-btn {
-    padding: 8px 20px;
-    border: none;
+.activity-entry input[type="text"] {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.3s ease;
+}
+
+.activity-entry input[type="date"] {
+    width: 150px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.add-activity-btn {
+    background-color: #2979ff;
     color: white;
-}
-
-.edit-btn {
-    background-color: #2979ff;  /* Modern blue to match your theme */
-}
-
-.edit-btn:hover {
-    background-color: #1c54b2;
-}
-
-.save-btn {
-    background-color: #2ecc71;  /* Green for save */
-}
-
-.save-btn:hover {
-    background-color: #27ae60;
-}
-
-/* Update modal content styling */
-.modal-content {
-    background-color: #fefefe;
-    margin: 5% auto;
-    padding: 30px;
     border: none;
-    width: 90%;
-    max-width: 600px;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    margin-top: 10px;
 }
 
-#modalTitle {
-    color: #333;
-    margin-bottom: 20px;
-    font-size: 1.5rem;
+.add-activity-btn:hover {
+    background-color: #195dcc;
 }
 
-.contact-info p {
-    margin: 12px 0;
-    font-size: 14px;
-    color: #444;
+.remove-activity-btn {
+    background-color: #ff4444;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
 }
 
-.contact-info strong {
-    color: #333;
-    width: 120px;
-    display: inline-block;
+.remove-activity-btn:hover {
+    background-color: #cc0000;
 }
