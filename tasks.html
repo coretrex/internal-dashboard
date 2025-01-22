@@ -28,13 +28,13 @@
         <!-- Tasks Container -->
         <div class="tasks-container">
             <!-- Input Section -->
-            <div class="input-section">
+            <form id="taskForm" class="input-section">
                 <div class="input-field-group">
-                    <label>Task Description</label>
+                    <label for="taskDescription">Task Description</label>
                     <input type="text" id="taskDescription" class="input-field" placeholder="Enter task description">
                 </div>
                 <div class="input-field-group">
-                    <label>Assigned To</label>
+                    <label for="taskAssignee">Assigned To</label>
                     <select id="taskAssignee" class="input-field dropdown">
                         <option value="">Select Assignee</option>
                         <option value="Robby">Robby</option>
@@ -46,11 +46,11 @@
                     </select>
                 </div>
                 <div class="input-field-group">
-                    <label>Due Date</label>
+                    <label for="taskDueDate">Due Date</label>
                     <input type="date" id="taskDueDate" class="input-field date-picker">
                 </div>
-                <button id="addTaskBtn" class="add-btn">Add Task</button>
-            </div>
+                <button type="submit" id="addTaskBtn" class="add-btn">Add Task</button>
+            </form>
 
             <!-- Tasks Table -->
             <table class="dashboard-table" id="tasksTable">

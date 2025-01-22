@@ -30,8 +30,29 @@ const addTaskBtn = document.getElementById('addTaskBtn');
 const tasksDueTodayEl = document.getElementById('tasksDueToday');
 const totalTasksEl = document.getElementById('totalTasks');
 
-// Add task function
-async function addTask() {
+// Add these global variables at the top
+let isEditing = false;
+let currentEditId = null;
+
+// Remove any duplicate DOMContentLoaded listeners and combine into one
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Initializing...');
+    
+    // Add event listener to form submission
+    const taskForm = document.querySelector('#taskForm');
+    if (taskForm) {
+        taskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            handleTaskSubmit();
+        });
+    }
+    
+    // Load tasks only once
+    loadTasks();
+}); 
+
+// New function to handle both add and edit
+async function handleTaskSubmit() {
     const taskInput = document.getElementById('taskDescription');
     const assigneeInput = document.getElementById('taskAssignee');
     const dueDateInput = document.getElementById('taskDueDate');
@@ -46,12 +67,27 @@ async function addTask() {
     }
 
     try {
-        const docRef = await addDoc(collection(db, "tasks"), {
-            task: taskText,
-            dueDate,
-            assignee,
-            completed: false
-        });
+        if (isEditing && currentEditId) {
+            // Update existing task
+            await updateDoc(doc(db, "tasks", currentEditId), {
+                task: taskText,
+                assignee: assignee,
+                dueDate: dueDate
+            });
+            
+            // Reset edit state
+            isEditing = false;
+            currentEditId = null;
+            addTaskBtn.textContent = 'Add Task';
+        } else {
+            // Add new task
+            await addDoc(collection(db, "tasks"), {
+                task: taskText,
+                assignee: assignee,
+                dueDate: dueDate,
+                completed: false
+            });
+        }
 
         // Clear inputs
         taskInput.value = '';
@@ -61,8 +97,8 @@ async function addTask() {
         // Reload tasks
         loadTasks();
     } catch (error) {
-        console.error("Error adding task:", error);
-        alert("Error adding task: " + error.message);
+        console.error("Error with task:", error);
+        alert("Error with task: " + error.message);
     }
 }
 
@@ -88,6 +124,50 @@ function createTaskRow(data, id) {
     // Add complete functionality
     row.querySelector('.complete-btn').addEventListener('click', () => completeTask(id));
 
+    // Add edit functionality
+    const editBtn = row.querySelector('.edit-btn');
+    editBtn.addEventListener('click', () => {
+        const cells = row.querySelectorAll('td');
+        
+        // Only transform to input fields if not already editing
+        if (!row.classList.contains('editing')) {
+            row.classList.add('editing');
+            
+            cells[0].innerHTML = `<input type="text" value="${data.task}" class="edit-input">`;
+            cells[1].innerHTML = `
+                <select class="edit-input">
+                    <option value="Robby" ${data.assignee === 'Robby' ? 'selected' : ''}>Robby</option>
+                    <option value="Greyson" ${data.assignee === 'Greyson' ? 'selected' : ''}>Greyson</option>
+                    <option value="Stephen" ${data.assignee === 'Stephen' ? 'selected' : ''}>Stephen</option>
+                    <option value="Bobby" ${data.assignee === 'Bobby' ? 'selected' : ''}>Bobby</option>
+                    <option value="Brandon" ${data.assignee === 'Brandon' ? 'selected' : ''}>Brandon</option>
+                    <option value="Noah" ${data.assignee === 'Noah' ? 'selected' : ''}>Noah</option>
+                </select>
+            `;
+            cells[2].innerHTML = `<input type="date" value="${data.dueDate}" class="edit-input">`;
+            
+            editBtn.innerHTML = '<i class="fas fa-save"></i>';
+        } else {
+            // Save the changes
+            const updatedTask = cells[0].querySelector('input').value;
+            const updatedAssignee = cells[1].querySelector('select').value;
+            const updatedDueDate = cells[2].querySelector('input').value;
+
+            updateDoc(doc(db, "tasks", id), {
+                task: updatedTask,
+                assignee: updatedAssignee,
+                dueDate: updatedDueDate
+            })
+            .then(() => {
+                loadTasks();
+            })
+            .catch((error) => {
+                console.error("Error updating task:", error);
+                alert("Error updating task: " + error.message);
+            });
+        }
+    });
+
     return row;
 }
 
@@ -95,16 +175,33 @@ function createTaskRow(data, id) {
 async function loadTasks() {
     console.log('Loading tasks...');
     const tbody = tasksTable.querySelector('tbody');
-    tbody.innerHTML = ''; // Clear existing tasks
+    
+    // Clear existing tasks first
+    if (tbody) {
+        tbody.innerHTML = '';
+    }
 
     try {
         const querySnapshot = await getDocs(collection(db, "tasks"));
         console.log('Found tasks:', querySnapshot.size);
 
+        // Create a Set to track unique IDs
+        const processedIds = new Set();
+
+        // Sort tasks by due date
+        const tasks = [];
         querySnapshot.forEach((doc) => {
-            const taskData = doc.data();
-            console.log('Task data:', taskData);
-            const row = createTaskRow(taskData, doc.id);
+            if (!processedIds.has(doc.id)) {
+                tasks.push({ id: doc.id, ...doc.data() });
+                processedIds.add(doc.id);
+            }
+        });
+
+        tasks.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+        // Create rows for sorted tasks
+        tasks.forEach((taskData) => {
+            const row = createTaskRow(taskData, taskData.id);
             tbody.appendChild(row);
         });
 
@@ -152,11 +249,4 @@ function updateTaskStatistics() {
     
     tasksDueTodayEl.textContent = tasksDueToday;
     totalTasksEl.textContent = rows.length - 1; // Subtract header row
-}
-
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('Initializing...');
-    loadTasks();
-    addTaskBtn.addEventListener('click', addTask);
-}); 
+} 

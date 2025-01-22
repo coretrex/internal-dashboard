@@ -1,3 +1,30 @@
+// Import Firebase modules
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+    getFirestore, 
+    collection, 
+    addDoc, 
+    getDocs,
+    deleteDoc,
+    doc,
+    updateDoc,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo",
+    authDomain: "coretrex-internal-dashboard.firebaseapp.com",
+    projectId: "coretrex-internal-dashboard",
+    storageBucket: "coretrex-internal-dashboard.firebasestorage.app",
+    messagingSenderId: "16273988237",
+    appId: "1:16273988237:web:956c63742712c22185e0c4"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize leads array from localStorage or empty array
     let leads = JSON.parse(localStorage.getItem('leads')) || [];
@@ -343,4 +370,33 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial load
     displayLeads();
     updateMetrics();
-}); 
+});
+
+// Function to load stats from Firestore
+async function loadStats() {
+    try {
+        const querySnapshot = await getDocs(collection(db, 'leads'));
+        const leads = querySnapshot.docs.map(doc => doc.data());
+        
+        let totalMRR = 0;
+        let greysonLeads = 0;
+        let robbyLeads = 0;
+        
+        leads.forEach(lead => {
+            totalMRR += Number(lead.retainerValue || 0);
+            if (lead.owner === 'Greyson') greysonLeads++;
+            if (lead.owner === 'Robby') robbyLeads++;
+        });
+        
+        // Update stats display
+        document.getElementById('totalMRR').textContent = `$${totalMRR.toLocaleString()}`;
+        document.getElementById('greysonLeads').textContent = greysonLeads;
+        document.getElementById('robbyLeads').textContent = robbyLeads;
+        document.getElementById('totalLeads').textContent = leads.length;
+    } catch (error) {
+        console.error("Error loading stats:", error);
+    }
+}
+
+// Call loadStats when page loads
+document.addEventListener('DOMContentLoaded', loadStats); 
