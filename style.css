@@ -718,6 +718,10 @@ h1 {
     position: absolute;
     top: 20px;
     right: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;  /* Changed from flex-end to center */
+    gap: 8px;
 }
 
 .import-btn {
@@ -740,6 +744,19 @@ h1 {
 
 .import-btn i {
     font-size: 16px;
+}
+
+.csv-template-link {
+    color: white;
+    text-decoration: none;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;  /* Adds space between icon and text */
+}
+
+.csv-template-link:hover {
+    text-decoration: underline;
 }
 
 /* Update page-content to have relative positioning */
@@ -790,9 +807,6 @@ h1 {
     color: #2979ff;
     font-weight: bold;
     font-size: 1.2em;
-    display: inline-block; /* Ensure clickable area */
-    width: 20px;
-    text-align: center;
 }
 
 .expand-control:hover {
@@ -800,15 +814,18 @@ h1 {
 }
 
 .activities-row {
-    display: none; /* Hidden by default */
+    display: none;
+    background-color: #f8f9fa;
+    border-top: 1px solid #eee;
 }
 
 .activities-row.expanded {
-    display: table-row !important; /* Force display when expanded */
+    display: table-row;
 }
 
 .activities-cell {
     padding: 15px !important;
+    column-span: all;
 }
 
 .activities-container {
