@@ -26,8 +26,24 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize leads array from localStorage or empty array
-    let leads = JSON.parse(localStorage.getItem('leads')) || [];
+    // Initialize leads array
+    let leads = [];
+    
+    // Load leads from Firebase instead of localStorage
+    async function loadLeads() {
+        try {
+            const querySnapshot = await getDocs(collection(db, 'leads'));
+            leads = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            console.log('Loaded leads:', leads); // Debug log
+            displayLeads();
+            updateMetrics();
+        } catch (error) {
+            console.error("Error loading leads:", error);
+        }
+    }
 
     // DOM Elements
     const addLeadBtn = document.getElementById('addLeadBtn');
@@ -171,33 +187,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update metrics
     function updateMetrics() {
-        const totalMRR = leads.reduce((sum, lead) => sum + Number(lead.retainerValue), 0);
-        const greysonLeadsCount = leads.filter(lead => lead.owner === 'Greyson').length;
-        const robbyLeadsCount = leads.filter(lead => lead.owner === 'Robby').length;
+        // Reset all counters
+        let totalMRR = 0;
+        let greysonLeadsCount = 0;
+        let robbyLeadsCount = 0;
+
+        // Only count if we have leads
+        if (leads && leads.length > 0) {
+            totalMRR = leads.reduce((sum, lead) => sum + Number(lead.retainerValue || 0), 0);
+            greysonLeadsCount = leads.filter(lead => lead.owner === 'Greyson').length;
+            robbyLeadsCount = leads.filter(lead => lead.owner === 'Robby').length;
+        }
         
+        // Update the display
         totalMRRElement.textContent = `$${totalMRR.toLocaleString()}`;
         totalLeadsElement.textContent = leads.length;
         greysonLeadsElement.textContent = greysonLeadsCount;
         robbyLeadsElement.textContent = robbyLeadsCount;
     }
 
-    // Add new lead
-    addLeadBtn.addEventListener('click', () => {
+    // Modify addLeadBtn event listener
+    addLeadBtn.addEventListener('click', async () => {
         const newLead = {
-            id: Date.now(),
             brandName: document.getElementById('brandName').value,
             firstName: document.getElementById('firstName').value,
             lastName: document.getElementById('lastName').value,
             email: document.getElementById('email').value,
             phone: document.getElementById('phone').value,
             status: document.getElementById('status').value,
-            leadStatus: 'Active', // Default value for new leads
+            leadStatus: 'Active',
             nextSteps: document.getElementById('nextSteps').value,
             dueDate: document.getElementById('dueDate').value,
             retainerValue: document.getElementById('retainerValue').value,
             owner: document.getElementById('owner').value,
             source: document.getElementById('source').value,
-            createdAt: new Date().toISOString()
+            createdAt: serverTimestamp()
         };
 
         // Validate required fields
@@ -206,14 +230,19 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        leads.push(newLead);
-        localStorage.setItem('leads', JSON.stringify(leads));
-        
-        // Clear all input fields
-        document.querySelectorAll('.input-field').forEach(input => input.value = '');
-        
-        displayLeads();
-        updateMetrics();
+        try {
+            // Add to Firebase
+            await addDoc(collection(db, 'leads'), newLead);
+            
+            // Clear input fields
+            document.querySelectorAll('.input-field').forEach(input => input.value = '');
+            
+            // Reload leads from Firebase
+            await loadLeads();
+        } catch (error) {
+            console.error("Error adding lead:", error);
+            alert('Error adding lead. Please try again.');
+        }
     });
 
     // Display leads
@@ -221,22 +250,29 @@ document.addEventListener('DOMContentLoaded', function() {
         displayFilteredLeads(leads);
     }
 
-    // Delete lead
-    window.deleteLead = function(id) {
-        leads = leads.filter(lead => lead.id !== id);
-        localStorage.setItem('leads', JSON.stringify(leads));
-        displayLeads();
-        updateMetrics();
+    // Modify deleteLead function
+    window.deleteLead = async function(id) {
+        try {
+            await deleteDoc(doc(db, 'leads', id));
+            await loadLeads();
+        } catch (error) {
+            console.error("Error deleting lead:", error);
+            alert('Error deleting lead. Please try again.');
+        }
     }
 
-    // Update viewContact function
+    // Update viewContact function to handle string ID
     window.viewContact = function(id) {
-        currentEditId = id;
+        currentEditId = id; // Store the ID as a string
         const lead = leads.find(lead => lead.id === id);
-        modalContent.innerHTML = createViewHTML(lead);
-        editButton.style.display = 'block';
-        saveButton.style.display = 'none';
-        modal.style.display = 'block';
+        if (lead) {
+            modalContent.innerHTML = createViewHTML(lead);
+            editButton.style.display = 'block';
+            saveButton.style.display = 'none';
+            modal.style.display = 'block';
+        } else {
+            console.error('Lead not found:', id);
+        }
     }
 
     // Modal close button
@@ -259,32 +295,32 @@ document.addEventListener('DOMContentLoaded', function() {
         saveButton.style.display = 'block';
     });
 
-    saveButton.addEventListener('click', function() {
-        const leadIndex = leads.findIndex(lead => lead.id === currentEditId);
-        if (leadIndex === -1) return;
-
-        leads[leadIndex] = {
-            ...leads[leadIndex],
-            brandName: document.getElementById('edit-brandName').value,
-            firstName: document.getElementById('edit-firstName').value,
-            lastName: document.getElementById('edit-lastName').value,
-            email: document.getElementById('edit-email').value,
-            phone: document.getElementById('edit-phone').value,
-            status: document.getElementById('edit-status').value,
-            leadStatus: document.getElementById('edit-leadStatus').value,
-            nextSteps: document.getElementById('edit-nextSteps').value,
-            dueDate: document.getElementById('edit-dueDate').value,
-            retainerValue: document.getElementById('edit-retainerValue').value,
-            owner: document.getElementById('edit-owner').value,
-            source: document.getElementById('edit-source').value
-        };
-
-        localStorage.setItem('leads', JSON.stringify(leads));
-        displayLeads();
-        updateMetrics();
+    // Modify saveButton event listener
+    saveButton.addEventListener('click', async function() {
+        const leadRef = doc(db, 'leads', currentEditId);
         
-        // Return to view mode
-        viewContact(currentEditId);
+        try {
+            await updateDoc(leadRef, {
+                brandName: document.getElementById('edit-brandName').value,
+                firstName: document.getElementById('edit-firstName').value,
+                lastName: document.getElementById('edit-lastName').value,
+                email: document.getElementById('edit-email').value,
+                phone: document.getElementById('edit-phone').value,
+                status: document.getElementById('edit-status').value,
+                leadStatus: document.getElementById('edit-leadStatus').value,
+                nextSteps: document.getElementById('edit-nextSteps').value,
+                dueDate: document.getElementById('edit-dueDate').value,
+                retainerValue: document.getElementById('edit-retainerValue').value,
+                owner: document.getElementById('edit-owner').value,
+                source: document.getElementById('edit-source').value
+            });
+
+            await loadLeads();
+            viewContact(currentEditId);
+        } catch (error) {
+            console.error("Error updating lead:", error);
+            alert('Error updating lead. Please try again.');
+        }
     });
 
     // Add CSV import functionality
@@ -336,39 +372,62 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Add this new function to display filtered leads
+    // Update displayFilteredLeads function
     function displayFilteredLeads(filteredLeads) {
         const tbody = leadsListDiv.querySelector('tbody');
         tbody.innerHTML = '';
         
-        filteredLeads.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        if (!Array.isArray(filteredLeads)) {
+            console.error('filteredLeads is not an array:', filteredLeads);
+            return;
+        }
+
+        // Sort leads by creation date if createdAt exists
+        filteredLeads.sort((a, b) => {
+            const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
+            const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
+            return dateB - dateA;
+        });
         
         filteredLeads.forEach(lead => {
             const tr = document.createElement('tr');
-            tr.className = `row-${lead.owner.toLowerCase()}`;
+            tr.className = `row-${lead.owner?.toLowerCase()}`;
+            
+            // Format the date safely
+            let formattedDate = '';
+            try {
+                const date = lead.dueDate ? new Date(lead.dueDate) : new Date();
+                formattedDate = date.toLocaleDateString();
+            } catch (e) {
+                console.error('Date formatting error:', e);
+                formattedDate = 'Invalid Date';
+            }
+
             tr.innerHTML = `
-                <td>${lead.brandName}</td>
-                <td>${lead.firstName} ${lead.lastName}</td>
-                <td>${lead.status}</td>
-                <td>${lead.nextSteps}</td>
-                <td>${new Date(lead.dueDate).toLocaleDateString()}</td>
-                <td>$${Number(lead.retainerValue).toLocaleString()}</td>
-                <td>${lead.owner}</td>
+                <td>${lead.brandName || ''}</td>
+                <td>${lead.firstName || ''} ${lead.lastName || ''}</td>
+                <td>${lead.status || ''}</td>
+                <td>${lead.nextSteps || ''}</td>
+                <td>${formattedDate}</td>
+                <td>$${Number(lead.retainerValue || 0).toLocaleString()}</td>
+                <td>${lead.owner || ''}</td>
                 <td>
-                    <button onclick="viewContact(${lead.id})" class="action-btn view-btn">
+                    <button onclick="viewContact('${lead.id}')" class="action-btn view-btn">
                         <i class="fas fa-address-card"></i>
                     </button>
-                    <button onclick="deleteLead(${lead.id})" class="action-btn delete-btn">
+                    <button onclick="deleteLead('${lead.id}')" class="action-btn delete-btn">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
+
+        console.log(`Displayed ${filteredLeads.length} leads`); // Debug log
     }
 
     // Initial load
-    displayLeads();
+    loadLeads();
     updateMetrics();
 });
 
