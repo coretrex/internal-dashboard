@@ -83,14 +83,14 @@ h1 {
 .input-field-group {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  min-width: 120px;
+  gap: 2px;
+  min-width: 140px;
   margin-bottom: 0;
   height: fit-content; /* Add this to prevent extra space */
 }
 
 .input-field-group label {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: #666;
   margin-bottom: 0;
   line-height: 1; /* Add this to reduce vertical space */
@@ -106,33 +106,33 @@ h1 {
 */
 .input-field {
   flex: 0 0 auto;
-  min-width: 90px;
-  padding: 6px 8px;
+  min-width: 100px;
+  padding: 10px;
   border-radius: 4px;
   border: 1px solid #ccc;
-  font-size: 13px;
+  font-size: 14px;
   outline: none;
   text-align: left; /* Left-justified */
 }
 
 .date-picker {
-  min-width: 120px;
+  min-width: 140px;
 }
 
 /* Dropdown style */
 .dropdown {
-  min-width: 100px;
+  min-width: 120px;
 }
 
 /* Add button styling */
 .add-btn {
   flex: 0 0 auto;
-  padding: 6px 15px;
+  padding: 10px 20px;
   background-color: #2979ff; /* Modern blue */
   color: #fff;
   border: none;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   transition: background-color 0.3s ease;
   white-space: nowrap;
@@ -636,4 +636,24 @@ h1 {
 #prospectsTable th:nth-child(5),
 #prospectsTable td:nth-child(5) {
     display: none;
+}
+
+.login-btn {
+  background: #2979ff;
+  padding: 15px;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.login-btn:hover {
+  background: #1c54b2;
+  animation: pulse 1.5s infinite;
 }
