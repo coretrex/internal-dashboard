@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>CoreTrex Leads</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="page-content">
+        <h1>Leads Dashboard</h1>
+        
+        <!-- Stats Container -->
+        <div class="stats-container">
+            <div class="stat">
+                <div class="stat-number" id="totalMRR">$0</div>
+                <div class="stat-label">Potential MRR</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="greysonLeads">0</div>
+                <div class="stat-label">Greyson Leads</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="robbyLeads">0</div>
+                <div class="stat-label">Robby Leads</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="totalLeads">0</div>
+                <div class="stat-label">Total Leads</div>
+            </div>
+        </div>
+
+        <!-- Add this before metrics-container -->
+        <div class="header-actions">
+            <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+            <button id="importCsvBtn" class="import-btn">
+                <i class="fas fa-file-import"></i> Import CSV
+            </button>
+        </div>
+
+        <div class="metrics-container">
+            <!-- Add this modal HTML just after prospects-container opening -->
+            <div id="contactModal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h2 id="modalTitle">Contact Information</h2>
+                    <div id="modalContent"></div>
+                    <div class="modal-footer">
+                        <button id="editButton" class="edit-btn">Edit</button>
+                        <button id="saveButton" class="save-btn" style="display: none;">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Input Section -->
+            <div class="input-section">
+                <div class="input-field-group">
+                    <label>Brand Name</label>
+                    <input type="text" id="brandName" class="input-field" placeholder="Enter brand name" required>
+                </div>
+                <div class="input-field-group">
+                    <label>First Name</label>
+                    <input type="text" id="firstName" class="input-field" placeholder="First name" required>
+                </div>
+                <div class="input-field-group">
+                    <label>Last Name</label>
+                    <input type="text" id="lastName" class="input-field" placeholder="Last name" required>
+                </div>
+                <div class="input-field-group">
+                    <label>Email</label>
+                    <input type="email" id="email" class="input-field" placeholder="Email" required>
+                </div>
+                <div class="input-field-group">
+                    <label>Phone</label>
+                    <input type="tel" id="phone" class="input-field" placeholder="Phone number" required>
+                </div>
+                <div class="input-field-group">
+                    <label>Status</label>
+                    <select id="status" class="input-field dropdown" required>
+                        <option value="">Select Status</option>
+                        <option value="Meeting Hunting">Meeting Hunting</option>
+                        <option value="Phone Call">Phone Call</option>
+                        <option value="Email">Email</option>
+                        <option value="Social DM">Social DM</option>
+                        <option value="Door Knock">Door Knock</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="input-field-group">
+                    <label>Next Steps</label>
+                    <input type="text" id="nextSteps" class="input-field" placeholder="Next steps" required>
+                </div>
+                <div class="input-field-group">
+                    <label>Due Date</label>
+                    <input type="date" id="dueDate" class="input-field date-picker" required>
+                </div>
+                <div class="input-field-group">
+                    <label>Retainer Value ($)</label>
+                    <input type="number" id="retainerValue" class="input-field" placeholder="Retainer value" required>
+                </div>
+                <div class="input-field-group">
+                    <label>Owner</label>
+                    <select id="owner" class="input-field dropdown" required>
+                        <option value="">Select Owner</option>
+                        <option value="Greyson">Greyson</option>
+                        <option value="Robby">Robby</option>
+                    </select>
+                </div>
+                <div class="input-field-group">
+                    <label>Source</label>
+                    <select id="source" class="input-field dropdown" required>
+                        <option value="">Select Source</option>
+                        <option value="Email">Email</option>
+                        <option value="Ads">Ads</option>
+                        <option value="Cold Call">Cold Call</option>
+                        <option value="Referral">Referral</option>
+                        <option value="Google Search">Google Search</option>
+                    </select>
+                </div>
+                <button type="button" id="addLeadBtn" class="add-btn">Add Lead</button>
+            </div>
+
+            <!-- Search Container -->
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search leads...">
+            </div>
+
+            <!-- Leads Table -->
+            <table class="dashboard-table" id="leadsList">
+                <thead>
+                    <tr>
+                        <th>Brand Name</th>
+                        <th>Contact</th>
+                        <th>Stage</th>
+                        <th>Next Steps</th>
+                        <th>Due Date</th>
+                        <th>Retainer Value</th>
+                        <th>Owner</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <nav-menu></nav-menu>
+    <script src="navigation.js"></script>
+    <script type="module" src="leads.js"></script>
+</body>
+</html> 

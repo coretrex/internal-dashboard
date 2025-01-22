@@ -1021,9 +1021,49 @@ function updateBrandStatistics() {
     document.getElementById('meetingsThisWeek').textContent = meetingsThisWeek;
 }
 
-// Modify your existing DOMContentLoaded event listener to include this:
+// Add this function near the top of your script.js file
+function initializeNavigation() {
+    const navButtons = `
+        <a href="leads.html" class="nav-btn">
+            <i class="fas fa-user-plus"></i> Leads
+        </a>
+        <a href="index.html" class="nav-btn">
+            <i class="fas fa-home"></i> Dashboard
+        </a>
+        <a href="prospects.html" class="nav-btn">
+            <i class="fas fa-chart-line"></i> Prospects
+        </a>
+        <a href="clients.html" class="nav-btn">
+            <i class="fas fa-users"></i> Clients
+        </a>
+        <a href="tasks.html" class="nav-btn">
+            <i class="fas fa-tasks"></i> Tasks
+        </a>
+    `;
+
+    // Find all nav-buttons containers and populate them
+    const navContainers = document.querySelectorAll('.nav-buttons');
+    navContainers.forEach(container => {
+        container.innerHTML = navButtons;
+    });
+
+    // Set active state based on current page
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    document.querySelectorAll('.nav-btn').forEach(button => {
+        if (button.getAttribute('href') === currentPage) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
+}
+
+// Update your DOMContentLoaded event listener to include initializeNavigation
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("Page loading...");
+    
+    // Initialize navigation
+    initializeNavigation();
     
     // Initialize elements
     tasksTable = document.getElementById('tasksTable');
@@ -1037,20 +1077,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             await addTask();
         });
     }
-
-    // Set up navigation
-    const navButtons = document.querySelectorAll('.nav-btn');
-    const pages = document.querySelectorAll('.page');
-
-    navButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const pageId = button.getAttribute('data-page');
-            navButtons.forEach(btn => btn.classList.remove('active'));
-            pages.forEach(page => page.classList.remove('active'));
-            button.classList.add('active');
-            document.getElementById(pageId).classList.add('active');
-        });
-    });
 
     // Load initial data
     await loadProspects();
@@ -1112,4 +1138,101 @@ function updateRowStatusClass(row, status) {
             row.classList.add('status-stalled');
             break;
     }
+}
+
+// Add event listeners to the edit and delete buttons in createClientRow
+function createClientRow(data, docId) {
+    console.log('Creating row for:', data);
+    const row = document.createElement('tr');
+    row.dataset.docId = docId;
+    
+    row.innerHTML = `
+        <td>${data.brandName}</td>
+        <td>${data.team || ''}</td>
+        <td>${data.relationship || ''}</td>
+        <td>${data.sensitivity || ''}</td>
+        <td>${data.action || ''}</td>
+        <td>${data.dueBy || ''}</td>
+        <td>$${(data.revenue || 0).toLocaleString()}</td>
+        <td>${data.yoy || 0}%</td>
+        <td>${data.nextMeeting || ''}</td>
+        <td>${data.status || ''}</td>
+        <td>
+            <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
+            <button class="action-btn delete-btn"><i class="fas fa-trash"></i></button>
+        </td>
+    `;
+
+    // Add event listeners after creating the row
+    const editBtn = row.querySelector('.edit-btn');
+    if (editBtn) {
+        editBtn.addEventListener('click', () => {
+            console.log('Edit button clicked for:', docId);
+            // Populate form fields
+            document.getElementById('brandName').value = data.brandName || '';
+            document.getElementById('teamResponsible').value = data.team || '';
+            document.getElementById('relationshipStatus').value = data.relationship || '';
+            document.getElementById('currentSensitivity').value = data.sensitivity || '';
+            document.getElementById('correctiveAction').value = data.action || '';
+            document.getElementById('dueBy').value = data.dueBy || '';
+            document.getElementById('trailing30Revenue').value = data.revenue || '';
+            document.getElementById('yoyPercentage').value = data.yoy || '';
+            document.getElementById('nextMeetingDate').value = data.nextMeeting || '';
+            document.getElementById('taskStatus').value = data.status || '';
+
+            // Change button text and store docId
+            const addClientBtn = document.getElementById('addClientBtn');
+            if (addClientBtn) {
+                addClientBtn.textContent = 'Update Client';
+                addClientBtn.dataset.editId = docId;
+                
+                // Remove existing click listeners
+                const newBtn = addClientBtn.cloneNode(true);
+                addClientBtn.parentNode.replaceChild(newBtn, addClientBtn);
+                
+                // Add update click listener
+                newBtn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const editId = newBtn.dataset.editId;
+                    if (!editId) return;
+
+                    try {
+                        const updatedData = {
+                            brandName: document.getElementById('brandName').value,
+                            teamResponsible: document.getElementById('teamResponsible').value,
+                            relationshipStatus: document.getElementById('relationshipStatus').value,
+                            currentSensitivity: document.getElementById('currentSensitivity').value,
+                            correctiveAction: document.getElementById('correctiveAction').value,
+                            dueBy: document.getElementById('dueBy').value,
+                            trailing30Revenue: parseFloat(document.getElementById('trailing30Revenue').value) || 0,
+                            yoyPercentage: parseFloat(document.getElementById('yoyPercentage').value) || 0,
+                            nextMeetingDate: document.getElementById('nextMeetingDate').value,
+                            taskStatus: document.getElementById('taskStatus').value
+                        };
+
+                        await updateDoc(doc(db, "brands", editId), updatedData);
+                        
+                        // Reset form and button
+                        newBtn.textContent = 'Add Client';
+                        delete newBtn.dataset.editId;
+                        
+                        // Clear form
+                        document.getElementById('brandName').value = '';
+                        document.getElementById('correctiveAction').value = '';
+                        document.getElementById('trailing30Revenue').value = '';
+                        document.getElementById('yoyPercentage').value = '';
+                        
+                        // Reload clients
+                        await loadClients();
+                        
+                    } catch (error) {
+                        console.error("Error updating client:", error);
+                        alert("Error updating client: " + error.message);
+                    }
+                });
+            }
+        });
+    }
+
+    return row;
 }

@@ -1,0 +1,29 @@
+class Navigation extends HTMLElement {
+    constructor() {
+        super();
+        
+        // Get current page to set active state
+        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        
+        // Create navigation HTML
+        this.innerHTML = `
+            <div class="nav-buttons">
+                <a href="leads.html" class="nav-btn ${currentPage === 'leads.html' ? 'active' : ''}">
+                    <i class="fas fa-user-plus"></i> Leads
+                </a>
+                <a href="prospects.html" class="nav-btn ${currentPage === 'prospects.html' ? 'active' : ''}">
+                    <i class="fas fa-chart-line"></i> Prospects
+                </a>
+                <a href="clients.html" class="nav-btn ${currentPage === 'clients.html' ? 'active' : ''}">
+                    <i class="fas fa-users"></i> Clients
+                </a>
+                <a href="tasks.html" class="nav-btn ${currentPage === 'tasks.html' ? 'active' : ''}">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+            </div>
+        `;
+    }
+}
+
+// Define the custom element
+customElements.define('nav-menu', Navigation); 
