@@ -73,21 +73,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterGreysonBtn = document.getElementById('filterGreyson');
     let currentFilter = 'all';
 
-    // Add this near the top with other DOM elements
-    const toggleInputBtn = document.getElementById('toggleInputBtn');
-    const inputSection = document.querySelector('.input-section');
-
-    // Add this toggle functionality
-    toggleInputBtn.addEventListener('click', function() {
-        if (inputSection.classList.contains('hidden')) {
-            inputSection.classList.remove('hidden');
-            toggleInputBtn.innerHTML = '<i class="fas fa-minus"></i> Hide Input Form';
-        } else {
-            inputSection.classList.add('hidden');
-            toggleInputBtn.innerHTML = '<i class="fas fa-plus"></i> Add New Lead';
-        }
-    });
-
     filterRobbyBtn.addEventListener('click', function() {
         if (currentFilter === 'robby') {
             // If already filtering Robby's leads, show all leads
@@ -468,29 +453,20 @@ document.addEventListener('DOMContentLoaded', function() {
             tr.className = `row-${lead.owner?.toLowerCase()}`;
             tr.setAttribute('data-lead-id', lead.id);
             
-            let formattedDate = '';
-            try {
-                const date = lead.dueDate ? new Date(lead.dueDate) : new Date();
-                formattedDate = date.toLocaleDateString();
-            } catch (e) {
-                console.error('Date formatting error:', e);
-                formattedDate = 'Invalid Date';
-            }
-
             tr.innerHTML = `
-                <td>
-                    <span class="expand-control" data-lead-id="${lead.id}">+</span>
-                </td>
                 <td>${lead.brandName || ''}</td>
                 <td>${lead.firstName || ''} ${lead.lastName || ''}</td>
                 <td>${lead.status || ''}</td>
                 <td>${lead.nextSteps || ''}</td>
-                <td>${formattedDate}</td>
+                <td>${lead.dueDate ? new Date(lead.dueDate).toLocaleDateString() : ''}</td>
                 <td>$${Number(lead.retainerValue || 0).toLocaleString()}</td>
                 <td>${lead.owner || ''}</td>
                 <td>
                     <button onclick="viewContact('${lead.id}')" class="action-btn view-btn">
                         <i class="fas fa-address-card"></i>
+                    </button>
+                    <button class="action-btn activity-btn" title="Activities">
+                        <i class="fas fa-history"></i>
                     </button>
                     <button onclick="deleteLead('${lead.id}')" class="action-btn delete-btn">
                         <i class="fas fa-trash"></i>
@@ -518,13 +494,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                         value="${activity.date || ''}" 
                                         class="activity-date" 
                                         readonly>
-                                    <button type="button" class="activity-edit-btn" title="Edit">
+                                    <button class="action-btn edit-btn" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button type="button" class="activity-save-btn" style="display: none;" title="Save">
-                                        <i class="fas fa-save"></i>
-                                    </button>
-                                    <button type="button" class="activity-remove-btn" title="Remove">
+                                    <button class="action-btn delete-btn" title="Delete">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -535,6 +508,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 </td>
             `;
             tbody.appendChild(activitiesRow);
+
+            // Add click handler for activity button
+            const activityBtn = tr.querySelector('.activity-btn');
+            activityBtn.addEventListener('click', function() {
+                const nextRow = tr.nextElementSibling;
+                if (nextRow && nextRow.classList.contains('activities-row')) {
+                    nextRow.style.display = nextRow.style.display === 'none' ? 'table-row' : 'none';
+                }
+            });
         });
 
         // Add expansion controls

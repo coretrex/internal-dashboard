@@ -882,7 +882,8 @@ h1 {
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.9em;
-    margin-top: 10px;
+    height: 35px; /* Match the height of input fields */
+    margin: 0; /* Remove any margin that might affect alignment */
 }
 
 .add-activity-btn:hover {
@@ -1068,4 +1069,27 @@ tr.completed button:disabled {
 
 .activity-entry .delete-btn:hover {
     color: #e74c3c; /* Red on hover */
+}
+
+/* Activity button (history icon) styling */
+.activity-btn {
+    background-color: #ff9966; /* Subtle orange */
+}
+
+.activity-btn:hover {
+    background-color: #ff8855; /* Slightly darker on hover */
+}
+
+/* Activity entry styling - align add button */
+.activity-entry {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center; /* This ensures vertical alignment */
+}
+
+/* Ensure consistent height for inputs */
+.activity-input,
+.activity-date {
+    height: 35px; /* Match the height of the add button */
 }

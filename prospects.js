@@ -7,7 +7,9 @@ import {
     getDocs, 
     deleteDoc, 
     doc, 
-    updateDoc 
+    updateDoc,
+    arrayUnion,
+    arrayRemove 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Firebase configuration
@@ -157,6 +159,7 @@ function addProspectToTable(data, docId) {
         </td>
         <td>
             <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+            <button class="action-btn activity-btn" title="Activities"><i class="fas fa-history"></i></button>
             <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
         </td>
     `;
@@ -245,6 +248,99 @@ function addProspectToTable(data, docId) {
         cancelBtn.addEventListener("click", () => {
             addProspectToTable(currentData, docId);
             newRow.remove();
+        });
+    });
+
+    // Add activity button functionality
+    const activityBtn = newRow.querySelector(".activity-btn");
+    activityBtn.addEventListener("click", () => {
+        const currentRow = newRow;
+        const nextRow = currentRow.nextElementSibling;
+        
+        if (nextRow && nextRow.classList.contains('activities-row')) {
+            nextRow.classList.toggle('expanded');
+            return;
+        }
+
+        const activitiesRow = document.createElement('tr');
+        activitiesRow.classList.add('activities-row', 'expanded');
+        activitiesRow.innerHTML = `
+            <td colspan="8" class="activities-cell">
+                <div class="activities-container">
+                    ${(data.activities || []).map(activity => `
+                        <div class="activity-entry">
+                            <input type="text" class="activity-input" value="${activity.text}" readonly>
+                            <input type="date" class="activity-date" value="${activity.date}" readonly>
+                            <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+                            <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `).join('')}
+                    <div class="activity-entry new-entry">
+                        <input type="text" class="activity-input" placeholder="Enter activity">
+                        <input type="date" class="activity-date">
+                        <button class="add-activity-btn">Add</button>
+                    </div>
+                </div>
+            </td>
+        `;
+
+        // Insert activities row after current row
+        currentRow.parentNode.insertBefore(activitiesRow, currentRow.nextSibling);
+
+        // Add event listeners for the new activity entry
+        const newActivityInput = activitiesRow.querySelector('.new-entry .activity-input');
+        const newActivityDate = activitiesRow.querySelector('.new-entry .activity-date');
+        const addActivityBtn = activitiesRow.querySelector('.add-activity-btn');
+
+        addActivityBtn.addEventListener('click', async () => {
+            const text = newActivityInput.value.trim();
+            const date = newActivityDate.value;
+
+            if (!text || !date) {
+                alert('Please enter both activity text and date');
+                return;
+            }
+
+            try {
+                const newActivity = { text, date };
+                await updateDoc(doc(db, "prospects", docId), {
+                    activities: arrayUnion(newActivity)
+                });
+
+                // Add new activity to the display
+                const activityEntry = document.createElement('div');
+                activityEntry.classList.add('activity-entry');
+                activityEntry.innerHTML = `
+                    <input type="text" class="activity-input" value="${text}" readonly>
+                    <input type="date" class="activity-date" value="${date}" readonly>
+                    <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+                `;
+
+                // Add event listeners for edit and delete
+                setupActivityEntryListeners(activityEntry, docId, newActivity);
+
+                // Insert before the new entry form
+                const newEntryDiv = activitiesRow.querySelector('.new-entry');
+                newEntryDiv.parentNode.insertBefore(activityEntry, newEntryDiv);
+
+                // Clear input fields
+                newActivityInput.value = '';
+                newActivityDate.value = '';
+
+            } catch (error) {
+                console.error("Error adding activity:", error);
+                alert("Error adding activity: " + error.message);
+            }
+        });
+
+        // Add event listeners for existing activities
+        const existingActivities = activitiesRow.querySelectorAll('.activity-entry:not(.new-entry)');
+        existingActivities.forEach(entry => {
+            setupActivityEntryListeners(entry, docId, {
+                text: entry.querySelector('.activity-input').value,
+                date: entry.querySelector('.activity-date').value
+            });
         });
     });
 
@@ -358,6 +454,63 @@ async function loadProspects() {
     } catch (error) {
         console.error("Error loading prospects:", error);
     }
+}
+
+// Helper function to setup activity entry listeners
+function setupActivityEntryListeners(entry, docId, activity) {
+    const editBtn = entry.querySelector('.edit-btn');
+    const deleteBtn = entry.querySelector('.delete-btn');
+    const textInput = entry.querySelector('.activity-input');
+    const dateInput = entry.querySelector('.activity-date');
+
+    editBtn.addEventListener('click', async () => {
+        if (textInput.readOnly) {
+            // Enable editing
+            textInput.readOnly = false;
+            dateInput.readOnly = false;
+            editBtn.innerHTML = '<i class="fas fa-save"></i>';
+            editBtn.title = "Save";
+        } else {
+            // Save changes
+            const oldActivity = activity;
+            const newActivity = {
+                text: textInput.value.trim(),
+                date: dateInput.value
+            };
+
+            try {
+                await updateDoc(doc(db, "prospects", docId), {
+                    activities: arrayRemove(oldActivity)
+                });
+                await updateDoc(doc(db, "prospects", docId), {
+                    activities: arrayUnion(newActivity)
+                });
+
+                textInput.readOnly = true;
+                dateInput.readOnly = true;
+                editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+                editBtn.title = "Edit";
+                activity = newActivity;
+            } catch (error) {
+                console.error("Error updating activity:", error);
+                alert("Error updating activity: " + error.message);
+            }
+        }
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+        if (confirm("Are you sure you want to delete this activity?")) {
+            try {
+                await updateDoc(doc(db, "prospects", docId), {
+                    activities: arrayRemove(activity)
+                });
+                entry.remove();
+            } catch (error) {
+                console.error("Error deleting activity:", error);
+                alert("Error deleting activity: " + error.message);
+            }
+        }
+    });
 }
 
 // Event Listeners
