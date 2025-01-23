@@ -1093,3 +1093,14 @@ tr.completed button:disabled {
 .activity-date {
     height: 35px; /* Match the height of the add button */
 }
+
+/* Center align only the relationship emoji column in the clients table */
+#clientsTable td:nth-child(3) {
+    text-align: center;
+}
+
+#clientsTable td .relationship-emoji {
+    display: inline-block;  /* This helps with centering */
+    width: 100%;           /* Take full width of the cell */
+    text-align: center;    /* Center the emoji */
+}
