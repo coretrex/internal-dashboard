@@ -107,14 +107,18 @@ function createTaskRow(data, id) {
     console.log('Creating row for task:', data);
     
     const row = document.createElement('tr');
+    if (data.completed) {
+        row.classList.add('completed');
+    }
+    
     row.innerHTML = `
         <td>${data.task}</td>
         <td>${data.assignee}</td>
         <td>${data.dueDate}</td>
         <td>
-            <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
+            <button class="action-btn edit-btn" ${data.completed ? 'disabled' : ''}><i class="fas fa-edit"></i></button>
             <button class="action-btn delete-btn"><i class="fas fa-trash"></i></button>
-            <button class="action-btn complete-btn"><i class="fas fa-check"></i></button>
+            <button class="action-btn complete-btn" ${data.completed ? 'disabled' : ''}><i class="fas fa-check"></i></button>
         </td>
     `;
 
@@ -122,7 +126,18 @@ function createTaskRow(data, id) {
     row.querySelector('.delete-btn').addEventListener('click', () => deleteTask(id));
 
     // Add complete functionality
-    row.querySelector('.complete-btn').addEventListener('click', () => completeTask(id));
+    row.querySelector('.complete-btn').addEventListener('click', async () => {
+        const taskRef = doc(db, "tasks", id);
+        try {
+            await updateDoc(taskRef, {
+                completed: true
+            });
+            await loadTasks();
+        } catch (error) {
+            console.error("Error completing task:", error);
+            alert("Error completing task: " + error.message);
+        }
+    });
 
     // Add edit functionality
     const editBtn = row.querySelector('.edit-btn');
@@ -188,7 +203,7 @@ async function loadTasks() {
         // Create a Set to track unique IDs
         const processedIds = new Set();
 
-        // Sort tasks by due date
+        // Sort tasks by completion status first, then by due date
         const tasks = [];
         querySnapshot.forEach((doc) => {
             if (!processedIds.has(doc.id)) {
@@ -197,7 +212,13 @@ async function loadTasks() {
             }
         });
 
-        tasks.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        tasks.sort((a, b) => {
+            // First sort by completion status (completed tasks go to bottom)
+            if (a.completed && !b.completed) return 1;
+            if (!a.completed && b.completed) return -1;
+            // Then sort by due date for tasks with same completion status
+            return new Date(a.dueDate) - new Date(b.dueDate);
+        });
 
         // Create rows for sorted tasks
         tasks.forEach((taskData) => {
@@ -221,19 +242,6 @@ async function deleteTask(id) {
             console.error("Error deleting task:", error);
             alert("Error deleting task: " + error.message);
         }
-    }
-}
-
-// Complete task
-async function completeTask(id) {
-    try {
-        await updateDoc(doc(db, "tasks", id), {
-            completed: true
-        });
-        loadTasks();
-    } catch (error) {
-        console.error("Error completing task:", error);
-        alert("Error completing task: " + error.message);
     }
 }
 

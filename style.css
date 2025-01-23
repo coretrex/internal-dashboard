@@ -918,3 +918,14 @@ h1 {
     transform: translateY(-1px);
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
+
+tr.completed {
+    background-color: #f0f0f0;
+    opacity: 0.7;
+    text-decoration: line-through;
+}
+
+tr.completed button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
