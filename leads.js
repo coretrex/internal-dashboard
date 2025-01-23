@@ -73,6 +73,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterGreysonBtn = document.getElementById('filterGreyson');
     let currentFilter = 'all';
 
+    // Add these DOM element references at the top with other DOM elements
+    const inputSection = document.querySelector('.input-section');
+    const toggleInputBtn = document.getElementById('toggleInputBtn');
+
+    // Add this event listener for the toggle button
+    toggleInputBtn.addEventListener('click', function() {
+        inputSection.classList.toggle('hidden');
+        toggleInputBtn.innerHTML = inputSection.classList.contains('hidden') 
+            ? '<i class="fas fa-plus"></i> Add New Lead'
+            : '<i class="fas fa-minus"></i> Hide Form';
+    });
+
     filterRobbyBtn.addEventListener('click', function() {
         if (currentFilter === 'robby') {
             // If already filtering Robby's leads, show all leads
