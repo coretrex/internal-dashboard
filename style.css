@@ -795,9 +795,18 @@ h1 {
     align-items: center;
 }
 
+.search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.6);
+    pointer-events: none;
+}
+
 .search-input {
     width: 300px;
-    padding: 8px 35px 8px 35px;
+    padding: 8px 35px 8px 35px; /* Adjust padding to accommodate the icon */
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 4px;
     background: rgba(255, 255, 255, 0.1);
@@ -806,13 +815,10 @@ h1 {
     transition: all 0.3s ease;
 }
 
-.search-icon {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: rgba(255, 255, 255, 0.6);
-    pointer-events: none;
+.search-input:focus {
+    outline: none;
+    border-color: white;
+    background: rgba(255, 255, 255, 0.15);
 }
 
 /* Expansion controls and activities styling */
@@ -1006,4 +1012,60 @@ tr.completed button:disabled {
 
 .toggle-input-btn i, .filter-btn i {
     font-size: 14px;
+}
+
+/* Activity input styling - normal textbox during entry */
+.activity-input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+}
+
+/* Saved activity styling - clean timeline look */
+.activity-entry:not(.new-entry) .activity-input[readonly],
+.activity-entry:not(.new-entry) .activity-date[readonly] {
+    background-color: transparent;
+    border: none;
+    padding: 8px 0;
+    font-style: italic;
+    cursor: default;
+    text-align: right; /* Add right alignment for saved activities */
+}
+
+/* Keep date input normal during entry */
+.activity-date {
+    width: 150px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+}
+
+/* Activity row action buttons */
+.activity-entry .action-btn {
+    padding: 6px;
+    margin: 0 2px;
+    border-radius: 4px;
+    border: none !important;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s ease;
+    color: #fff;
+    width: auto;  /* Remove fixed width */
+    height: auto; /* Remove fixed height */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none; /* Remove background */
+    color: #666; /* Change icon color to gray */
+}
+
+.activity-entry .edit-btn:hover {
+    color: #3498db; /* Blue on hover */
+}
+
+.activity-entry .delete-btn:hover {
+    color: #e74c3c; /* Red on hover */
 }

@@ -52,19 +52,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalLeadsElement = document.getElementById('totalLeads');
     const greysonLeadsElement = document.getElementById('greysonLeads');
     const robbyLeadsElement = document.getElementById('robbyLeads');
-    const toggleInputBtn = document.getElementById('toggleInputBtn');
-    const inputSection = document.querySelector('.input-section');
-
-    // Add toggle functionality for input section
-    toggleInputBtn.addEventListener('click', function() {
-        inputSection.classList.toggle('hidden');
-        // Update button text based on visibility
-        if (inputSection.classList.contains('hidden')) {
-            toggleInputBtn.innerHTML = '<i class="fas fa-plus"></i> Add New Lead';
-        } else {
-            toggleInputBtn.innerHTML = '<i class="fas fa-minus"></i> Hide Form';
-        }
-    });
 
     // Add these modal elements
     const modal = document.getElementById('contactModal');
@@ -85,6 +72,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const filterRobbyBtn = document.getElementById('filterRobby');
     const filterGreysonBtn = document.getElementById('filterGreyson');
     let currentFilter = 'all';
+
+    // Add this near the top with other DOM elements
+    const toggleInputBtn = document.getElementById('toggleInputBtn');
+    const inputSection = document.querySelector('.input-section');
+
+    // Add this toggle functionality
+    toggleInputBtn.addEventListener('click', function() {
+        if (inputSection.classList.contains('hidden')) {
+            inputSection.classList.remove('hidden');
+            toggleInputBtn.innerHTML = '<i class="fas fa-minus"></i> Hide Input Form';
+        } else {
+            inputSection.classList.add('hidden');
+            toggleInputBtn.innerHTML = '<i class="fas fa-plus"></i> Add New Lead';
+        }
+    });
 
     filterRobbyBtn.addEventListener('click', function() {
         if (currentFilter === 'robby') {
@@ -280,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
         robbyLeadsElement.textContent = robbyLeadsCount;
     }
 
-    // Modify addLeadBtn event listener
+    // Modify addLeadBtn event listener to handle form visibility after submission
     addLeadBtn.addEventListener('click', async () => {
         const newLead = {
             brandName: document.getElementById('brandName').value,
@@ -310,6 +312,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Clear input fields
             document.querySelectorAll('.input-field').forEach(input => input.value = '');
+            
+            // Hide the input section after successful submission
+            inputSection.classList.add('hidden');
+            toggleInputBtn.innerHTML = '<i class="fas fa-plus"></i> Add New Lead';
             
             // Reload leads from Firebase
             await loadLeads();
@@ -460,6 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Create main lead row
             const tr = document.createElement('tr');
             tr.className = `row-${lead.owner?.toLowerCase()}`;
+            tr.setAttribute('data-lead-id', lead.id);
             
             let formattedDate = '';
             try {
@@ -495,15 +502,31 @@ document.addEventListener('DOMContentLoaded', function() {
             // Create activities row
             const activitiesRow = document.createElement('tr');
             activitiesRow.className = 'activities-row';
+            activitiesRow.style.display = 'none';
             activitiesRow.innerHTML = `
                 <td colspan="9" class="activities-cell">
                     <div class="activities-container">
                         <div class="activities-list">
                             ${(lead.activities || []).map(activity => `
                                 <div class="activity-entry">
-                                    <input type="text" value="${activity.description}" placeholder="Enter activity description" class="activity-description">
-                                    <input type="date" value="${activity.date}" class="activity-date">
-                                    <button class="remove-activity-btn">Remove</button>
+                                    <input type="text" 
+                                        value="${activity.description || ''}" 
+                                        placeholder="Enter activity description" 
+                                        class="activity-input" 
+                                        readonly>
+                                    <input type="date" 
+                                        value="${activity.date || ''}" 
+                                        class="activity-date" 
+                                        readonly>
+                                    <button type="button" class="activity-edit-btn" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="activity-save-btn" style="display: none;" title="Save">
+                                        <i class="fas fa-save"></i>
+                                    </button>
+                                    <button type="button" class="activity-remove-btn" title="Remove">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
                             `).join('')}
                         </div>
@@ -514,52 +537,139 @@ document.addEventListener('DOMContentLoaded', function() {
             tbody.appendChild(activitiesRow);
         });
 
-        // Add event listeners for expansion controls
+        // Add expansion controls
         document.querySelectorAll('.expand-control').forEach(control => {
             control.addEventListener('click', function() {
-                const leadId = this.dataset.leadId;
-                const activitiesRow = this.closest('tr').nextElementSibling;
+                const leadRow = this.closest('tr');
+                const activitiesRow = leadRow.nextElementSibling;
                 
-                if (this.textContent === '+') {
+                if (activitiesRow.style.display === 'none') {
+                    activitiesRow.style.display = 'table-row';
                     this.textContent = '-';
-                    activitiesRow.classList.add('expanded');
                 } else {
+                    activitiesRow.style.display = 'none';
                     this.textContent = '+';
-                    activitiesRow.classList.remove('expanded');
                 }
             });
         });
 
-        // Add event listeners for activity buttons
-        document.querySelectorAll('.add-activity-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const activitiesList = this.previousElementSibling;
-                const newActivity = document.createElement('div');
-                newActivity.className = 'activity-entry';
-                newActivity.innerHTML = `
-                    <input type="text" placeholder="Enter activity description" class="activity-description">
-                    <input type="date" class="activity-date">
-                    <button class="remove-activity-btn">Remove</button>
-                `;
-                activitiesList.appendChild(newActivity);
+        // Add activity edit/save functionality
+        document.querySelectorAll('.activity-edit-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const activityEntry = this.closest('.activity-entry');
+                const descriptionInput = activityEntry.querySelector('.activity-input');
+                const dateInput = activityEntry.querySelector('.activity-date');
+                const saveButton = activityEntry.querySelector('.activity-save-btn');
+
+                // Enable editing
+                descriptionInput.removeAttribute('readonly');
+                dateInput.removeAttribute('readonly');
+                descriptionInput.style.backgroundColor = 'white';
+                dateInput.style.backgroundColor = 'white';
+
+                // Toggle buttons
+                this.style.display = 'none';
+                saveButton.style.display = 'flex';
             });
         });
 
-        // Update the event listener for remove activity buttons
-        document.addEventListener('click', async function(e) {
-            if (e.target.classList.contains('remove-activity-btn')) {
-                const activityEntry = e.target.closest('.activity-entry');
-                const leadId = e.target.closest('tr')
-                    .previousElementSibling
-                    .querySelector('.expand-control')
-                    .dataset.leadId;
+        document.querySelectorAll('.activity-save-btn').forEach(button => {
+            button.addEventListener('click', async function() {
+                const activityEntry = this.closest('.activity-entry');
+                const descriptionInput = activityEntry.querySelector('.activity-input');
+                const dateInput = activityEntry.querySelector('.activity-date');
+                const editButton = activityEntry.querySelector('.activity-edit-btn');
+
+                // Disable editing
+                descriptionInput.setAttribute('readonly', true);
+                dateInput.setAttribute('readonly', true);
+                descriptionInput.style.backgroundColor = '#f8f9fa';
+                dateInput.style.backgroundColor = '#f8f9fa';
+
+                // Toggle buttons
+                editButton.style.display = 'flex';
+                this.style.display = 'none';
+
+                // Save changes
+                const leadRow = activityEntry.closest('.activities-row').previousElementSibling;
+                const leadId = leadRow.getAttribute('data-lead-id');
+                if (leadId) {
+                    await saveActivities(leadId);
+                }
+            });
+        });
+
+        // Add new activity button functionality
+        document.querySelectorAll('.add-activity-btn').forEach(button => {
+            button.addEventListener('click', async function() {
+                const activitiesList = this.closest('.activities-container').querySelector('.activities-list');
+                const leadRow = this.closest('.activities-row').previousElementSibling;
+                const leadId = leadRow.getAttribute('data-lead-id');
                 
-                // Remove from UI
-                activityEntry.remove();
-                
-                // Save the updated activities to Firebase
-                await saveActivities(leadId);
-            }
+                // Create new activity entry
+                const newActivityDiv = document.createElement('div');
+                newActivityDiv.className = 'activity-entry';
+                newActivityDiv.innerHTML = `
+                    <input type="text" 
+                        placeholder="Enter activity description" 
+                        class="activity-input">
+                    <input type="date" 
+                        value="${new Date().toISOString().split('T')[0]}" 
+                        class="activity-date">
+                    <button type="button" class="activity-edit-btn" title="Edit" style="display: none;">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="activity-save-btn" title="Save">
+                        <i class="fas fa-save"></i>
+                    </button>
+                    <button type="button" class="activity-remove-btn" title="Remove">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+
+                // Prepend to DOM (add at the beginning instead of the end)
+                activitiesList.insertBefore(newActivityDiv, activitiesList.firstChild);
+
+                // Add event listeners to new buttons
+                const newSaveBtn = newActivityDiv.querySelector('.activity-save-btn');
+                const newEditBtn = newActivityDiv.querySelector('.activity-edit-btn');
+                const newRemoveBtn = newActivityDiv.querySelector('.activity-remove-btn');
+
+                // Save button listener
+                newSaveBtn.addEventListener('click', async function() {
+                    const inputs = newActivityDiv.querySelectorAll('input');
+                    inputs.forEach(input => {
+                        input.setAttribute('readonly', true);
+                        input.style.backgroundColor = '#f8f9fa';
+                    });
+                    newEditBtn.style.display = 'flex';
+                    newSaveBtn.style.display = 'none';
+                    if (leadId) {
+                        await saveActivities(leadId);
+                    }
+                });
+
+                // Edit button listener
+                newEditBtn.addEventListener('click', function() {
+                    const inputs = newActivityDiv.querySelectorAll('input');
+                    inputs.forEach(input => {
+                        input.removeAttribute('readonly');
+                        input.style.backgroundColor = 'white';
+                    });
+                    newEditBtn.style.display = 'none';
+                    newSaveBtn.style.display = 'flex';
+                });
+
+                // Remove button listener
+                newRemoveBtn.addEventListener('click', async function() {
+                    if (confirm('Are you sure you want to remove this activity?')) {
+                        newActivityDiv.remove();
+                        if (leadId) {
+                            await saveActivities(leadId);
+                        }
+                    }
+                });
+            });
         });
     }
 
@@ -571,7 +681,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const activities = Array.from(activitiesRow.querySelectorAll('.activity-entry'))
             .map(entry => ({
-                description: entry.querySelector('.activity-description').value,
+                description: entry.querySelector('.activity-input').value,
                 date: entry.querySelector('.activity-date').value
             }))
             .filter(activity => activity.description || activity.date); // Only save non-empty activities
@@ -588,7 +698,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add auto-save functionality for activities
     document.addEventListener('change', async function(e) {
-        if (e.target.classList.contains('activity-description') || 
+        if (e.target.classList.contains('activity-input') || 
             e.target.classList.contains('activity-date')) {
             const leadId = e.target.closest('tr')
                 .previousElementSibling
