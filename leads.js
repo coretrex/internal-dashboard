@@ -52,6 +52,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalLeadsElement = document.getElementById('totalLeads');
     const greysonLeadsElement = document.getElementById('greysonLeads');
     const robbyLeadsElement = document.getElementById('robbyLeads');
+    const toggleInputBtn = document.getElementById('toggleInputBtn');
+    const inputSection = document.querySelector('.input-section');
+
+    // Add toggle functionality for input section
+    toggleInputBtn.addEventListener('click', function() {
+        inputSection.classList.toggle('hidden');
+        // Update button text based on visibility
+        if (inputSection.classList.contains('hidden')) {
+            toggleInputBtn.innerHTML = '<i class="fas fa-plus"></i> Add New Lead';
+        } else {
+            toggleInputBtn.innerHTML = '<i class="fas fa-minus"></i> Hide Form';
+        }
+    });
 
     // Add these modal elements
     const modal = document.getElementById('contactModal');
@@ -69,9 +82,56 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add search functionality
     const searchInput = document.getElementById('searchInput');
     
+    const filterRobbyBtn = document.getElementById('filterRobby');
+    const filterGreysonBtn = document.getElementById('filterGreyson');
+    let currentFilter = 'all';
+
+    filterRobbyBtn.addEventListener('click', function() {
+        if (currentFilter === 'robby') {
+            // If already filtering Robby's leads, show all leads
+            currentFilter = 'all';
+            filterRobbyBtn.classList.remove('active');
+            displayFilteredLeads(leads);
+        } else {
+            // Filter to show only Robby's leads
+            currentFilter = 'robby';
+            filterRobbyBtn.classList.add('active');
+            filterGreysonBtn.classList.remove('active');
+            const robbyLeads = leads.filter(lead => lead.owner === 'Robby');
+            displayFilteredLeads(robbyLeads);
+        }
+    });
+
+    filterGreysonBtn.addEventListener('click', function() {
+        if (currentFilter === 'greyson') {
+            // If already filtering Greyson's leads, show all leads
+            currentFilter = 'all';
+            filterGreysonBtn.classList.remove('active');
+            displayFilteredLeads(leads);
+        } else {
+            // Filter to show only Greyson's leads
+            currentFilter = 'greyson';
+            filterGreysonBtn.classList.add('active');
+            filterRobbyBtn.classList.remove('active');
+            const greysonLeads = leads.filter(lead => lead.owner === 'Greyson');
+            displayFilteredLeads(greysonLeads);
+        }
+    });
+
+    // Modify the existing search functionality to respect the current owner filter
     searchInput.addEventListener('input', function(e) {
         const searchTerm = e.target.value.toLowerCase();
-        const filteredLeads = leads.filter(lead => {
+        let filteredLeads = leads;
+
+        // Apply owner filter first
+        if (currentFilter === 'robby') {
+            filteredLeads = leads.filter(lead => lead.owner === 'Robby');
+        } else if (currentFilter === 'greyson') {
+            filteredLeads = leads.filter(lead => lead.owner === 'Greyson');
+        }
+
+        // Then apply search filter
+        filteredLeads = filteredLeads.filter(lead => {
             return (
                 lead.brandName.toLowerCase().includes(searchTerm) ||
                 lead.firstName.toLowerCase().includes(searchTerm) ||

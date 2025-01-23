@@ -33,7 +33,13 @@
             </div>
         </div>
 
-        <!-- Add this before metrics-container -->
+        <!-- Move search container here, right after stats-container -->
+        <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search leads...">
+        </div>
+
+        <!-- Header actions div remains in its position -->
         <div class="header-actions">
             <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
             <button id="importCsvBtn" class="import-btn">
@@ -44,6 +50,18 @@
                target="_blank">
                 <i class="fas fa-download"></i> CSV Template
             </a>
+        </div>
+
+        <div class="add-lead-toggle">
+            <button id="toggleInputBtn" class="toggle-input-btn">
+                <i class="fas fa-plus"></i> Add New Lead
+            </button>
+            <button id="filterRobby" class="filter-btn">
+                <i class="fas fa-user"></i> Robby's Leads
+            </button>
+            <button id="filterGreyson" class="filter-btn">
+                <i class="fas fa-user"></i> Greyson's Leads
+            </button>
         </div>
 
         <div class="metrics-container">
@@ -61,7 +79,7 @@
             </div>
             
             <!-- Input Section -->
-            <div class="input-section">
+            <div class="input-section hidden">
                 <div class="input-field-group">
                     <label>Brand Name</label>
                     <input type="text" id="brandName" class="input-field" placeholder="Enter brand name" required>
@@ -126,11 +144,6 @@
                     </select>
                 </div>
                 <button type="button" id="addLeadBtn" class="add-btn">Add Lead</button>
-            </div>
-
-            <!-- Search Container -->
-            <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="Search leads...">
             </div>
 
             <!-- Leads Table -->
