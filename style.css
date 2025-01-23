@@ -949,3 +949,24 @@ tr.completed button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Relationship emoji styling */
+.dashboard-table td .relationship-emoji[data-status="Strong"] {
+    color: green !important;
+    font-size: 2.2em;
+}
+
+.dashboard-table td .relationship-emoji[data-status="Medium"] {
+    color: #FFB100 !important;
+    font-size: 1.2em;
+}
+
+.dashboard-table td .relationship-emoji[data-status="Poor"] {
+    color: red !important;
+    font-size: 1.2em;
+}
+
+/* Center align the relationship column */
+.dashboard-table td:nth-child(3) {
+    text-align: center;
+}

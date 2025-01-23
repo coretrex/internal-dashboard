@@ -89,7 +89,6 @@ async function loadClients() {
                 trailing30Revenue: rawData.trailing30Revenue || rawData.revenue || 0,
                 yoyPercentage: rawData.yoyPercentage || rawData.yoy || 0,
                 nextMeetingDate: rawData.nextMeetingDate || rawData.nextMeeting || '',
-                taskStatus: rawData.taskStatus || rawData.status || '',
                 docId: doc.id
             };
 
@@ -147,6 +146,20 @@ function createClientRow(data, docId) {
     const row = document.createElement('tr');
     row.dataset.docId = docId;
     
+    // Add this helper function at the start of createClientRow
+    const getRelationshipEmoji = (status) => {
+        switch(status) {
+            case 'Strong':
+                return `<span class="relationship-emoji" data-status="Strong">&#9786;</span>`; // ☺
+            case 'Medium':
+                return `<span class="relationship-emoji" data-status="Medium">&#128528;</span>`; // 😐
+            case 'Poor':
+                return `<span class="relationship-emoji" data-status="Poor">&#128545;</span>`; // 😡
+            default:
+                return '';
+        }
+    };
+
     // Map the data consistently
     const mappedData = {
         brandName: data.brandName || '',
@@ -158,20 +171,18 @@ function createClientRow(data, docId) {
         trailing30Revenue: data.trailing30Revenue || 0,
         yoyPercentage: data.yoyPercentage || 0,
         nextMeetingDate: data.nextMeetingDate || '',
-        taskStatus: data.taskStatus || ''
     };
     
     row.innerHTML = `
         <td>${mappedData.brandName}</td>
         <td class="hide-column">${mappedData.teamResponsible}</td>
-        <td>${mappedData.relationshipStatus}</td>
+        <td>${getRelationshipEmoji(mappedData.relationshipStatus)}</td>
         <td>${mappedData.currentSensitivity}</td>
         <td>${mappedData.correctiveAction}</td>
         <td>${mappedData.dueBy}</td>
         <td>$${(mappedData.trailing30Revenue).toLocaleString()}</td>
         <td>${mappedData.yoyPercentage}%</td>
         <td>${mappedData.nextMeetingDate}</td>
-        <td>${mappedData.taskStatus}</td>
         <td>
             <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
             <button class="action-btn delete-btn"><i class="fas fa-trash"></i></button>
@@ -192,8 +203,7 @@ function createClientRow(data, docId) {
                 dueBy: mappedData.dueBy,
                 trailing30Revenue: mappedData.trailing30Revenue,
                 yoyPercentage: mappedData.yoyPercentage,
-                nextMeetingDate: mappedData.nextMeetingDate,
-                taskStatus: mappedData.taskStatus
+                nextMeetingDate: mappedData.nextMeetingDate
             };
 
             // Replace cells with input fields
@@ -219,20 +229,15 @@ function createClientRow(data, docId) {
             cells[6].innerHTML = `<input type="number" step="0.01" class="editable-input" value="${currentData.trailing30Revenue}">`;
             cells[7].innerHTML = `<input type="number" step="0.01" class="editable-input" value="${currentData.yoyPercentage}">`;
             cells[8].innerHTML = `<input type="date" class="editable-input" value="${currentData.nextMeetingDate}">`;
-            cells[9].innerHTML = `<select class="editable-input">
-                <option value="In Progress" ${currentData.taskStatus === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                <option value="Done" ${currentData.taskStatus === 'Done' ? 'selected' : ''}>Done</option>
-                <option value="Waiting on Client" ${currentData.taskStatus === 'Waiting on Client' ? 'selected' : ''}>Waiting on Client</option>
-            </select>`;
 
             // Replace action buttons with save/cancel
-            cells[10].innerHTML = `
+            cells[9].innerHTML = `
                 <button class="action-btn save-btn">Save</button>
                 <button class="action-btn cancel-btn">Cancel</button>
             `;
 
             // Add save functionality
-            const saveBtn = cells[10].querySelector('.save-btn');
+            const saveBtn = cells[9].querySelector('.save-btn');
             saveBtn.addEventListener('click', async () => {
                 try {
                     const updatedData = {
@@ -244,8 +249,7 @@ function createClientRow(data, docId) {
                         dueBy: cells[5].querySelector('input').value,
                         trailing30Revenue: parseFloat(cells[6].querySelector('input').value) || 0,
                         yoyPercentage: parseFloat(cells[7].querySelector('input').value) || 0,
-                        nextMeetingDate: cells[8].querySelector('input').value,
-                        taskStatus: cells[9].querySelector('select').value
+                        nextMeetingDate: cells[8].querySelector('input').value
                     };
 
                     await updateDoc(doc(db, "brands", docId), updatedData);
@@ -257,7 +261,7 @@ function createClientRow(data, docId) {
             });
 
             // Add cancel functionality
-            const cancelBtn = cells[10].querySelector('.cancel-btn');
+            const cancelBtn = cells[9].querySelector('.cancel-btn');
             cancelBtn.addEventListener('click', () => {
                 loadClients(); // Reload the table to revert changes
             });
