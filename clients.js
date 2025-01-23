@@ -233,7 +233,6 @@ function createClientRow(data, docId) {
             // Replace action buttons with save/cancel
             cells[9].innerHTML = `
                 <button class="action-btn save-btn">Save</button>
-                <button class="action-btn cancel-btn">Cancel</button>
             `;
 
             // Add save functionality
@@ -258,12 +257,6 @@ function createClientRow(data, docId) {
                     console.error("Error updating client:", error);
                     alert("Error updating client: " + error.message);
                 }
-            });
-
-            // Add cancel functionality
-            const cancelBtn = cells[9].querySelector('.cancel-btn');
-            cancelBtn.addEventListener('click', () => {
-                loadClients(); // Reload the table to revert changes
             });
         });
     }
