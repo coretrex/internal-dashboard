@@ -970,7 +970,7 @@ tr.completed button:disabled {
 
 /* Center align the relationship column */
 .dashboard-table td:nth-child(3) {
-    text-align: center;
+    text-align: left;
 }
 
 .hidden {
