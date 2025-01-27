@@ -291,7 +291,7 @@ async function addClient() {
 
     try {
         const clientData = {
-            brandName: brandName, // Make sure we're using the correct field name
+            brandName: brandName,
             teamResponsible: document.getElementById('teamResponsible').value,
             relationshipStatus: document.getElementById('relationshipStatus').value,
             currentSensitivity: document.getElementById('currentSensitivity').value,
@@ -299,12 +299,11 @@ async function addClient() {
             dueBy: document.getElementById('dueBy').value,
             trailing30Revenue: parseFloat(document.getElementById('trailing30Revenue').value) || 0,
             yoyPercentage: parseFloat(document.getElementById('yoyPercentage').value) || 0,
-            nextMeetingDate: document.getElementById('nextMeetingDate').value,
-            taskStatus: document.getElementById('taskStatus').value
+            nextMeetingDate: document.getElementById('nextMeetingDate').value
         };
 
         await addDoc(collection(db, "brands"), clientData);
-        await loadClients(); // Reload the table
+        await loadClients();
 
         // Clear form
         document.getElementById('brandName').value = '';
