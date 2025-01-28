@@ -405,45 +405,49 @@ document.addEventListener('DOMContentLoaded', function() {
         csvFileInput.click();
     });
 
-    csvFileInput.addEventListener('change', function(e) {
+    csvFileInput.addEventListener('change', async function(e) {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 const text = e.target.result;
                 const rows = text.split('\n');
                 const headers = rows[0].split(',').map(header => header.trim());
 
-                // Process each row (skip header row)
-                for (let i = 1; i < rows.length; i++) {
-                    if (rows[i].trim() === '') continue; // Skip empty rows
-                    
-                    const values = rows[i].split(',').map(value => value.trim());
-                    const lead = {
-                        id: Date.now() + i, // Unique ID for each lead
-                        brandName: values[headers.indexOf('Brand Name')] || '',
-                        firstName: values[headers.indexOf('First Name')] || '',
-                        lastName: values[headers.indexOf('Last Name')] || '',
-                        email: values[headers.indexOf('Email')] || '',
-                        phone: values[headers.indexOf('Phone')] || '',
-                        status: values[headers.indexOf('Status')] || 'Meeting Hunting',
-                        leadStatus: values[headers.indexOf('Lead Status')] || 'Active',
-                        nextSteps: values[headers.indexOf('Next Steps')] || '',
-                        dueDate: values[headers.indexOf('Due Date')] || new Date().toISOString().split('T')[0],
-                        retainerValue: values[headers.indexOf('Retainer Value')] || '0',
-                        owner: values[headers.indexOf('Owner')] || 'Greyson',
-                        source: values[headers.indexOf('Source')] || 'Import',
-                        createdAt: new Date().toISOString()
-                    };
+                try {
+                    // Process each row (skip header row)
+                    for (let i = 1; i < rows.length; i++) {
+                        if (rows[i].trim() === '') continue; // Skip empty rows
+                        
+                        const values = rows[i].split(',').map(value => value.trim());
+                        const lead = {
+                            brandName: values[headers.indexOf('Brand Name')] || '',
+                            firstName: values[headers.indexOf('First Name')] || '',
+                            lastName: values[headers.indexOf('Last Name')] || '',
+                            email: values[headers.indexOf('Email')] || '',
+                            phone: values[headers.indexOf('Phone')] || '',
+                            status: values[headers.indexOf('Status')] || 'Meeting Hunting',
+                            leadStatus: values[headers.indexOf('Lead Status')] || 'Active',
+                            nextSteps: values[headers.indexOf('Next Steps')] || '',
+                            dueDate: values[headers.indexOf('Due Date')] || new Date().toISOString().split('T')[0],
+                            retainerValue: values[headers.indexOf('Retainer Value')] || '0',
+                            owner: values[headers.indexOf('Owner')] || 'Greyson',
+                            source: values[headers.indexOf('Source')] || 'Import',
+                            createdAt: serverTimestamp()
+                        };
 
-                    leads.push(lead);
+                        // Add to Firebase instead of local array
+                        await addDoc(collection(db, 'leads'), lead);
+                    }
+
+                    // Reload leads from Firebase
+                    await loadLeads();
+                    alert('CSV import complete!');
+                } catch (error) {
+                    console.error("Error importing CSV:", error);
+                    alert('Error importing CSV. Please try again.');
                 }
-
-                localStorage.setItem('leads', JSON.stringify(leads));
-                displayLeads();
-                updateMetrics();
                 csvFileInput.value = ''; // Reset file input
-                alert('CSV import complete!');
             };
             reader.readAsText(file);
         }
