@@ -984,6 +984,44 @@ tr.completed button:disabled {
     gap: 10px; /* Add gap between buttons */
 }
 
+.next-steps-cell {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: relative;
+    cursor: help;
+}
+
+/* Tooltip styling */
+.next-steps-cell[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    left: 0;
+    top: 100%;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    white-space: normal;
+    max-width: 300px;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    word-wrap: break-word;
+    line-height: 1.4;
+}
+
+/* Add a small arrow to the tooltip */
+.next-steps-cell[title]:hover::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: calc(100% - 5px);
+    border: 5px solid transparent;
+    border-bottom-color: #333;
+}
+
 .toggle-input-btn, .filter-btn {
     padding: 12px 24px;
     background-color: transparent;  /* Changed to transparent */
