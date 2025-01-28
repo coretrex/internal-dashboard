@@ -415,12 +415,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 const headers = rows[0].split(',').map(header => header.trim());
 
                 try {
+                    let importedCount = 0;
+                    let duplicateCount = 0;
+
+                    // Get existing leads first
+                    const querySnapshot = await getDocs(collection(db, 'leads'));
+                    const existingLeads = querySnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+
                     // Process each row (skip header row)
                     for (let i = 1; i < rows.length; i++) {
                         if (rows[i].trim() === '') continue; // Skip empty rows
                         
                         const values = rows[i].split(',').map(value => value.trim());
-                        const lead = {
+                        const newLead = {
                             brandName: values[headers.indexOf('Brand Name')] || '',
                             firstName: values[headers.indexOf('First Name')] || '',
                             lastName: values[headers.indexOf('Last Name')] || '',
@@ -436,13 +446,26 @@ document.addEventListener('DOMContentLoaded', function() {
                             createdAt: serverTimestamp()
                         };
 
-                        // Add to Firebase instead of local array
-                        await addDoc(collection(db, 'leads'), lead);
+                        // Check for duplicates based on brand name AND email
+                        const isDuplicate = existingLeads.some(existingLead => 
+                            existingLead.brandName.toLowerCase() === newLead.brandName.toLowerCase() &&
+                            existingLead.email.toLowerCase() === newLead.email.toLowerCase()
+                        );
+
+                        if (!isDuplicate) {
+                            // Add to Firebase
+                            await addDoc(collection(db, 'leads'), newLead);
+                            importedCount++;
+                        } else {
+                            duplicateCount++;
+                        }
                     }
 
                     // Reload leads from Firebase
                     await loadLeads();
-                    alert('CSV import complete!');
+                    
+                    // Show summary alert
+                    alert(`Import complete!\n${importedCount} leads imported\n${duplicateCount} duplicates skipped`);
                 } catch (error) {
                     console.error("Error importing CSV:", error);
                     alert('Error importing CSV. Please try again.');
