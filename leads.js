@@ -491,22 +491,16 @@ document.addEventListener('DOMContentLoaded', function() {
             tr.className = `row-${lead.owner?.toLowerCase()}`;
             tr.setAttribute('data-lead-id', lead.id);
             
-            // Properly handle and escape the next steps text
-            const nextSteps = (lead.nextSteps || '').trim();
-            const truncatedSteps = nextSteps.split(' ').slice(0, 4).join(' ') + 
-                (nextSteps.split(' ').length > 4 ? '...' : '');
-            
-            // Create the next steps cell separately to ensure proper attribute setting
-            const nextStepsCell = document.createElement('td');
-            nextStepsCell.className = 'next-steps-cell';
-            nextStepsCell.textContent = truncatedSteps;
-            nextStepsCell.setAttribute('title', nextSteps); // Set the full text as title
+            // Format the due date correctly
+            const dueDate = lead.dueDate ? 
+                new Date(lead.dueDate + 'T00:00:00').toLocaleDateString() : '';
             
             tr.innerHTML = `
                 <td>${lead.brandName || ''}</td>
                 <td>${lead.firstName || ''} ${lead.lastName || ''}</td>
                 <td>${lead.status || ''}</td>
-                <td>${lead.dueDate ? new Date(lead.dueDate).toLocaleDateString() : ''}</td>
+                <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${lead.nextSteps || ''}">${lead.nextSteps || ''}</td>
+                <td>${dueDate}</td>
                 <td>$${Number(lead.retainerValue || 0).toLocaleString()}</td>
                 <td>${lead.owner || ''}</td>
                 <td>
@@ -521,10 +515,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                 </td>
             `;
-            
-            // Insert the next steps cell at the correct position (after status)
-            const cells = tr.getElementsByTagName('td');
-            tr.insertBefore(nextStepsCell, cells[3]);
             
             tbody.appendChild(tr);
 
