@@ -24,4 +24,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     // ... rest of login code
-}); 
+});
+
+function createEmbers() {
+    const flamesElement = document.querySelector('.flames');
+    for (let i = 0; i < 20; i++) {
+        const ember = document.createElement('div');
+        ember.className = 'ember';
+        ember.style.left = `${Math.random() * 100}%`;
+        ember.style.animationDuration = `${1 + Math.random() * 2}s`;
+        ember.style.animationDelay = `${Math.random() * 2}s`;
+        flamesElement.appendChild(ember);
+    }
+}
+
+// Call this after the DOM is loaded
+document.addEventListener('DOMContentLoaded', createEmbers); 
