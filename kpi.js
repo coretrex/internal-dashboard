@@ -107,12 +107,20 @@ function calculateRecentStats() {
         const changeClass = change > 0 ? 'stat-change-up' : change < 0 ? 'stat-change-down' : 'stat-change-neutral';
         const arrow = change > 0 ? '↑' : change < 0 ? '↓' : '→';
         
+        // Check if this is a conversion rate stat and above 2%
+        const isConversion = elementId.includes('Conversion');
+        const numericValue = parseFloat(value);
+        const isOnFire = isConversion && numericValue >= 2;
+        
         element.innerHTML = `
-            ${value}
+            ${value} ${isOnFire ? '<span class="flame">🔥</span>' : ''}
             <div class="${changeClass}">
                 ${arrow} ${Math.abs(change)}%
             </div>
         `;
+        
+        // Add or remove the on-fire class based on the condition
+        element.closest('.stat').classList.toggle('on-fire', isOnFire);
     }
     
     updateStat('greysonMeetings', stats.greyson.current.meetings, greysonMeetingsChange);

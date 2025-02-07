@@ -218,3 +218,26 @@ h1 {
 .stat-change-neutral {
     color: #95a5a6; /* Grey for no change */
 }
+
+/* Flame animation styles */
+.flame {
+    display: inline-block;
+    animation: bounce 0.8s ease infinite;
+}
+
+.stat.on-fire {
+    position: relative;
+    animation: shake 1s ease infinite;
+    background: linear-gradient(45deg, rgba(255, 100, 0, 0.2), rgba(255, 0, 0, 0.1));
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-1px); }
+    75% { transform: translateX(1px); }
+}
