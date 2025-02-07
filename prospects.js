@@ -64,14 +64,16 @@ function updateStatistics() {
     // Update prospect MRR - only sum revenue from In-Progress prospects
     let totalRevenue = 0;
     inProgressProspects.forEach(row => {
-        const revenueCell = row.cells[5];
+        const revenueCell = row.cells[6];
         if (revenueCell) {
-            const revenue = parseFloat(revenueCell.textContent.replace(/[^0-9.]/g, '')) || 0;
+            const revenue = parseFloat(revenueCell.textContent.replace(/[^0-9.-]/g, '')) || 0;
             totalRevenue += revenue;
         }
     });
     
-    prospectMRREl.innerHTML = `$${totalRevenue.toLocaleString()}<span class="goal-text">/$${prospectMRRGoal.toLocaleString()}</span>`;
+    // Add goal-reached class if goal is met
+    const goalText = totalRevenue >= prospectMRRGoal ? '<span class="goal-text goal-reached">/$' : '<span class="goal-text">/$';
+    prospectMRREl.innerHTML = `$${totalRevenue.toLocaleString()}${goalText}${prospectMRRGoal.toLocaleString()}</span>`;
     
     // Update days before March
     const today = new Date();

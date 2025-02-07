@@ -246,6 +246,10 @@ h1 {
   margin-left: 4px;
 }
 
+.goal-text.goal-reached {
+  color: #2ecc71; /* A nice green color */
+}
+
 .due-today {
   background-color: #ffe6e6; /* Subtle red for due today rows */
 }
