@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>CoreTrex KPI Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="kpi-styles.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="kpi-container">
+        <header class="kpi-header">
+            <h1>KPI Dashboard</h1>
+        </header>
+        <h2 style="color: white; padding-bottom: 10px;">New Entry</h2>
+        <div class="kpi-form" id="entryForm">
+            <form id="kpiForm" class="inline-form">
+                <div class="form-group">
+                    <label for="entryDate">Date:</label>
+                    <input type="date" id="entryDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="callsMade">Calls Made:</label>
+                    <input type="number" id="callsMade" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="meetingsScheduled">Meetings Scheduled:</label>
+                    <input type="number" id="meetingsScheduled" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="owner">Owner:</label>
+                    <select id="owner" required>
+                        <option value="Greyson">Greyson</option>
+                        <option value="Robby">Robby</option>
+                    </select>
+                </div>
+                <div class="form-group submit-group">
+                    <button type="submit" class="submit-btn">Save Entry</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="kpi-history">
+            <h2 style="color: white;">KPIs</h2>
+            <div class="kpi-table-container">
+                <table class="kpi-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Day</th>
+                            <th>Calls Made</th>
+                            <th>Meetings Scheduled</th>
+                            <th>Conversion Rate</th>
+                            <th>Owner</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kpiTableBody">
+                        <!-- Data will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <nav-menu></nav-menu>
+    <script type="module" src="kpi.js"></script>
+    <script src="navigation.js"></script>
+    <div class="floating-timer">
+        <button id="timerBtn" class="timer-btn">
+            <i class="fas fa-play"></i> Start Timer
+        </button>
+        <div id="timerDisplay" class="timer-display">15:00</div>
+    </div>
+    <script src="timer.js"></script>
+</body>
+</html> 
