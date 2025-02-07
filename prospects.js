@@ -451,7 +451,7 @@ async function loadProspects() {
         // Add Robby's prospects with header
         if (robbyProspects.length > 0) {
             const robbyHeader = document.createElement('tr');
-            robbyHeader.innerHTML = `<td colspan="8" class="pod-header">Robby's Prospects</td>`;
+            robbyHeader.innerHTML = `<td colspan="9" class="pod-header">Robby's Prospects</td>`;
             tbody.appendChild(robbyHeader);
             
             robbyProspects.forEach(prospect => {
@@ -462,7 +462,7 @@ async function loadProspects() {
         // Add Greyson's prospects with header
         if (greysonProspects.length > 0) {
             const greysonHeader = document.createElement('tr');
-            greysonHeader.innerHTML = `<td colspan="8" class="pod-header">Greyson's Prospects</td>`;
+            greysonHeader.innerHTML = `<td colspan="9" class="pod-header">Greyson's Prospects</td>`;
             tbody.appendChild(greysonHeader);
             
             greysonProspects.forEach(prospect => {

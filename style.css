@@ -700,9 +700,17 @@ h1 {
 }
 
 /* Hide Sales Lead column specifically in the prospects table */
+/*
 #prospectsTable th:nth-child(5),
 #prospectsTable td:nth-child(5) {
     display: none;
+}
+*/
+
+/* Add specific styling for the signature expected column */
+.signature-expected-column {
+    min-width: 140px;  /* Ensures column has enough width */
+    text-align: left;
 }
 
 .login-btn {
