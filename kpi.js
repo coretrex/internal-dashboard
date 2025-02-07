@@ -51,7 +51,7 @@ async function saveKPIData(data) {
 
 // Format date to display day of week
 function formatDate(dateString) {
-    const date = new Date(dateString);
+    const date = new Date(dateString + 'T00:00:00'); // Add time component and force local time
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     return {
         formatted: dateString,
@@ -227,26 +227,89 @@ window.editEntry = async function(date, owner) {
         const q = query(kpiRef);
         const querySnapshot = await getDocs(q);
         let entry = null;
+        let row = null;
         
-        querySnapshot.docs.forEach(doc => {
-            const data = doc.data();
-            if (data.date === date && data.owner === owner) {
-                entry = { id: doc.id, ...data };
+        // Find the matching row in the table
+        const rows = document.querySelectorAll('#kpiTableBody tr');
+        rows.forEach(r => {
+            const rowDate = r.cells[0].textContent;
+            const rowOwner = r.cells[5].textContent;
+            if (rowDate === date && rowOwner === owner) {
+                row = r;
             }
         });
         
-        if (entry) {
-            document.getElementById('entryDate').value = entry.date;
-            document.getElementById('callsMade').value = entry.calls;
-            document.getElementById('meetingsScheduled').value = entry.meetings;
-            document.getElementById('owner').value = entry.owner;
-            
-            // Scroll to form
-            document.getElementById('kpiForm').scrollIntoView({ behavior: 'smooth' });
-        }
+        if (!row) return;
+        
+        // Get current values
+        const currentValues = {
+            date: row.cells[0].textContent,
+            calls: row.cells[2].textContent,
+            meetings: row.cells[3].textContent,
+            owner: row.cells[5].textContent
+        };
+        
+        // Replace cells with input fields
+        row.cells[2].innerHTML = `<input type="number" class="editable-input" value="${currentValues.calls}" min="0">`;
+        row.cells[3].innerHTML = `<input type="number" class="editable-input" value="${currentValues.meetings}" min="0">`;
+        row.cells[5].innerHTML = `
+            <select class="editable-input">
+                <option value="Robby" ${currentValues.owner === 'Robby' ? 'selected' : ''}>Robby</option>
+                <option value="Greyson" ${currentValues.owner === 'Greyson' ? 'selected' : ''}>Greyson</option>
+            </select>
+        `;
+        
+        // Replace edit/delete buttons with save/cancel buttons
+        const actionCell = row.cells[6];
+        const originalButtons = actionCell.innerHTML;
+        actionCell.innerHTML = `
+            <button onclick="saveEdit('${date}', '${owner}', this)" class="action-btn-small">
+                <i class="fas fa-save"></i>
+            </button>
+            <button onclick="cancelEdit('${date}', '${owner}', '${originalButtons}')" class="action-btn-small">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
     } catch (error) {
         console.error("Error editing entry:", error);
     }
+}
+
+// Add these new functions for save and cancel functionality
+window.saveEdit = async function(date, owner, button) {
+    const row = button.closest('tr');
+    const newValues = {
+        date: date,
+        calls: parseInt(row.cells[2].querySelector('input').value) || 0,
+        meetings: parseInt(row.cells[3].querySelector('input').value) || 0,
+        owner: row.cells[5].querySelector('select').value
+    };
+    
+    try {
+        const kpiRef = collection(db, 'kpi');
+        const q = query(kpiRef);
+        const querySnapshot = await getDocs(q);
+        
+        querySnapshot.docs.forEach(async (doc) => {
+            const data = doc.data();
+            if (data.date === date && data.owner === owner) {
+                await updateDoc(doc.ref, newValues);
+            }
+        });
+        
+        // Update table to reflect changes
+        await updateTable();
+        
+    } catch (error) {
+        console.error("Error saving edit:", error);
+        alert("Error saving changes. Please try again.");
+    }
+}
+
+window.cancelEdit = async function(date, owner, originalButtons) {
+    // Simply refresh the table to revert changes
+    await updateTable();
 }
 
 // Delete entry function
