@@ -261,7 +261,21 @@ function createClientRow(data, docId) {
         });
     }
 
-    // ... rest of the delete button functionality ...
+    // Add delete button functionality
+    const deleteBtn = row.querySelector('.delete-btn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', async () => {
+            if (confirm(`Are you sure you want to delete ${mappedData.brandName}?`)) {
+                try {
+                    await deleteDoc(doc(db, "brands", docId));
+                    await loadClients(); // Reload the table after deletion
+                } catch (error) {
+                    console.error("Error deleting client:", error);
+                    alert("Error deleting client: " + error.message);
+                }
+            }
+        });
+    }
 
     return row;
 }

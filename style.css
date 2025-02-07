@@ -1187,3 +1187,58 @@ tr.completed button:disabled {
     left: 50%;
     top: 100%;
 }
+
+/* Floating Timer Styles */
+.floating-timer {
+    position: fixed;
+    top: 20px;  /* Changed from bottom to top */
+    right: 20px;
+    background: rgba(41, 121, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 999;
+}
+
+.timer-btn {
+    background-color: #1976cc;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.timer-btn:hover {
+    background-color: #195dcc;
+    transform: translateY(-1px);
+}
+
+.timer-display {
+    font-size: 24px;
+    font-weight: 700;
+    color: white;
+    min-width: 80px;
+    text-align: center;
+    display: none;
+}
+
+.timer-display.active {
+    display: block;
+}
+
+.timer-btn.running {
+    background-color: #dc3545;
+}
+
+.timer-btn.running:hover {
+    background-color: #c82333;
+}

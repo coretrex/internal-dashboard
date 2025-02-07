@@ -36,6 +36,8 @@ const daysBeforeMarchEl = document.getElementById('daysBeforeMarch');
 const prospectMRREl = document.getElementById('prospectMRR');
 const prospectsTable = document.getElementById('prospectsTable');
 const addProspectBtn = document.getElementById('addProspectBtn');
+const timerBtn = document.getElementById('timerBtn');
+const timerDisplay = document.getElementById('timerDisplay');
 
 // Add this CSS to your stylesheet or add it inline
 const style = document.createElement('style');
@@ -143,7 +145,7 @@ function addProspectToTable(data, docId) {
     const todayString = new Date().toISOString().split('T')[0];
 
     newRow.innerHTML = `
-        <td><span class="hot-lead ${data.isHotLead ? 'active' : ''}">🔥</span></td>
+        <td><span class="hot-lead ${data.isHotLead ? 'active' : ''}" title="Hot">🔥</span></td>
         <td>${data.prospectName}</td>
         <td>${data.nextSteps}</td>
         <td class="${data.dueDate <= todayString ? 'overdue' : ''}">${data.dueDate}</td>
@@ -164,6 +166,21 @@ function addProspectToTable(data, docId) {
             <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
         </td>
     `;
+
+    // Add hot lead click handler
+    const hotLeadSpan = newRow.querySelector('.hot-lead');
+    hotLeadSpan.addEventListener('click', async () => {
+        try {
+            const newHotLeadStatus = !hotLeadSpan.classList.contains('active');
+            await updateDoc(doc(db, "prospects", docId), {
+                isHotLead: newHotLeadStatus
+            });
+            hotLeadSpan.classList.toggle('active');
+        } catch (error) {
+            console.error("Error updating hot lead status:", error);
+            alert("Error updating hot lead status: " + error.message);
+        }
+    });
 
     // Add status change handler
     const statusDropdown = newRow.querySelector('.status-dropdown');
@@ -360,21 +377,6 @@ function addProspectToTable(data, docId) {
         }
     });
 
-    // Add hot lead toggle functionality
-    const hotLeadSpan = newRow.querySelector('.hot-lead');
-    hotLeadSpan.addEventListener('click', async () => {
-        try {
-            const newHotLeadStatus = !hotLeadSpan.classList.contains('active');
-            await updateDoc(doc(db, "prospects", docId), {
-                isHotLead: newHotLeadStatus
-            });
-            hotLeadSpan.classList.toggle('active');
-        } catch (error) {
-            console.error("Error updating hot lead status:", error);
-            alert("Error updating hot lead status: " + error.message);
-        }
-    });
-
     // Add row to table
     const tbody = prospectsTable.querySelector("tbody");
     tbody.appendChild(newRow);
@@ -536,4 +538,48 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addProspectBtn) {
         addProspectBtn.addEventListener("click", addProspect);
     }
-}); 
+
+    timerBtn.addEventListener('click', () => {
+        if (timerInterval) {
+            stopTimer();
+        } else {
+            startTimer();
+        }
+    });
+});
+
+let timerInterval;
+let timeLeft;
+
+function startTimer() {
+    timeLeft = 15 * 60; // 15 minutes in seconds
+    updateTimerDisplay();
+    
+    timerBtn.innerHTML = '<i class="fas fa-stop"></i> Stop Timer';
+    timerBtn.classList.add('running');
+    timerDisplay.classList.add('active');
+    
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+        
+        if (timeLeft <= 0) {
+            stopTimer();
+            alert('Timer finished!');
+        }
+    }, 1000);
+}
+
+function stopTimer() {
+    clearInterval(timerInterval);
+    timerBtn.innerHTML = '<i class="fas fa-play"></i> Start Timer';
+    timerBtn.classList.remove('running');
+    timerDisplay.classList.remove('active');
+    timerDisplay.textContent = '15:00';
+}
+
+function updateTimerDisplay() {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+} 
