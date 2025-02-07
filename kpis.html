@@ -11,10 +11,35 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
+    <h1>KPI Dashboard</h1>
     <div class="kpi-container">
         <header class="kpi-header">
-            <h1>KPI Dashboard</h1>
+            
         </header>
+
+        <!-- Add Stats Container -->
+        <div class="stats-container">
+            <!-- Greyson's Stats -->
+            <div class="stat">
+                <div class="stat-number" id="greysonMeetings">0</div>
+                <div class="stat-label">Meetings (Greyson)</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="greysonConversion">0%</div>
+                <div class="stat-label">Conversion Rate (Greyson)</div>
+            </div>
+            
+            <!-- Robby's Stats -->
+            <div class="stat">
+                <div class="stat-number" id="robbyMeetings">0</div>
+                <div class="stat-label">Meetings (Robby)</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="robbyConversion">0%</div>
+                <div class="stat-label">Conversion Rate (Robby)</div>
+            </div>
+        </div>
+
         <h2 style="color: white; padding-bottom: 10px;">New Entry</h2>
         <div class="kpi-form" id="entryForm">
             <form id="kpiForm" class="inline-form">

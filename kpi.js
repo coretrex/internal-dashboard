@@ -28,6 +28,99 @@ function calculateConversionRate(calls, meetings) {
     return ((meetings / calls) * 100).toFixed(1) + '%';
 }
 
+// Add this function to calculate stats for the last 14 days
+function calculateRecentStats() {
+    const kpiData = loadKPIData();
+    
+    // Initialize stats objects
+    const stats = {
+        greyson: { 
+            current: { meetings: 0, calls: 0 },
+            previous: { meetings: 0, calls: 0 }
+        },
+        robby: { 
+            current: { meetings: 0, calls: 0 },
+            previous: { meetings: 0, calls: 0 }
+        }
+    };
+    
+    // Group entries by owner
+    const greysonEntries = kpiData.filter(entry => entry.owner === 'Greyson')
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+    const robbyEntries = kpiData.filter(entry => entry.owner === 'Robby')
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    // Get current and previous 5 entries for each owner
+    const greysonCurrent = greysonEntries.slice(0, 5);
+    const greysonPrevious = greysonEntries.slice(5, 10);
+    const robbyCurrent = robbyEntries.slice(0, 5);
+    const robbyPrevious = robbyEntries.slice(5, 10);
+    
+    // Calculate totals for current and previous periods
+    greysonCurrent.forEach(entry => {
+        stats.greyson.current.meetings += entry.meetings;
+        stats.greyson.current.calls += entry.calls;
+    });
+    
+    greysonPrevious.forEach(entry => {
+        stats.greyson.previous.meetings += entry.meetings;
+        stats.greyson.previous.calls += entry.calls;
+    });
+    
+    robbyCurrent.forEach(entry => {
+        stats.robby.current.meetings += entry.meetings;
+        stats.robby.current.calls += entry.calls;
+    });
+    
+    robbyPrevious.forEach(entry => {
+        stats.robby.previous.meetings += entry.meetings;
+        stats.robby.previous.calls += entry.calls;
+    });
+    
+    // Calculate conversion rates and changes
+    function calculateChange(current, previous) {
+        if (previous === 0) return current > 0 ? 100 : 0;
+        return ((current - previous) / previous * 100).toFixed(1);
+    }
+    
+    // Greyson's calculations
+    const greysonCurrentConversion = stats.greyson.current.calls ? 
+        ((stats.greyson.current.meetings / stats.greyson.current.calls) * 100).toFixed(1) : 0;
+    const greysonPreviousConversion = stats.greyson.previous.calls ? 
+        ((stats.greyson.previous.meetings / stats.greyson.previous.calls) * 100).toFixed(1) : 0;
+    
+    // Robby's calculations
+    const robbyCurrentConversion = stats.robby.current.calls ? 
+        ((stats.robby.current.meetings / stats.robby.current.calls) * 100).toFixed(1) : 0;
+    const robbyPreviousConversion = stats.robby.previous.calls ? 
+        ((stats.robby.previous.meetings / stats.robby.previous.calls) * 100).toFixed(1) : 0;
+    
+    // Calculate percentage changes
+    const greysonMeetingsChange = calculateChange(stats.greyson.current.meetings, stats.greyson.previous.meetings);
+    const greysonConversionChange = calculateChange(greysonCurrentConversion, greysonPreviousConversion);
+    const robbyMeetingsChange = calculateChange(stats.robby.current.meetings, stats.robby.previous.meetings);
+    const robbyConversionChange = calculateChange(robbyCurrentConversion, robbyPreviousConversion);
+    
+    // Update DOM with current values and changes
+    function updateStat(elementId, value, change) {
+        const element = document.getElementById(elementId);
+        const changeClass = change > 0 ? 'stat-change-up' : change < 0 ? 'stat-change-down' : 'stat-change-neutral';
+        const arrow = change > 0 ? '↑' : change < 0 ? '↓' : '→';
+        
+        element.innerHTML = `
+            ${value}
+            <div class="${changeClass}">
+                ${arrow} ${Math.abs(change)}%
+            </div>
+        `;
+    }
+    
+    updateStat('greysonMeetings', stats.greyson.current.meetings, greysonMeetingsChange);
+    updateStat('greysonConversion', `${greysonCurrentConversion}%`, greysonConversionChange);
+    updateStat('robbyMeetings', stats.robby.current.meetings, robbyMeetingsChange);
+    updateStat('robbyConversion', `${robbyCurrentConversion}%`, robbyConversionChange);
+}
+
 // Update table with KPI data
 function updateTable() {
     const tableBody = document.getElementById('kpiTableBody');
@@ -66,6 +159,9 @@ function updateTable() {
             </tr>
         `;
     }).join('');
+    
+    // Add this line at the end
+    calculateRecentStats();
 }
 
 // Edit entry function
@@ -119,5 +215,8 @@ document.getElementById('kpiForm').addEventListener('submit', (e) => {
     e.target.reset();
 });
 
-// Initialize table on page load
-document.addEventListener('DOMContentLoaded', updateTable); 
+// Make sure stats are calculated on page load
+document.addEventListener('DOMContentLoaded', () => {
+    updateTable();
+    calculateRecentStats();
+}); 
