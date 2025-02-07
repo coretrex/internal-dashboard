@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('isLoggedIn', 'true');
                 
                 // Redirect to leads page
-                window.location.href = 'leads.html';
+                window.location.href = 'kpis.html';
             } else {
                 loginError.style.display = "block";
                 loginError.textContent = "Incorrect password. Please try again.";
