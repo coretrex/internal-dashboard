@@ -143,6 +143,7 @@ function addProspectToTable(data, docId) {
     const todayString = new Date().toISOString().split('T')[0];
 
     newRow.innerHTML = `
+        <td><span class="hot-lead ${data.isHotLead ? 'active' : ''}">🔥</span></td>
         <td>${data.prospectName}</td>
         <td>${data.nextSteps}</td>
         <td class="${data.dueDate <= todayString ? 'overdue' : ''}">${data.dueDate}</td>
@@ -186,50 +187,50 @@ function addProspectToTable(data, docId) {
     editBtn.addEventListener("click", () => {
         const cells = newRow.cells;
         const currentData = {
-            prospectName: cells[0].textContent,
-            nextSteps: cells[1].textContent,
-            dueDate: cells[2].textContent,
-            signatureExpected: cells[3].textContent,
-            salesLead: cells[4].textContent,
-            revenueValue: parseFloat(cells[5].textContent.replace(/[$,]/g, '')),
-            status: cells[6].querySelector('select').value
+            prospectName: cells[1].textContent,
+            nextSteps: cells[2].textContent,
+            dueDate: cells[3].textContent,
+            signatureExpected: cells[4].textContent,
+            salesLead: cells[5].textContent,
+            revenueValue: parseFloat(cells[6].textContent.replace(/[$,]/g, '')),
+            status: cells[7].querySelector('select').value
         };
 
         // Replace cells with input fields
-        cells[0].innerHTML = `<input type="text" class="editable-input" value="${currentData.prospectName}">`;
-        cells[1].innerHTML = `<input type="text" class="editable-input" value="${currentData.nextSteps}">`;
-        cells[2].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueDate}">`;
-        cells[3].innerHTML = `
+        cells[1].innerHTML = `<input type="text" class="editable-input" value="${currentData.prospectName}">`;
+        cells[2].innerHTML = `<input type="text" class="editable-input" value="${currentData.nextSteps}">`;
+        cells[3].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueDate}">`;
+        cells[4].innerHTML = `
             <select class="editable-input">
                 <option value="February 1st" ${currentData.signatureExpected === 'February 1st' ? 'selected' : ''}>February 1st</option>
                 <option value="March 1st" ${currentData.signatureExpected === 'March 1st' ? 'selected' : ''}>March 1st</option>
             </select>
         `;
-        cells[4].innerHTML = `
+        cells[5].innerHTML = `
             <select class="editable-input">
                 <option value="Robby" ${currentData.salesLead === 'Robby' ? 'selected' : ''}>Robby</option>
                 <option value="Greyson" ${currentData.salesLead === 'Greyson' ? 'selected' : ''}>Greyson</option>
             </select>
         `;
-        cells[5].innerHTML = `<input type="number" class="editable-input" value="${currentData.revenueValue}">`;
+        cells[6].innerHTML = `<input type="number" class="editable-input" value="${currentData.revenueValue}">`;
 
         // Replace edit/delete buttons with save/cancel buttons
-        cells[7].innerHTML = `
+        cells[8].innerHTML = `
             <button class="action-btn save-btn" title="Save"><i class="fas fa-save"></i></button>
             <button class="action-btn cancel-btn" title="Cancel"><i class="fas fa-times"></i></button>
         `;
 
         // Add save functionality
-        const saveBtn = cells[7].querySelector(".save-btn");
+        const saveBtn = cells[8].querySelector(".save-btn");
         saveBtn.addEventListener("click", async () => {
             try {
                 const updatedData = {
-                    prospectName: cells[0].querySelector('input').value,
-                    nextSteps: cells[1].querySelector('input').value,
-                    dueDate: cells[2].querySelector('input').value,
-                    signatureExpected: cells[3].querySelector('select').value,
-                    salesLead: cells[4].querySelector('select').value,
-                    revenueValue: parseFloat(cells[5].querySelector('input').value) || 0,
+                    prospectName: cells[1].querySelector('input').value,
+                    nextSteps: cells[2].querySelector('input').value,
+                    dueDate: cells[3].querySelector('input').value,
+                    signatureExpected: cells[4].querySelector('select').value,
+                    salesLead: cells[5].querySelector('select').value,
+                    revenueValue: parseFloat(cells[6].querySelector('input').value) || 0,
                     status: currentData.status
                 };
 
@@ -244,7 +245,7 @@ function addProspectToTable(data, docId) {
         });
 
         // Add cancel functionality
-        const cancelBtn = cells[7].querySelector(".cancel-btn");
+        const cancelBtn = cells[8].querySelector(".cancel-btn");
         cancelBtn.addEventListener("click", () => {
             addProspectToTable(currentData, docId);
             newRow.remove();
@@ -356,6 +357,21 @@ function addProspectToTable(data, docId) {
                 console.error("Error deleting prospect:", error);
                 alert("Error deleting prospect: " + error.message);
             }
+        }
+    });
+
+    // Add hot lead toggle functionality
+    const hotLeadSpan = newRow.querySelector('.hot-lead');
+    hotLeadSpan.addEventListener('click', async () => {
+        try {
+            const newHotLeadStatus = !hotLeadSpan.classList.contains('active');
+            await updateDoc(doc(db, "prospects", docId), {
+                isHotLead: newHotLeadStatus
+            });
+            hotLeadSpan.classList.toggle('active');
+        } catch (error) {
+            console.error("Error updating hot lead status:", error);
+            alert("Error updating hot lead status: " + error.message);
         }
     });
 
