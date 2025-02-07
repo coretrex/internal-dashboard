@@ -1191,9 +1191,9 @@ tr.completed button:disabled {
 /* Floating Timer Styles */
 .floating-timer {
     position: fixed;
-    top: 20px;  /* Changed from bottom to top */
+    bottom: 20px;  /* Changed from top to bottom */
     right: 20px;
-    background: rgba(41, 121, 255, 0.1);
+    background: rgba(0, 34, 71, 0.8);  /* Darker background for better contrast */
     backdrop-filter: blur(10px);
     padding: 15px;
     border-radius: 12px;
@@ -1203,6 +1203,7 @@ tr.completed button:disabled {
     align-items: center;
     gap: 10px;
     z-index: 999;
+    min-width: 120px;  /* Ensure minimum width */
 }
 
 .timer-btn {
@@ -1223,12 +1224,14 @@ tr.completed button:disabled {
 }
 
 .timer-display {
-    font-size: 24px;
+    font-size: 32px;  /* Increased font size */
     font-weight: 700;
     color: white;
-    min-width: 80px;
+    min-width: 100px;  /* Increased minimum width */
     text-align: center;
     display: none;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);  /* Added text shadow for better readability */
+    font-family: monospace;  /* Monospace font for better number alignment */
 }
 
 .timer-display.active {
