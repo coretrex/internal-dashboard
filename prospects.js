@@ -395,7 +395,9 @@ function updateRowStatusClass(row, status) {
 // Sort prospects by status
 function sortProspectsByStatus() {
     const tbody = prospectsTable.querySelector("tbody");
-    const rows = Array.from(tbody.getElementsByTagName("tr"));
+    if (!tbody) return;
+
+    const rows = Array.from(tbody.querySelectorAll("tr:not(.pod-header):not(.activities-row)"));
     
     const statusPriority = {
         'In-Progress': 0,
@@ -405,12 +407,48 @@ function sortProspectsByStatus() {
     };
     
     rows.sort((a, b) => {
-        const statusA = a.querySelector('.status-dropdown').value;
-        const statusB = b.querySelector('.status-dropdown').value;
+        const statusDropdownA = a.querySelector('.status-dropdown');
+        const statusDropdownB = b.querySelector('.status-dropdown');
+        
+        if (!statusDropdownA || !statusDropdownB) return 0;
+        
+        const statusA = statusDropdownA.value || 'In-Progress';
+        const statusB = statusDropdownB.value || 'In-Progress';
+        
         return statusPriority[statusA] - statusPriority[statusB];
     });
     
-    rows.forEach(row => tbody.appendChild(row));
+    // Clear tbody
+    tbody.innerHTML = '';
+    
+    // Group rows by sales lead
+    const rowsBySalesLead = {};
+    rows.forEach(row => {
+        const salesLeadCell = row.querySelector('td:nth-child(6)');
+        if (!salesLeadCell) return;
+        
+        const salesLead = salesLeadCell.textContent || 'Unknown';
+        if (!rowsBySalesLead[salesLead]) {
+            rowsBySalesLead[salesLead] = [];
+        }
+        rowsBySalesLead[salesLead].push(row);
+    });
+    
+    // Add rows back with headers
+    Object.entries(rowsBySalesLead).forEach(([salesLead, salesLeadRows]) => {
+        if (salesLeadRows.length > 0) {
+            // Add header
+            const header = document.createElement('tr');
+            header.classList.add('pod-header');
+            header.innerHTML = `<td colspan="9" class="pod-header">${salesLead}'s Prospects</td>`;
+            tbody.appendChild(header);
+            
+            // Add rows
+            salesLeadRows.forEach(row => {
+                tbody.appendChild(row);
+            });
+        }
+    });
 }
 
 // Load prospects from Firebase
