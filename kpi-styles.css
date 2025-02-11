@@ -241,3 +241,30 @@ h1 {
     25% { transform: translateX(-1px); }
     75% { transform: translateX(1px); }
 }
+
+.leads-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    color: white;
+    border: 2px solid white;
+    border-radius: 5px;
+    text-decoration: none;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.3s ease;
+}
+
+.leads-btn::after {
+    content: "↗";
+    font-size: 1.2em;
+    line-height: 1;
+}
+
+.leads-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
