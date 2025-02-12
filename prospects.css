@@ -1,0 +1,280 @@
+/* Stats Container */
+.stats-container {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.stat {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    min-width: 200px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.3s ease;
+}
+
+.stat:hover {
+    transform: translateY(-2px);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.stat-label {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Input Section */
+.input-section {
+    display: none;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+    align-items: end;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2rem;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.input-section.show {
+    display: grid;
+}
+
+/* Table Styles */
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.dashboard-table th,
+.dashboard-table td {
+    padding: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Column-specific widths */
+.dashboard-table th:nth-child(1), /* Intent */
+.dashboard-table td:nth-child(1) {
+    width: 50px;
+    max-width: 50px;
+}
+
+.dashboard-table th:nth-child(2), /* Prospect Name */
+.dashboard-table td:nth-child(2) {
+    max-width: 150px;
+}
+
+.dashboard-table th:nth-child(3), /* Next Steps */
+.dashboard-table td:nth-child(3) {
+    max-width: 200px;
+}
+
+.dashboard-table th:nth-child(4), /* Due Date */
+.dashboard-table td:nth-child(4) {
+    max-width: 100px;
+}
+
+.dashboard-table th:nth-child(5), /* Signature Expected */
+.dashboard-table td:nth-child(5) {
+    max-width: 120px;
+}
+
+.dashboard-table th:nth-child(6), /* Sales Lead */
+.dashboard-table td:nth-child(6) {
+    max-width: 80px;
+}
+
+.dashboard-table th:nth-child(7), /* Revenue */
+.dashboard-table td:nth-child(7) {
+    max-width: 100px;
+}
+
+.dashboard-table th:nth-child(8), /* Status */
+.dashboard-table td:nth-child(8) {
+    max-width: 100px;
+}
+
+.dashboard-table th:nth-child(9), /* Actions */
+.dashboard-table td:nth-child(9) {
+    max-width: 120px;
+}
+
+.dashboard-table th {
+    background: #0853a8;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+.pod-header {
+    background: #e9ecef;
+    font-weight: bold;
+    text-align: left;
+    padding: 0.75rem !important;
+}
+
+/* Action Buttons */
+.action-btn {
+    padding: 0.25rem 0.5rem;
+    margin: 0 0.25rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    color: white;
+}
+
+.edit-btn {
+    background: #2196F3;
+}
+
+.activity-btn {
+    background: #4CAF50;
+}
+
+.delete-btn {
+    background: #dc3545;
+}
+
+/* Hot Lead Indicator */
+.hot-lead {
+    cursor: pointer;
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+}
+
+.hot-lead.active {
+    opacity: 1;
+}
+
+/* Status Styles */
+.status-won {
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.status-lost {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.status-stalled {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+/* Activities Section */
+.activities-row {
+    display: none;
+}
+
+.activities-row.expanded {
+    display: table-row;
+}
+
+.activities-cell {
+    padding: 1rem !important;
+    background: #f8f9fa;
+}
+
+.activities-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.activity-entry {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.activity-input {
+    flex: 1;
+    padding: 0.25rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Timer */
+.floating-timer {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    background: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Add Client Button */
+.toggle-add-prospect {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 8px 20px;
+    border: 2px solid white;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    z-index: 100;
+    display: inline-flex;
+    align-items: center;
+    font-family: 'Poppins', sans-serif;
+}
+
+.toggle-add-prospect:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Overdue styling */
+.overdue {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+    .dashboard-table {
+        font-size: 0.8rem;
+    }
+    
+    .dashboard-table th,
+    .dashboard-table td {
+        padding: 0.4rem;
+    }
+} 
+
+/* Format date to hide year */
+.date-short {
+    display: block;
+}
+
+.date-short::after {
+    content: attr(data-date);
+}

@@ -146,11 +146,20 @@ function addProspectToTable(data, docId) {
     // Get today's date string for comparison
     const todayString = new Date().toISOString().split('T')[0];
 
+    // Format the date to show only month and day
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric' 
+        });
+    };
+
     newRow.innerHTML = `
         <td><span class="hot-lead ${data.isHotLead ? 'active' : ''}" title="Hot">🔥</span></td>
         <td>${data.prospectName}</td>
         <td>${data.nextSteps}</td>
-        <td class="${data.dueDate <= todayString ? 'overdue' : ''}">${data.dueDate}</td>
+        <td class="${data.dueDate <= todayString ? 'overdue' : ''}">${formatDate(data.dueDate)}</td>
         <td>${data.signatureExpected}</td>
         <td>${data.salesLead}</td>
         <td>$${data.revenueValue.toLocaleString()}</td>
