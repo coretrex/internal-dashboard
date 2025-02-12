@@ -287,9 +287,29 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Firestore database:', db);
     loadClients();
     
+    // Create and insert toggle button before input section
+    const inputSection = document.querySelector('.input-section');
+    const toggleButton = document.createElement('button');
+    toggleButton.className = 'toggle-add-client';
+    toggleButton.textContent = '+ Add Client';
+    inputSection.parentNode.insertBefore(toggleButton, inputSection);
+    
+    // Add toggle functionality
+    toggleButton.addEventListener('click', () => {
+        inputSection.classList.toggle('show');
+        toggleButton.textContent = inputSection.classList.contains('show') 
+            ? '- Hide Form' 
+            : '+ Add Client';
+    });
+    
     const addClientBtn = document.getElementById('addClientBtn');
     if (addClientBtn) {
-        addClientBtn.addEventListener('click', addClient);
+        addClientBtn.addEventListener('click', () => {
+            addClient();
+            // Hide the form after successful addition
+            inputSection.classList.remove('show');
+            toggleButton.textContent = '+ Add Client';
+        });
     } else {
         console.error('Add Client button not found');
     }
