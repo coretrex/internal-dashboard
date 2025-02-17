@@ -232,18 +232,18 @@
     position: fixed;
     top: 20px;
     left: 20px;
-    background: rgba(255, 255, 255, 0.1);
+    background: #0853a8;
     color: white;
     padding: 8px 20px;
-    border: 2px solid white;
+    border: none;
     border-radius: 5px;
     cursor: pointer;
     font-weight: 500;
-    backdrop-filter: blur(10px);
     transition: all 0.3s ease;
     z-index: 100;
     display: inline-flex;
     align-items: center;
+    gap: 8px;
     font-family: 'Poppins', sans-serif;
 }
 

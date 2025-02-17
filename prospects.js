@@ -584,6 +584,18 @@ function setupActivityEntryListeners(entry, docId, activity) {
 document.addEventListener('DOMContentLoaded', () => {
     loadProspects();
     
+    // Add this new code
+    const toggleAddProspectBtn = document.querySelector('.toggle-add-prospect');
+    const inputSection = document.querySelector('.input-section');
+    
+    toggleAddProspectBtn.addEventListener('click', () => {
+        inputSection.classList.toggle('show');
+        const isShowing = inputSection.classList.contains('show');
+        toggleAddProspectBtn.innerHTML = isShowing ? 
+            '<i class="fas fa-times"></i> Close Form' : 
+            '<i class="fas fa-plus"></i> Add New Prospect';
+    });
+    
     if (addProspectBtn) {
         addProspectBtn.addEventListener("click", addProspect);
     }
