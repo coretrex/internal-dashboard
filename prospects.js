@@ -140,7 +140,6 @@ function addProspectToTable(data, docId) {
     const newRow = document.createElement("tr");
     newRow.dataset.docId = docId;
     
-    // Set initial status class
     updateRowStatusClass(newRow, data.status || 'In-Progress');
 
     // Get today's date string for comparison
@@ -148,7 +147,8 @@ function addProspectToTable(data, docId) {
 
     // Format the date to show only month and day
     const formatDate = (dateString) => {
-        const date = new Date(dateString);
+        // Add timezone offset to prevent date from shifting
+        const date = new Date(dateString + 'T00:00:00');
         return date.toLocaleDateString('en-US', { 
             month: 'short', 
             day: 'numeric' 
