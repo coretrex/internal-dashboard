@@ -743,33 +743,47 @@ h1 {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0,0,0,0.4);
+    background-color: rgba(0,0,0,0.5);
+    backdrop-filter: blur(5px);
 }
 
 .modal-content {
     background-color: #fefefe;
-    margin: 5% auto;
-    padding: 20px;
-    border: 1px solid #888;
+    margin: 15% auto;
+    padding: 2rem;
+    border-radius: 15px;
     width: 80%;
     max-width: 500px;
-    border-radius: 8px;
     position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
 
 .close {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
+    position: absolute;
+    right: 1.5rem;
+    top: 1rem;
+    font-size: 1.8rem;
     font-weight: bold;
+    color: #666;
     cursor: pointer;
+    transition: color 0.2s ease;
 }
 
-.close:hover,
-.close:focus {
-    color: black;
-    text-decoration: none;
-    cursor: pointer;
+.close:hover {
+    color: #333;
+}
+
+.modal-details {
+    margin-top: 1.5rem;
+    line-height: 1.6;
+    color: #444;
+    font-size: 1.1rem;
+}
+
+.modal h2 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
 }
 
 .contact-info {
@@ -1483,4 +1497,213 @@ tr.completed button:disabled {
     0% { text-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
     50% { text-shadow: 0 0 20px rgba(255, 0, 0, 0.8); }
     100% { text-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
+}
+
+/* Goals Page Styles */
+.goals-content {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.goals-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.current-mrr {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2ecc71;
+}
+
+.thermometer-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 2rem 0;
+    padding: 0 2rem;
+}
+
+.thermometer-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 1rem;
+}
+
+.label {
+    font-size: 0.9rem;
+    color: #666;
+    text-align: center;
+    min-width: 60px;
+}
+
+.thermometer {
+    width: 100%;
+    height: 60px;
+    background: #f0f0f0;
+    border-radius: 30px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.thermometer-progress {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    background: linear-gradient(to right, #e74c3c, #f39c12);
+    transition: width 0.3s ease;
+    border-radius: 30px;
+}
+
+.progress-value {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.milestones-container {
+    margin-top: 3rem;
+}
+
+.milestone-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.milestone-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+    position: relative;
+    cursor: pointer;
+}
+
+.milestone-card:hover {
+    transform: translateY(-5px);
+}
+
+.milestone-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: #2979ff;
+}
+
+.milestone-card.completed .milestone-icon {
+    color: #2ecc71;
+}
+
+.milestone-card.active .milestone-icon {
+    color: #f39c12;
+}
+
+.milestone-card.locked .milestone-icon {
+    color: #95a5a6;
+}
+
+.milestone-card h3 {
+    margin: 0.5rem 0;
+    font-size: 1.2rem;
+    color: #2c3e50;
+}
+
+.milestone-card p {
+    color: #666;
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.milestone-details {
+    text-align: left;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.milestone-details ul {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0;
+}
+
+.milestone-details li {
+    margin: 0.3rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.milestone-details li:before {
+    content: "•";
+    color: #2979ff;
+    position: absolute;
+    left: 0;
+}
+
+/* Update thermometer styles for horizontal layout */
+.thermometer-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 2rem 0;
+    padding: 0 2rem;
+}
+
+.thermometer-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 1rem;
+}
+
+.label {
+    font-size: 0.9rem;
+    color: #666;
+    text-align: center;
+    min-width: 60px;
+}
+
+.thermometer {
+    width: 100%;
+    height: 60px;
+    background: #f0f0f0;
+    border-radius: 30px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.thermometer-progress {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    background: linear-gradient(to right, #e74c3c, #f39c12);
+    transition: width 0.3s ease;
+    border-radius: 30px;
+}
+
+.progress-value {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: white;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }

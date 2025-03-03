@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <title>CoreTrex Goals</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="page-container">
+        <div class="goals-content">
+            <div class="goals-header">
+                <h1>Sales Goals & Milestones</h1>
+                <div class="current-mrr">Current MRR: $94K</div>
+            </div>
+            
+            <div class="thermometer-container">
+                <div class="thermometer-labels">
+                    <div class="label">$75K</div>
+                    <div class="label">$90K</div>
+                    <div class="label">$100K</div>
+                    <div class="label">$110K</div>
+                    <div class="label">$120K</div>
+                </div>
+                <div class="thermometer">
+                    <div class="thermometer-progress" style="width: 42%;">
+                        <div class="progress-value">$94K</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="milestones-container">
+                <h2>Milestones & Unlocks</h2>
+                <div class="milestone-grid">
+                    <div class="milestone-card active" data-milestone="94k">
+                        <div class="milestone-icon"><i class="fas fa-rocket"></i></div>
+                        <h3>$94K MRR</h3>
+                        <p>Projected MRR Start</p>
+                    </div>
+                    <div class="milestone-card locked" data-milestone="100k">
+                        <div class="milestone-icon"><i class="fas fa-tshirt"></i></div>
+                        <h3>$100K MRR</h3>
+                        <p>Team Celebration + Merch</p>
+                    </div>
+                    <div class="milestone-card locked" data-milestone="110k">
+                        <div class="milestone-icon"><i class="fas fa-gift"></i></div>
+                        <h3>$110K MRR</h3>
+                        <p>Major Perks Unlock</p>
+                    </div>
+                    <div class="milestone-card locked" data-milestone="115k">
+                        <div class="milestone-icon"><i class="fas fa-user-plus"></i></div>
+                        <h3>$115K MRR</h3>
+                        <p>New Hire to Expand Team</p>
+                    </div>
+                    <div class="milestone-card locked" data-milestone="120k">
+                        <div class="milestone-icon"><i class="fas fa-trophy"></i></div>
+                        <h3>$120K MRR</h3>
+                        <p>Team Retreat + Giveaway</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Milestone Details Modal -->
+    <div id="milestoneModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+<!-- Navigation -->
+<nav-menu></nav-menu>
+<script src="navigation.js"></script>
+    <script type="module" src="goals.js"></script>
+</body>
+</html> 

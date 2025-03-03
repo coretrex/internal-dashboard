@@ -8,6 +8,9 @@ class Navigation extends HTMLElement {
         // Create navigation HTML
         this.innerHTML = `
             <div class="nav-buttons">
+                <a href="goals.html" class="nav-btn ${currentPage === 'goals.html' ? 'active' : ''}">
+                    <i class="fas fa-bullseye"></i> Goals
+                </a>
                 <a href="kpis.html" class="nav-btn ${currentPage === 'kpis.html' ? 'active' : ''}">
                     <i class="fas fa-chart-bar"></i> KPIs
                 </a>
