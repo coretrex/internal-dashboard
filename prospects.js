@@ -232,6 +232,9 @@ function addProspectToTable(data, docId) {
             <select class="editable-input">
                 <option value="February 1st" ${currentData.signatureExpected === 'February 1st' ? 'selected' : ''}>February 1st</option>
                 <option value="March 1st" ${currentData.signatureExpected === 'March 1st' ? 'selected' : ''}>March 1st</option>
+                <option value="April 1st" ${currentData.signatureExpected === 'April 1st' ? 'selected' : ''}>April 1st</option>
+                <option value="May 1st" ${currentData.signatureExpected === 'May 1st' ? 'selected' : ''}>May 1st</option>
+                <option value="June 1st" ${currentData.signatureExpected === 'June 1st' ? 'selected' : ''}>June 1st</option>
             </select>
         `;
         cells[5].innerHTML = `
