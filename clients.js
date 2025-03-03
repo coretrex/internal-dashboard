@@ -160,6 +160,16 @@ function createClientRow(data, docId) {
         }
     };
 
+    // Add this helper function before the createClientRow function
+    function isPastDue(dateString) {
+        if (!dateString) return false;
+        const dueDate = new Date(dateString);
+        dueDate.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return dueDate < today;
+    }
+
     // Map the data consistently
     const mappedData = {
         brandName: data.brandName || '',
@@ -179,10 +189,10 @@ function createClientRow(data, docId) {
         <td>${getRelationshipEmoji(mappedData.relationshipStatus)}</td>
         <td>${mappedData.currentSensitivity}</td>
         <td>${mappedData.correctiveAction}</td>
-        <td>${mappedData.dueBy}</td>
+        <td class="${isPastDue(mappedData.dueBy) ? 'past-due' : ''}">${mappedData.dueBy}</td>
         <td>$${(mappedData.trailing30Revenue).toLocaleString()}</td>
         <td>${mappedData.yoyPercentage}%</td>
-        <td>${mappedData.nextMeetingDate}</td>
+        <td class="${isPastDue(mappedData.nextMeetingDate) ? 'past-due' : ''}">${mappedData.nextMeetingDate}</td>
         <td>
             <button class="action-btn edit-btn"><i class="fas fa-edit"></i></button>
             <button class="action-btn delete-btn"><i class="fas fa-trash"></i></button>
