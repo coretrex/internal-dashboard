@@ -486,7 +486,15 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        filteredLeads.forEach(lead => {
+        // Separate leads by status
+        const activeLeads = filteredLeads.filter(lead => 
+            lead.leadStatus !== 'Stalled' && lead.leadStatus !== 'Do Not Contact'
+        );
+        const stalledLeads = filteredLeads.filter(lead => lead.leadStatus === 'Stalled');
+        const doNotContactLeads = filteredLeads.filter(lead => lead.leadStatus === 'Do Not Contact');
+
+        // Helper function to create a lead row
+        const createLeadRow = (lead) => {
             const tr = document.createElement('tr');
             tr.className = `row-${lead.owner?.toLowerCase()}`;
             tr.setAttribute('data-lead-id', lead.id);
@@ -516,9 +524,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 </td>
             `;
             
-            tbody.appendChild(tr);
+            return tr;
+        };
 
-            // Create activities row
+        // Helper function to create activities row
+        const createActivitiesRow = (lead) => {
             const activitiesRow = document.createElement('tr');
             activitiesRow.className = 'activities-row';
             activitiesRow.style.display = 'none';
@@ -550,30 +560,70 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </td>
             `;
-            tbody.appendChild(activitiesRow);
+            return activitiesRow;
+        };
 
-            // Add click handler for activity button
-            const activityBtn = tr.querySelector('.activity-btn');
-            activityBtn.addEventListener('click', function() {
-                const nextRow = tr.nextElementSibling;
-                if (nextRow && nextRow.classList.contains('activities-row')) {
-                    nextRow.style.display = nextRow.style.display === 'none' ? 'table-row' : 'none';
-                }
-            });
+        // Helper function to create collapsible section
+        const createCollapsibleSection = (leads, title, className) => {
+            if (leads.length > 0) {
+                const header = document.createElement('tr');
+                header.classList.add(className);
+                header.innerHTML = `
+                    <td colspan="9" class="${className}" style="background-color: ${className === 'stalled-leads-header' ? '#ff8c00' : '#ff0000'}; color: white;">
+                        <div class="collapsible-toggle">
+                            <i class="fas fa-chevron-right"></i>
+                            ${title} (${leads.length})
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(header);
+
+                // Add click handler for toggle
+                header.querySelector('.collapsible-toggle').addEventListener('click', () => {
+                    const isExpanded = header.classList.contains('expanded');
+                    header.classList.toggle('expanded');
+                    header.querySelector('i').classList.toggle('fa-chevron-right');
+                    header.querySelector('i').classList.toggle('fa-chevron-down');
+                    
+                    // Toggle visibility of leads
+                    leads.forEach(lead => {
+                        const row = document.querySelector(`tr[data-lead-id="${lead.id}"]`);
+                        const activitiesRow = row?.nextElementSibling;
+                        if (row) {
+                            row.style.display = isExpanded ? 'none' : 'table-row';
+                            if (activitiesRow && activitiesRow.classList.contains('activities-row')) {
+                                activitiesRow.style.display = 'none';
+                            }
+                        }
+                    });
+                });
+
+                // Add leads (initially hidden)
+                leads.forEach(lead => {
+                    const row = createLeadRow(lead);
+                    row.style.display = 'none';
+                    tbody.appendChild(row);
+                    tbody.appendChild(createActivitiesRow(lead));
+                });
+            }
+        };
+
+        // Display active leads first
+        activeLeads.forEach(lead => {
+            tbody.appendChild(createLeadRow(lead));
+            tbody.appendChild(createActivitiesRow(lead));
         });
 
-        // Add expansion controls
-        document.querySelectorAll('.expand-control').forEach(control => {
-            control.addEventListener('click', function() {
-                const leadRow = this.closest('tr');
-                const activitiesRow = leadRow.nextElementSibling;
-                
-                if (activitiesRow.style.display === 'none') {
-                    activitiesRow.style.display = 'table-row';
-                    this.textContent = '-';
-                } else {
-                    activitiesRow.style.display = 'none';
-                    this.textContent = '+';
+        // Add collapsible sections for stalled and do not contact leads
+        createCollapsibleSection(stalledLeads, 'Stalled Leads', 'stalled-leads-header');
+        createCollapsibleSection(doNotContactLeads, 'Do Not Contact Leads', 'do-not-contact-header');
+
+        // Add event listeners for activity buttons
+        document.querySelectorAll('.activity-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const nextRow = this.closest('tr').nextElementSibling;
+                if (nextRow && nextRow.classList.contains('activities-row')) {
+                    nextRow.style.display = nextRow.style.display === 'none' ? 'table-row' : 'none';
                 }
             });
         });
@@ -586,18 +636,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 const dateInput = activityEntry.querySelector('.activity-date');
                 const saveButton = activityEntry.querySelector('.activity-save-btn');
 
-                // Enable editing
                 descriptionInput.removeAttribute('readonly');
                 dateInput.removeAttribute('readonly');
                 descriptionInput.style.backgroundColor = 'white';
                 dateInput.style.backgroundColor = 'white';
 
-                // Toggle buttons
                 this.style.display = 'none';
                 saveButton.style.display = 'flex';
             });
         });
 
+        // Add activity save functionality
         document.querySelectorAll('.activity-save-btn').forEach(button => {
             button.addEventListener('click', async function() {
                 const activityEntry = this.closest('.activity-entry');
@@ -605,17 +654,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const dateInput = activityEntry.querySelector('.activity-date');
                 const editButton = activityEntry.querySelector('.activity-edit-btn');
 
-                // Disable editing
                 descriptionInput.setAttribute('readonly', true);
                 dateInput.setAttribute('readonly', true);
                 descriptionInput.style.backgroundColor = '#f8f9fa';
                 dateInput.style.backgroundColor = '#f8f9fa';
 
-                // Toggle buttons
                 editButton.style.display = 'flex';
                 this.style.display = 'none';
 
-                // Save changes
                 const leadRow = activityEntry.closest('.activities-row').previousElementSibling;
                 const leadId = leadRow.getAttribute('data-lead-id');
                 if (leadId) {
@@ -631,7 +677,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const leadRow = this.closest('.activities-row').previousElementSibling;
                 const leadId = leadRow.getAttribute('data-lead-id');
                 
-                // Create new activity entry
                 const newActivityDiv = document.createElement('div');
                 newActivityDiv.className = 'activity-entry';
                 newActivityDiv.innerHTML = `
@@ -652,15 +697,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                 `;
 
-                // Prepend to DOM (add at the beginning instead of the end)
                 activitiesList.insertBefore(newActivityDiv, activitiesList.firstChild);
 
-                // Add event listeners to new buttons
                 const newSaveBtn = newActivityDiv.querySelector('.activity-save-btn');
                 const newEditBtn = newActivityDiv.querySelector('.activity-edit-btn');
                 const newRemoveBtn = newActivityDiv.querySelector('.activity-remove-btn');
 
-                // Save button listener
                 newSaveBtn.addEventListener('click', async function() {
                     const inputs = newActivityDiv.querySelectorAll('input');
                     inputs.forEach(input => {
@@ -674,7 +716,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
 
-                // Edit button listener
                 newEditBtn.addEventListener('click', function() {
                     const inputs = newActivityDiv.querySelectorAll('input');
                     inputs.forEach(input => {
@@ -685,7 +726,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     newSaveBtn.style.display = 'flex';
                 });
 
-                // Remove button listener
                 newRemoveBtn.addEventListener('click', async function() {
                     if (confirm('Are you sure you want to remove this activity?')) {
                         newActivityDiv.remove();
