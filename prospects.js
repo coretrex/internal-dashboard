@@ -394,6 +394,8 @@ function addProspectToTable(data, docId) {
     // Add row to table
     const tbody = prospectsTable.querySelector("tbody");
     tbody.appendChild(newRow);
+
+    return newRow;
 }
 
 // Helper function to update row status classes
@@ -409,7 +411,7 @@ function sortProspectsByStatus() {
     const tbody = prospectsTable.querySelector("tbody");
     if (!tbody) return;
 
-    const rows = Array.from(tbody.querySelectorAll("tr:not(.pod-header):not(.activities-row)"));
+    const rows = Array.from(tbody.querySelectorAll("tr:not(.pod-header):not(.activities-row):not(.won-prospects-header):not(.won-prospects-row)"));
     
     const statusPriority = {
         'In-Progress': 0,
@@ -461,6 +463,46 @@ function sortProspectsByStatus() {
             });
         }
     });
+
+    // Add Won Prospects section
+    const wonProspects = rows.filter(row => {
+        const statusDropdown = row.querySelector('.status-dropdown');
+        return statusDropdown && statusDropdown.value === 'Won';
+    });
+
+    if (wonProspects.length > 0) {
+        // Add Won Prospects header
+        const wonHeader = document.createElement('tr');
+        wonHeader.classList.add('won-prospects-header');
+        wonHeader.innerHTML = `
+            <td colspan="9" class="won-prospects-header">
+                <div class="won-prospects-toggle">
+                    <i class="fas fa-chevron-right"></i>
+                    Won Prospects (${wonProspects.length})
+                </div>
+            </td>
+        `;
+        tbody.appendChild(wonHeader);
+
+        // Add click handler for toggle
+        wonHeader.querySelector('.won-prospects-toggle').addEventListener('click', () => {
+            const isExpanded = wonHeader.classList.contains('expanded');
+            wonHeader.classList.toggle('expanded');
+            wonHeader.querySelector('i').classList.toggle('fa-chevron-right');
+            wonHeader.querySelector('i').classList.toggle('fa-chevron-down');
+            
+            // Toggle visibility of won prospects
+            wonProspects.forEach(row => {
+                row.style.display = isExpanded ? 'none' : 'table-row';
+            });
+        });
+
+        // Add won prospects (initially hidden)
+        wonProspects.forEach(row => {
+            row.style.display = 'none';
+            tbody.appendChild(row);
+        });
+    }
 }
 
 // Load prospects from Firebase
@@ -471,13 +513,22 @@ async function loadProspects() {
         
         const querySnapshot = await getDocs(collection(db, "prospects"));
         
-        // Create arrays for each sales lead
+        // Create arrays for each status and sales lead
         const robbyProspects = [];
         const greysonProspects = [];
+        const wonProspects = [];
+        const stalledProspects = [];
+        const lostProspects = [];
         
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            if (data.salesLead === 'Robby') {
+            if (data.status === 'Won') {
+                wonProspects.push({ ...data, id: doc.id });
+            } else if (data.status === 'Stalled') {
+                stalledProspects.push({ ...data, id: doc.id });
+            } else if (data.status === 'Lost') {
+                lostProspects.push({ ...data, id: doc.id });
+            } else if (data.salesLead === 'Robby') {
                 robbyProspects.push({ ...data, id: doc.id });
             } else if (data.salesLead === 'Greyson') {
                 greysonProspects.push({ ...data, id: doc.id });
@@ -488,9 +539,7 @@ async function loadProspects() {
         const sortByStatus = (a, b) => {
             const statusPriority = {
                 'In-Progress': 0,
-                'Stalled': 1,
-                'Won': 2,
-                'Lost': 3
+                'Lost': 1
             };
             return statusPriority[a.status] - statusPriority[b.status];
         };
@@ -519,6 +568,52 @@ async function loadProspects() {
                 addProspectToTable(prospect, prospect.id);
             });
         }
+
+        // Helper function to create collapsible section
+        const createCollapsibleSection = (prospects, title, className) => {
+            if (prospects.length > 0) {
+                const header = document.createElement('tr');
+                header.classList.add(className);
+                header.innerHTML = `
+                    <td colspan="9" class="${className}">
+                        <div class="collapsible-toggle">
+                            <i class="fas fa-chevron-right"></i>
+                            ${title} (${prospects.length})
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(header);
+
+                // Add click handler for toggle
+                header.querySelector('.collapsible-toggle').addEventListener('click', () => {
+                    const isExpanded = header.classList.contains('expanded');
+                    header.classList.toggle('expanded');
+                    header.querySelector('i').classList.toggle('fa-chevron-right');
+                    header.querySelector('i').classList.toggle('fa-chevron-down');
+                    
+                    // Toggle visibility of prospects
+                    prospects.forEach(prospect => {
+                        const row = document.querySelector(`tr[data-doc-id="${prospect.id}"]`);
+                        if (row) {
+                            row.style.display = isExpanded ? 'none' : 'table-row';
+                        }
+                    });
+                });
+
+                // Add prospects (initially hidden)
+                prospects.forEach(prospect => {
+                    const row = addProspectToTable(prospect, prospect.id);
+                    if (row) {
+                        row.style.display = 'none';
+                    }
+                });
+            }
+        };
+
+        // Add collapsible sections for each status
+        createCollapsibleSection(wonProspects, 'Won Prospects', 'won-prospects-header');
+        createCollapsibleSection(stalledProspects, 'Stalled Prospects', 'stalled-prospects-header');
+        createCollapsibleSection(lostProspects, 'Lost Prospects', 'lost-prospects-header');
 
         updateStatistics();
     } catch (error) {

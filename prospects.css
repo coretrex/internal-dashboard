@@ -278,3 +278,81 @@
 .date-short::after {
     content: attr(data-date);
 }
+
+/* Won Prospects Section */
+.won-prospects-header {
+    background: #28a745;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.won-prospects-header:hover {
+    background: #218838;
+}
+
+.won-prospects-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.5rem;
+}
+
+.won-prospects-toggle i {
+    transition: transform 0.3s ease;
+}
+
+.won-prospects-header.expanded .won-prospects-toggle i {
+    transform: rotate(90deg);
+}
+
+/* Collapsible Sections */
+.won-prospects-header,
+.stalled-prospects-header,
+.lost-prospects-header {
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.won-prospects-header {
+    background: #28a745;
+}
+
+.won-prospects-header:hover {
+    background: #218838;
+}
+
+.stalled-prospects-header {
+    background: #ffc107;
+    color: #000;
+}
+
+.stalled-prospects-header:hover {
+    background: #e0a800;
+}
+
+.lost-prospects-header {
+    background: #dc3545;
+}
+
+.lost-prospects-header:hover {
+    background: #c82333;
+}
+
+.collapsible-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.5rem;
+}
+
+.collapsible-toggle i {
+    transition: transform 0.3s ease;
+}
+
+.won-prospects-header.expanded .collapsible-toggle i,
+.stalled-prospects-header.expanded .collapsible-toggle i,
+.lost-prospects-header.expanded .collapsible-toggle i {
+    transform: rotate(90deg);
+}
