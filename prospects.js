@@ -32,7 +32,6 @@ const prospectMRRGoal = 100000;
 
 // DOM Elements
 const prospectCountEl = document.getElementById('prospectCount');
-const daysBeforeMarchEl = document.getElementById('daysBeforeMarch');
 const prospectMRREl = document.getElementById('prospectMRR');
 const prospectsTable = document.getElementById('prospectsTable');
 const addProspectBtn = document.getElementById('addProspectBtn');
@@ -48,6 +47,35 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Add this helper function at the top level
+function formatDateWithOrdinal(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString + 'T00:00:00');
+    const month = date.toLocaleString('en-US', { month: 'long' });
+    const day = date.getDate();
+    
+    // Add ordinal suffix to day
+    const ordinal = (day) => {
+        if (day > 3 && day < 21) return day + 'th';
+        switch (day % 10) {
+            case 1: return day + 'st';
+            case 2: return day + 'nd';
+            case 3: return day + 'rd';
+            default: return day + 'th';
+        }
+    };
+    
+    return `${month} ${ordinal(day)}`;
+}
+
+// Add this helper function to convert formatted date back to YYYY-MM-DD
+function convertToYYYYMMDD(formattedDate) {
+    if (!formattedDate) return '';
+    const date = new Date(formattedDate);
+    if (isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
+}
 
 // Statistics function
 function updateStatistics() {
@@ -74,17 +102,6 @@ function updateStatistics() {
     // Add goal-reached class if goal is met
     const goalText = totalRevenue >= prospectMRRGoal ? '<span class="goal-text goal-reached">/$' : '<span class="goal-text">/$';
     prospectMRREl.innerHTML = `$${totalRevenue.toLocaleString()}${goalText}${prospectMRRGoal.toLocaleString()}</span>`;
-    
-    // Update days before March
-    const today = new Date();
-    const year = today.getFullYear();
-    const marchFirst = new Date(year, 2, 1);
-    if (today > marchFirst) {
-        marchFirst.setFullYear(year + 1);
-    }
-    const diffTime = marchFirst - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    daysBeforeMarchEl.textContent = diffDays;
 }
 
 // Add prospect function
@@ -140,27 +157,18 @@ function addProspectToTable(data, docId) {
     const newRow = document.createElement("tr");
     newRow.dataset.docId = docId;
     
+    // Set initial status class
     updateRowStatusClass(newRow, data.status || 'In-Progress');
 
     // Get today's date string for comparison
     const todayString = new Date().toISOString().split('T')[0];
 
-    // Format the date to show only month and day
-    const formatDate = (dateString) => {
-        // Add timezone offset to prevent date from shifting
-        const date = new Date(dateString + 'T00:00:00');
-        return date.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric' 
-        });
-    };
-
     newRow.innerHTML = `
         <td><span class="hot-lead ${data.isHotLead ? 'active' : ''}" title="Hot">🔥</span></td>
         <td>${data.prospectName}</td>
         <td>${data.nextSteps}</td>
-        <td class="${data.dueDate <= todayString ? 'overdue' : ''}">${formatDate(data.dueDate)}</td>
-        <td>${data.signatureExpected}</td>
+        <td class="${data.dueDate <= todayString ? 'overdue' : ''}" data-date="${data.dueDate}">${formatDateWithOrdinal(data.dueDate)}</td>
+        <td data-date="${data.signatureExpected}">${formatDateWithOrdinal(data.signatureExpected)}</td>
         <td>${data.salesLead}</td>
         <td>$${data.revenueValue.toLocaleString()}</td>
         <td>
@@ -214,11 +222,13 @@ function addProspectToTable(data, docId) {
     const editBtn = newRow.querySelector(".edit-btn");
     editBtn.addEventListener("click", () => {
         const cells = newRow.cells;
+        
+        // Get the original data from the row's dataset and data attributes
         const currentData = {
             prospectName: cells[1].textContent,
             nextSteps: cells[2].textContent,
-            dueDate: cells[3].textContent,
-            signatureExpected: cells[4].textContent,
+            dueDate: cells[3].dataset.date,  // Get the original date from data attribute
+            signatureExpected: cells[4].dataset.date,  // Get the original date from data attribute
             salesLead: cells[5].textContent,
             revenueValue: parseFloat(cells[6].textContent.replace(/[$,]/g, '')),
             status: cells[7].querySelector('select').value
@@ -228,15 +238,7 @@ function addProspectToTable(data, docId) {
         cells[1].innerHTML = `<input type="text" class="editable-input" value="${currentData.prospectName}">`;
         cells[2].innerHTML = `<input type="text" class="editable-input" value="${currentData.nextSteps}">`;
         cells[3].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueDate}">`;
-        cells[4].innerHTML = `
-            <select class="editable-input">
-                <option value="February 1st" ${currentData.signatureExpected === 'February 1st' ? 'selected' : ''}>February 1st</option>
-                <option value="March 1st" ${currentData.signatureExpected === 'March 1st' ? 'selected' : ''}>March 1st</option>
-                <option value="April 1st" ${currentData.signatureExpected === 'April 1st' ? 'selected' : ''}>April 1st</option>
-                <option value="May 1st" ${currentData.signatureExpected === 'May 1st' ? 'selected' : ''}>May 1st</option>
-                <option value="June 1st" ${currentData.signatureExpected === 'June 1st' ? 'selected' : ''}>June 1st</option>
-            </select>
-        `;
+        cells[4].innerHTML = `<input type="date" class="editable-input" value="${currentData.signatureExpected}">`;
         cells[5].innerHTML = `
             <select class="editable-input">
                 <option value="Robby" ${currentData.salesLead === 'Robby' ? 'selected' : ''}>Robby</option>
@@ -259,7 +261,7 @@ function addProspectToTable(data, docId) {
                     prospectName: cells[1].querySelector('input').value,
                     nextSteps: cells[2].querySelector('input').value,
                     dueDate: cells[3].querySelector('input').value,
-                    signatureExpected: cells[4].querySelector('select').value,
+                    signatureExpected: cells[4].querySelector('input').value,
                     salesLead: cells[5].querySelector('select').value,
                     revenueValue: parseFloat(cells[6].querySelector('input').value) || 0,
                     status: currentData.status
