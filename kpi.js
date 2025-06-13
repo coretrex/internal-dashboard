@@ -472,6 +472,12 @@ async function getAllNoteDates() {
     return noteDates;
 }
 
+// Helper to get note text for a date
+async function getNoteTextForDate(date) {
+    const noteObj = await getNoteForDate(date);
+    return noteObj ? noteObj.note : '';
+}
+
 // Chart.js plugin to draw a red note icon above data points with notes
 const noteIconPlugin = (noteDates, allDates) => ({
     id: 'noteIconPlugin',
@@ -479,11 +485,66 @@ const noteIconPlugin = (noteDates, allDates) => ({
         const { ctx, chartArea, scales } = chart;
         if (!ctx || !scales || !scales.x) return;
         ctx.save();
+        
+        // Create tooltip element if it doesn't exist
+        let tooltip = document.getElementById('noteTooltip');
+        if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.id = 'noteTooltip';
+            tooltip.style.position = 'absolute';
+            tooltip.style.display = 'none';
+            tooltip.style.backgroundColor = 'rgba(33, 150, 243, 0.95)'; // Material Design Blue with high opacity
+            tooltip.style.color = 'white';
+            tooltip.style.padding = '8px 12px';
+            tooltip.style.borderRadius = '4px';
+            tooltip.style.fontSize = '14px';
+            tooltip.style.maxWidth = '300px';
+            tooltip.style.zIndex = '1000';
+            tooltip.style.pointerEvents = 'none';
+            tooltip.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)'; // Add subtle shadow for depth
+            document.body.appendChild(tooltip);
+        }
+
+        // Add mouse move handler if not already added
+        if (!chart._noteIconMouseMoveHandler) {
+            chart._noteIconMouseMoveHandler = async function(e) {
+                const rect = chart.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Check if mouse is over any note icon
+                for (let i = 0; i < allDates.length; i++) {
+                    const date = allDates[i];
+                    if (!noteDates.includes(date)) continue;
+                    
+                    const iconX = scales.x.getPixelForValue(date);
+                    const iconY = chartArea.top + 18;
+                    
+                    // Check if mouse is within icon bounds (20x20 pixels)
+                    if (Math.abs(x - iconX) <= 10 && Math.abs(y - iconY) <= 10) {
+                        const noteText = await getNoteTextForDate(date);
+                        if (noteText) {
+                            tooltip.style.display = 'block';
+                            tooltip.style.left = (e.clientX + 10) + 'px';
+                            tooltip.style.top = (e.clientY + 10) + 'px';
+                            tooltip.textContent = noteText;
+                            return;
+                        }
+                    }
+                }
+                tooltip.style.display = 'none';
+            };
+            
+            chart.canvas.addEventListener('mousemove', chart._noteIconMouseMoveHandler);
+        }
+
+        // Draw note icons
         noteDates.forEach(date => {
             const idx = allDates.indexOf(date);
             if (idx === -1) return;
             const x = scales.x.getPixelForValue(date);
-            const y = chartArea.top + 18; // 18px from top of chart area
+            const y = chartArea.top + 18;
+            
             // Draw a red note icon (Font Awesome style sticky note)
             ctx.font = 'bold 20px FontAwesome, Arial';
             ctx.textAlign = 'center';
@@ -491,6 +552,7 @@ const noteIconPlugin = (noteDates, allDates) => ({
             ctx.fillStyle = '#ff1744';
             ctx.fillText('\uf249', x, y); // fa-note-sticky unicode
         });
+        
         ctx.restore();
     }
 });
@@ -555,6 +617,10 @@ async function renderKpiChart(startDate, endDate, selectedPeople, reverseOrder =
         });
     });
     if (kpiChartInstance) {
+        // Remove old event listener if it exists
+        if (kpiChartInstance._noteIconMouseMoveHandler) {
+            kpiChartInstance.canvas.removeEventListener('mousemove', kpiChartInstance._noteIconMouseMoveHandler);
+        }
         kpiChartInstance.destroy();
     }
     const noteDates = await getAllNoteDates();
@@ -693,9 +759,13 @@ if (closeKpiGraphModalBtn) {
     };
 }
 window.onclick = function(event) {
-    const modal = document.getElementById('kpiGraphModal');
-    if (event.target === modal) {
-        modal.style.display = 'none';
+    const kpiGraphModal = document.getElementById('kpiGraphModal');
+    const kpiNoteModal = document.getElementById('kpiNoteModal');
+    if (event.target === kpiGraphModal) {
+        kpiGraphModal.style.display = 'none';
+    }
+    if (event.target === kpiNoteModal) {
+        kpiNoteModal.style.display = 'none';
     }
 };
 
@@ -729,6 +799,19 @@ async function saveNoteForDate(date, note) {
     }
 }
 
+// Helper to delete a note for a date
+async function deleteNoteForDate(date) {
+    const q = query(notesCollection);
+    const querySnapshot = await getDocs(q);
+    for (const docSnap of querySnapshot.docs) {
+        const data = docSnap.data();
+        if (data.date === date) {
+            await deleteDoc(doc(notesCollection, docSnap.id));
+            break;
+        }
+    }
+}
+
 // Add chart click event for notes
 function addChartClickForNotes(chart, allDates) {
     chart.options.onClick = async function(evt, elements) {
@@ -740,16 +823,45 @@ function addChartClickForNotes(chart, allDates) {
         const noteDateSpan = document.getElementById('kpiNoteDate');
         const noteText = document.getElementById('kpiNoteText');
         const saveBtn = document.getElementById('saveKpiNoteBtn');
+        const deleteBtn = document.getElementById('deleteKpiNoteBtn');
         noteDateSpan.textContent = date;
         noteText.value = '';
         noteModal.style.display = 'block';
         // Load note if exists
         const noteObj = await getNoteForDate(date);
-        if (noteObj) noteText.value = noteObj.note;
+        if (noteObj) {
+            noteText.value = noteObj.note;
+            deleteBtn.style.display = 'block';
+        } else {
+            deleteBtn.style.display = 'none';
+        }
         // Save handler
         saveBtn.onclick = async function() {
             await saveNoteForDate(date, noteText.value);
             noteModal.style.display = 'none';
+            // Update chart to reflect new note
+            const startDate = new Date(document.getElementById('kpiGraphStartDate').value);
+            const endDate = new Date(document.getElementById('kpiGraphEndDate').value);
+            const selectedPeople = Array.from(document.querySelectorAll('.person-filter'))
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+            const dateOrderToggle = document.getElementById('dateOrderToggle');
+            await renderKpiChart(startDate, endDate, selectedPeople, dateOrderToggle.checked);
+        };
+        // Delete handler
+        deleteBtn.onclick = async function() {
+            if (confirm('Are you sure you want to delete this note?')) {
+                await deleteNoteForDate(date);
+                noteModal.style.display = 'none';
+                // Update chart to reflect deleted note
+                const startDate = new Date(document.getElementById('kpiGraphStartDate').value);
+                const endDate = new Date(document.getElementById('kpiGraphEndDate').value);
+                const selectedPeople = Array.from(document.querySelectorAll('.person-filter'))
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
+                const dateOrderToggle = document.getElementById('dateOrderToggle');
+                await renderKpiChart(startDate, endDate, selectedPeople, dateOrderToggle.checked);
+            }
         };
     };
 }
@@ -760,4 +872,16 @@ if (closeKpiNoteModalBtn) {
     closeKpiNoteModalBtn.onclick = function() {
         document.getElementById('kpiNoteModal').style.display = 'none';
     };
-} 
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const kpiGraphModal = document.getElementById('kpiGraphModal');
+    const kpiNoteModal = document.getElementById('kpiNoteModal');
+    if (event.target === kpiGraphModal) {
+        kpiGraphModal.style.display = 'none';
+    }
+    if (event.target === kpiNoteModal) {
+        kpiNoteModal.style.display = 'none';
+    }
+}; 
