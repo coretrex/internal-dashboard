@@ -19,16 +19,36 @@
             
         </header>
 
-        <!-- Add Stats Container -->
-        <div class="stats-container">
-            <!-- Robby's Stats -->
-            <div class="stat">
-                <div class="stat-number" id="robbyMeetings">0</div>
-                <div class="stat-label">Meetings (Robby)</div>
-            </div>
-            <div class="stat">
-                <div class="stat-number" id="robbyConversion">0%</div>
-                <div class="stat-label">Conversion Rate (Robby)</div>
+        <!-- KPI Summary Table -->
+        <div class="kpi-summary-container">
+            <table class="kpi-summary-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Meetings (Last 10)</th>
+                        <th>Conversion Rate (Last 10)</th>
+                    </tr>
+                </thead>
+                <tbody id="kpiSummaryBody">
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+        <!-- KPI Graph Modal -->
+        <div id="kpiGraphModal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span class="close" id="closeKpiGraphModal">&times;</span>
+                <h2 id="kpiGraphTitle"></h2>
+                <div id="kpiGraphDateSelectors" style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+                    <label style="color:#fff;">Start: <input type="date" id="kpiGraphStartDate"></label>
+                    <label style="color:#fff;">End: <input type="date" id="kpiGraphEndDate"></label>
+                </div>
+                <div id="kpiGraphPersonFilters" style="margin-bottom: 1rem; display: flex; gap: 1.5rem; align-items: center;">
+                    <label style="color:#fff;"><input type="checkbox" class="person-filter" value="Robby Asbery" checked> Robby Asbery</label>
+                    <label style="color:#fff;"><input type="checkbox" class="person-filter" value="Martin Seshoene" checked> Martin Seshoene</label>
+                    <label style="color:#fff;"><input type="checkbox" class="person-filter" value="Chris Maren" checked> Chris Maren</label>
+                </div>
+                <canvas id="kpiGraphCanvas" width="600" height="350"></canvas>
             </div>
         </div>
 
@@ -50,7 +70,9 @@
                 <div class="form-group">
                     <label for="owner">Owner:</label>
                     <select id="owner" required>
-                        <option value="Robby">Robby</option>
+                        <option value="Robby Asbery">Robby Asbery</option>
+                        <option value="Martin Seshoene">Martin Seshoene</option>
+                        <option value="Chris Maren">Chris Maren</option>
                     </select>
                 </div>
                 <div class="form-group submit-group">

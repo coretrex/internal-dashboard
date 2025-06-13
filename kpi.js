@@ -385,8 +385,259 @@ document.getElementById('kpiForm').addEventListener('submit', async (e) => {
     }
 });
 
+// Function to update the KPI summary table
+async function updateKpiSummaryTable() {
+    const salespeople = [
+        { name: 'Robby Asbery' },
+        { name: 'Martin Seshoene' },
+        { name: 'Chris Maren' }
+    ];
+    const kpiData = await loadKPIData();
+    const tbody = document.getElementById('kpiSummaryBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = salespeople.map(person => {
+        // Filter and sort entries for this person
+        let entries;
+        if (person.name === 'Robby Asbery') {
+            entries = kpiData
+                .filter(entry => entry.owner === 'Robby' || entry.owner === 'Robby Asbery')
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+        } else {
+            entries = kpiData
+                .filter(entry => entry.owner === person.name)
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+        // Get last 10 work days (weekdays only)
+        const workdayEntries = [];
+        for (let i = 0, count = 0; i < entries.length && count < 10; i++) {
+            const date = new Date(entries[i].date + 'T00:00:00');
+            const day = date.getDay();
+            if (day !== 0 && day !== 6) { // 0 = Sunday, 6 = Saturday
+                workdayEntries.push(entries[i]);
+                count++;
+            }
+        }
+        // Calculate totals
+        const totalMeetings = workdayEntries.reduce((sum, entry) => sum + Number(entry.meetings), 0);
+        const totalCalls = workdayEntries.reduce((sum, entry) => sum + Number(entry.calls), 0);
+        // Calculate conversion rate
+        const conversionRate = totalCalls === 0 ? '0%' : ((totalMeetings / totalCalls) * 100).toFixed(1) + '%';
+        // Add clickable class, data-person attribute, and icon
+        return `
+            <tr>
+                <td class="name-cell" data-person="${person.name}">
+                    <span class='name-text'>${person.name}</span>
+                    <i class='fas fa-chart-line expand-icon'></i>
+                </td>
+                <td>${totalMeetings}</td>
+                <td>${conversionRate}</td>
+            </tr>
+        `;
+    }).join('');
+
+    // Add click event listeners to name cells
+    Array.from(tbody.querySelectorAll('.name-cell')).forEach(cell => {
+        cell.addEventListener('click', () => {
+            openKpiGraphModal();
+        });
+    });
+}
+
 // Make sure stats are calculated on page load
 document.addEventListener('DOMContentLoaded', async () => {
     await updateTable();
     calculateRecentStats();
-}); 
+    updateKpiSummaryTable();
+});
+
+// Add Chart.js loader
+if (!window.Chart) {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+    document.head.appendChild(script);
+}
+
+let kpiChartInstance = null;
+
+// Function to render the KPI chart for a given date range and selected people
+async function renderKpiChart(startDate, endDate, selectedPeople) {
+    const canvas = document.getElementById('kpiGraphCanvas');
+    const kpiData = await loadKPIData();
+    const salespeople = [
+        { name: 'Robby Asbery', firstName: 'Robby', aliases: ['Robby', 'Robby Asbery'], color: 'rgba(33, 150, 243, 1)', bg: 'rgba(33, 150, 243, 0.3)' },
+        { name: 'Martin Seshoene', firstName: 'Martin', aliases: ['Martin Seshoene'], color: 'rgba(76, 175, 80, 1)', bg: 'rgba(76, 175, 80, 0.3)' },
+        { name: 'Chris Maren', firstName: 'Chris', aliases: ['Chris Maren'], color: 'rgba(255, 193, 7, 1)', bg: 'rgba(255, 193, 7, 0.3)' }
+    ];
+    // Get all unique dates in the range
+    const allDatesSet = new Set();
+    kpiData.forEach(entry => {
+        const d = new Date(entry.date);
+        if (d >= startDate && d <= endDate) allDatesSet.add(entry.date);
+    });
+    const allDates = Array.from(allDatesSet).sort().reverse();
+    // Prepare datasets for each selected salesperson
+    const datasets = [];
+    salespeople.forEach((person, idx) => {
+        if (!selectedPeople.includes(person.name)) return;
+        const entries = kpiData.filter(entry => person.aliases.includes(entry.owner));
+        const entryMap = {};
+        entries.forEach(e => { entryMap[e.date] = e; });
+        const callsData = allDates.map(date => entryMap[date] ? entryMap[date].calls : 0);
+        const conversionData = allDates.map(date => {
+            if (entryMap[date] && entryMap[date].calls > 0) {
+                return ((entryMap[date].meetings / entryMap[date].calls) * 100).toFixed(1);
+            }
+            return 0;
+        });
+        datasets.push({
+            label: `${person.firstName} Calls`,
+            data: callsData,
+            backgroundColor: person.bg,
+            borderColor: person.color,
+            borderWidth: 1,
+            yAxisID: 'y',
+            type: 'bar',
+            stack: 'calls',
+            order: 1
+        });
+        datasets.push({
+            label: `${person.firstName} CVR%`,
+            data: conversionData,
+            borderColor: person.color,
+            backgroundColor: person.bg,
+            borderWidth: 2,
+            fill: false,
+            yAxisID: 'y1',
+            type: 'line',
+            tension: 0.3,
+            order: 2,
+            pointStyle: 'line',
+            showLine: true
+        });
+    });
+    if (kpiChartInstance) {
+        kpiChartInstance.destroy();
+    }
+    kpiChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: allDates,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: '#fff', usePointStyle: true, padding: 20 }, padding: 24 },
+                title: { display: false }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#fff', maxRotation: 90, minRotation: 45 },
+                    grid: { color: 'rgba(255,255,255,0.08)' }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: { display: true, text: 'Calls', color: '#fff' },
+                    ticks: { color: '#fff' },
+                    grid: { color: 'rgba(255,255,255,0.08)' }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: { display: true, text: 'CVR%', color: '#fff' },
+                    ticks: { color: '#fff' },
+                    grid: { drawOnChartArea: false }
+                }
+            }
+        }
+    });
+}
+
+// Update openKpiGraphModal to use the person filters
+window.openKpiGraphModal = async function() {
+    // Wait for Chart.js to load if not already loaded
+    if (!window.Chart) {
+        await new Promise(resolve => {
+            const check = () => window.Chart ? resolve() : setTimeout(check, 50);
+            check();
+        });
+    }
+    const modal = document.getElementById('kpiGraphModal');
+    const title = document.getElementById('kpiGraphTitle');
+    title.textContent = '';
+    modal.style.display = 'block';
+
+    // Get date input elements
+    const startInput = document.getElementById('kpiGraphStartDate');
+    const endInput = document.getElementById('kpiGraphEndDate');
+
+    // If user has not selected a date, set to last 10 work days
+    let setDefault = !startInput.value || !endInput.value;
+    let endDate = new Date();
+    let startDate = new Date();
+    if (setDefault) {
+        // Find last 10 work days
+        let workdays = 0;
+        endDate = new Date();
+        startDate = new Date();
+        while (workdays < 10) {
+            const day = startDate.getDay();
+            if (day !== 0 && day !== 6) {
+                workdays++;
+            }
+            if (workdays < 10) {
+                startDate.setDate(startDate.getDate() - 1);
+            }
+        }
+        // startDate is now the 10th workday before today
+        startInput.value = formatDateYYYYMMDD(startDate);
+        endInput.value = formatDateYYYYMMDD(endDate);
+    } else {
+        startDate = new Date(startInput.value);
+        endDate = new Date(endInput.value);
+    }
+
+    // Get initial selected people
+    const personCheckboxes = Array.from(document.querySelectorAll('.person-filter'));
+    let selectedPeople = personCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
+
+    // Render chart for default range and people
+    await renderKpiChart(startDate, endDate, selectedPeople);
+
+    // Add event listeners to update chart on date or person change
+    function updateChart() {
+        const newStart = new Date(startInput.value);
+        const newEnd = new Date(endInput.value);
+        selectedPeople = personCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
+        if (newStart <= newEnd) {
+            renderKpiChart(newStart, newEnd, selectedPeople);
+        }
+    }
+    startInput.onchange = updateChart;
+    endInput.onchange = updateChart;
+    personCheckboxes.forEach(cb => cb.onchange = updateChart);
+};
+
+// Helper to format date as yyyy-mm-dd
+function formatDateYYYYMMDD(date) {
+    return date.toISOString().slice(0, 10);
+}
+
+// Modal close logic
+const closeKpiGraphModalBtn = document.getElementById('closeKpiGraphModal');
+if (closeKpiGraphModalBtn) {
+    closeKpiGraphModalBtn.onclick = function() {
+        document.getElementById('kpiGraphModal').style.display = 'none';
+    };
+}
+window.onclick = function(event) {
+    const modal = document.getElementById('kpiGraphModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+}; 
