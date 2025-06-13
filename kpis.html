@@ -117,5 +117,14 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     </script>
+    <!-- KPI Note Modal -->
+    <div id="kpiNoteModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" id="closeKpiNoteModal">&times;</span>
+            <h2 id="kpiNoteModalTitle">Note for <span id="kpiNoteDate"></span></h2>
+            <textarea id="kpiNoteText" rows="5" style="width:100%;margin-bottom:1rem;"></textarea>
+            <button id="saveKpiNoteBtn" class="submit-btn">Save Note</button>
+        </div>
+    </div>
 </body>
 </html> 

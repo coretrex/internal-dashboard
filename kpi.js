@@ -1,6 +1,6 @@
 // Initialize Firebase (add this at the top of kpi.js)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -460,6 +460,41 @@ if (!window.Chart) {
 
 let kpiChartInstance = null;
 
+// Helper to get all note dates
+async function getAllNoteDates() {
+    const q = query(notesCollection);
+    const querySnapshot = await getDocs(q);
+    const noteDates = [];
+    for (const docSnap of querySnapshot.docs) {
+        const data = docSnap.data();
+        if (data.date) noteDates.push(data.date);
+    }
+    return noteDates;
+}
+
+// Chart.js plugin to draw a red note icon above data points with notes
+const noteIconPlugin = (noteDates, allDates) => ({
+    id: 'noteIconPlugin',
+    afterDatasetsDraw(chart, args, options) {
+        const { ctx, chartArea, scales } = chart;
+        if (!ctx || !scales || !scales.x) return;
+        ctx.save();
+        noteDates.forEach(date => {
+            const idx = allDates.indexOf(date);
+            if (idx === -1) return;
+            const x = scales.x.getPixelForValue(date);
+            const y = chartArea.top + 18; // 18px from top of chart area
+            // Draw a red note icon (Font Awesome style sticky note)
+            ctx.font = 'bold 20px FontAwesome, Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#ff1744';
+            ctx.fillText('\uf249', x, y); // fa-note-sticky unicode
+        });
+        ctx.restore();
+    }
+});
+
 // Function to render the KPI chart for a given date range and selected people
 async function renderKpiChart(startDate, endDate, selectedPeople) {
     const canvas = document.getElementById('kpiGraphCanvas');
@@ -519,6 +554,7 @@ async function renderKpiChart(startDate, endDate, selectedPeople) {
     if (kpiChartInstance) {
         kpiChartInstance.destroy();
     }
+    const noteDates = await getAllNoteDates();
     kpiChartInstance = new Chart(canvas, {
         type: 'bar',
         data: {
@@ -554,8 +590,10 @@ async function renderKpiChart(startDate, endDate, selectedPeople) {
                     grid: { drawOnChartArea: false }
                 }
             }
-        }
+        },
+        plugins: [noteIconPlugin(noteDates, allDates)]
     });
+    addChartClickForNotes(kpiChartInstance, allDates);
 }
 
 // Update openKpiGraphModal to use the person filters
@@ -640,4 +678,67 @@ window.onclick = function(event) {
     if (event.target === modal) {
         modal.style.display = 'none';
     }
-}; 
+};
+
+const notesCollection = collection(db, 'kpiNotes');
+
+// Helper to get a note for a date
+async function getNoteForDate(date) {
+    const q = query(notesCollection);
+    const querySnapshot = await getDocs(q);
+    for (const docSnap of querySnapshot.docs) {
+        const data = docSnap.data();
+        if (data.date === date) return { id: docSnap.id, ...data };
+    }
+    return null;
+}
+
+// Helper to save a note for a date
+async function saveNoteForDate(date, note) {
+    // Check if note exists
+    const q = query(notesCollection);
+    const querySnapshot = await getDocs(q);
+    let existingId = null;
+    for (const docSnap of querySnapshot.docs) {
+        const data = docSnap.data();
+        if (data.date === date) existingId = docSnap.id;
+    }
+    if (existingId) {
+        await setDoc(doc(notesCollection, existingId), { date, note });
+    } else {
+        await addDoc(notesCollection, { date, note });
+    }
+}
+
+// Add chart click event for notes
+function addChartClickForNotes(chart, allDates) {
+    chart.options.onClick = async function(evt, elements) {
+        if (!elements.length) return;
+        const idx = elements[0].index;
+        const date = allDates[idx];
+        // Open note modal for this date
+        const noteModal = document.getElementById('kpiNoteModal');
+        const noteDateSpan = document.getElementById('kpiNoteDate');
+        const noteText = document.getElementById('kpiNoteText');
+        const saveBtn = document.getElementById('saveKpiNoteBtn');
+        noteDateSpan.textContent = date;
+        noteText.value = '';
+        noteModal.style.display = 'block';
+        // Load note if exists
+        const noteObj = await getNoteForDate(date);
+        if (noteObj) noteText.value = noteObj.note;
+        // Save handler
+        saveBtn.onclick = async function() {
+            await saveNoteForDate(date, noteText.value);
+            noteModal.style.display = 'none';
+        };
+    };
+}
+
+// Modal close logic for note modal
+const closeKpiNoteModalBtn = document.getElementById('closeKpiNoteModal');
+if (closeKpiNoteModalBtn) {
+    closeKpiNoteModalBtn.onclick = function() {
+        document.getElementById('kpiNoteModal').style.display = 'none';
+    };
+} 
