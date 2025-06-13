@@ -496,7 +496,7 @@ const noteIconPlugin = (noteDates, allDates) => ({
 });
 
 // Function to render the KPI chart for a given date range and selected people
-async function renderKpiChart(startDate, endDate, selectedPeople) {
+async function renderKpiChart(startDate, endDate, selectedPeople, reverseOrder = false) {
     const canvas = document.getElementById('kpiGraphCanvas');
     const kpiData = await loadKPIData();
     const salespeople = [
@@ -510,7 +510,10 @@ async function renderKpiChart(startDate, endDate, selectedPeople) {
         const d = new Date(entry.date);
         if (d >= startDate && d <= endDate) allDatesSet.add(entry.date);
     });
-    const allDates = Array.from(allDatesSet).sort().reverse();
+    const allDates = Array.from(allDatesSet).sort().reverse(); // Default to most recent on left
+    if (reverseOrder) {
+        allDates.reverse(); // Reverse to show most recent on right when checked
+    }
     // Prepare datasets for each selected salesperson
     const datasets = [];
     salespeople.forEach((person, idx) => {
@@ -608,11 +611,26 @@ window.openKpiGraphModal = async function() {
     const modal = document.getElementById('kpiGraphModal');
     const title = document.getElementById('kpiGraphTitle');
     title.textContent = '';
+
+    // Add date order toggle if it doesn't exist
+    if (!document.getElementById('dateOrderToggle')) {
+        const toggleContainer = document.createElement('div');
+        toggleContainer.style.marginBottom = '1rem';
+        toggleContainer.innerHTML = `
+            <label style="color:#fff; display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" id="dateOrderToggle">
+                Show most recent dates on the right
+            </label>
+        `;
+        document.getElementById('kpiGraphDateSelectors').after(toggleContainer);
+    }
+
     modal.style.display = 'block';
 
     // Get date input elements
     const startInput = document.getElementById('kpiGraphStartDate');
     const endInput = document.getElementById('kpiGraphEndDate');
+    const dateOrderToggle = document.getElementById('dateOrderToggle');
 
     // If user has not selected a date, set to last 10 work days
     let setDefault = !startInput.value || !endInput.value;
@@ -645,7 +663,7 @@ window.openKpiGraphModal = async function() {
     let selectedPeople = personCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
 
     // Render chart for default range and people
-    await renderKpiChart(startDate, endDate, selectedPeople);
+    await renderKpiChart(startDate, endDate, selectedPeople, dateOrderToggle.checked);
 
     // Add event listeners to update chart on date or person change
     function updateChart() {
@@ -653,11 +671,12 @@ window.openKpiGraphModal = async function() {
         const newEnd = new Date(endInput.value);
         selectedPeople = personCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
         if (newStart <= newEnd) {
-            renderKpiChart(newStart, newEnd, selectedPeople);
+            renderKpiChart(newStart, newEnd, selectedPeople, dateOrderToggle.checked);
         }
     }
     startInput.onchange = updateChart;
     endInput.onchange = updateChart;
+    dateOrderToggle.onchange = updateChart;
     personCheckboxes.forEach(cb => cb.onchange = updateChart);
 };
 
