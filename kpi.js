@@ -201,6 +201,7 @@ async function updateTable() {
                     <td class="${meetingsClass}">${entry.meetings}</td>
                     <td>${calculateConversionRate(entry.calls, entry.meetings)}</td>
                     <td>${entry.owner || 'N/A'}</td>
+                    <td>${entry.notes || ''}</td>
                     <td>
                         <button onclick="editEntry('${entry.date}', '${entry.owner}')" class="action-btn-small">
                             <i class="fas fa-edit"></i>
@@ -246,7 +247,8 @@ window.editEntry = async function(date, owner) {
             date: row.cells[0].textContent,
             calls: row.cells[2].textContent,
             meetings: row.cells[3].textContent,
-            owner: row.cells[5].textContent
+            owner: row.cells[5].textContent,
+            notes: row.cells[6].textContent
         };
         
         // Replace cells with input fields
@@ -254,13 +256,15 @@ window.editEntry = async function(date, owner) {
         row.cells[3].innerHTML = `<input type="number" class="editable-input" value="${currentValues.meetings}" min="0">`;
         row.cells[5].innerHTML = `
             <select class="editable-input">
-                <option value="Robby" ${currentValues.owner === 'Robby' ? 'selected' : ''}>Robby</option>
-                <option value="Greyson" ${currentValues.owner === 'Greyson' ? 'selected' : ''}>Greyson</option>
+                <option value="Robby Asbery" ${currentValues.owner === 'Robby Asbery' ? 'selected' : ''}>Robby Asbery</option>
+                <option value="Martin Seshoene" ${currentValues.owner === 'Martin Seshoene' ? 'selected' : ''}>Martin Seshoene</option>
+                <option value="Chris Maren" ${currentValues.owner === 'Chris Maren' ? 'selected' : ''}>Chris Maren</option>
             </select>
         `;
+        row.cells[6].innerHTML = `<input type="text" class="editable-input" value="${currentValues.notes}">`;
         
         // Replace edit/delete buttons with save/cancel buttons
-        const actionCell = row.cells[6];
+        const actionCell = row.cells[7];
         const originalButtons = actionCell.innerHTML;
         actionCell.innerHTML = `
             <button onclick="saveEdit('${date}', '${owner}', this)" class="action-btn-small">
@@ -283,7 +287,8 @@ window.saveEdit = async function(date, owner, button) {
         date: date,
         calls: parseInt(row.cells[2].querySelector('input').value) || 0,
         meetings: parseInt(row.cells[3].querySelector('input').value) || 0,
-        owner: row.cells[5].querySelector('select').value
+        owner: row.cells[5].querySelector('select').value,
+        notes: row.cells[6].querySelector('input').value
     };
     
     try {
@@ -342,7 +347,8 @@ document.getElementById('kpiForm').addEventListener('submit', async (e) => {
         date: document.getElementById('entryDate').value,
         calls: parseInt(document.getElementById('callsMade').value) || 0,
         meetings: parseInt(document.getElementById('meetingsScheduled').value) || 0,
-        owner: document.getElementById('owner').value
+        owner: document.getElementById('owner').value,
+        notes: document.getElementById('notes').value
     };
     
     try {
@@ -462,20 +468,15 @@ let kpiChartInstance = null;
 
 // Helper to get all note dates
 async function getAllNoteDates() {
-    const q = query(notesCollection);
-    const querySnapshot = await getDocs(q);
-    const noteDates = [];
-    for (const docSnap of querySnapshot.docs) {
-        const data = docSnap.data();
-        if (data.date) noteDates.push(data.date);
-    }
-    return noteDates;
+    const kpiData = await loadKPIData();
+    return kpiData.filter(entry => entry.notes && entry.notes.trim() !== '').map(entry => entry.date);
 }
 
 // Helper to get note text for a date
 async function getNoteTextForDate(date) {
-    const noteObj = await getNoteForDate(date);
-    return noteObj ? noteObj.note : '';
+    const kpiData = await loadKPIData();
+    const entry = kpiData.find(entry => entry.date === date);
+    return entry && entry.notes ? entry.notes : '';
 }
 
 // Chart.js plugin to draw a red note icon above data points with notes
@@ -493,7 +494,7 @@ const noteIconPlugin = (noteDates, allDates) => ({
             tooltip.id = 'noteTooltip';
             tooltip.style.position = 'absolute';
             tooltip.style.display = 'none';
-            tooltip.style.backgroundColor = 'rgba(33, 150, 243, 0.95)'; // Material Design Blue with high opacity
+            tooltip.style.backgroundColor = 'rgba(33, 150, 243, 0.95)';
             tooltip.style.color = 'white';
             tooltip.style.padding = '8px 12px';
             tooltip.style.borderRadius = '4px';
@@ -501,7 +502,7 @@ const noteIconPlugin = (noteDates, allDates) => ({
             tooltip.style.maxWidth = '300px';
             tooltip.style.zIndex = '1000';
             tooltip.style.pointerEvents = 'none';
-            tooltip.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)'; // Add subtle shadow for depth
+            tooltip.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.2)';
             document.body.appendChild(tooltip);
         }
 
@@ -769,76 +770,42 @@ window.onclick = function(event) {
     }
 };
 
-const notesCollection = collection(db, 'kpiNotes');
-
-// Helper to get a note for a date
-async function getNoteForDate(date) {
-    const q = query(notesCollection);
-    const querySnapshot = await getDocs(q);
-    for (const docSnap of querySnapshot.docs) {
-        const data = docSnap.data();
-        if (data.date === date) return { id: docSnap.id, ...data };
-    }
-    return null;
-}
-
-// Helper to save a note for a date
-async function saveNoteForDate(date, note) {
-    // Check if note exists
-    const q = query(notesCollection);
-    const querySnapshot = await getDocs(q);
-    let existingId = null;
-    for (const docSnap of querySnapshot.docs) {
-        const data = docSnap.data();
-        if (data.date === date) existingId = docSnap.id;
-    }
-    if (existingId) {
-        await setDoc(doc(notesCollection, existingId), { date, note });
-    } else {
-        await addDoc(notesCollection, { date, note });
-    }
-}
-
-// Helper to delete a note for a date
-async function deleteNoteForDate(date) {
-    const q = query(notesCollection);
-    const querySnapshot = await getDocs(q);
-    for (const docSnap of querySnapshot.docs) {
-        const data = docSnap.data();
-        if (data.date === date) {
-            await deleteDoc(doc(notesCollection, docSnap.id));
-            break;
-        }
-    }
-}
-
 // Add chart click event for notes
 function addChartClickForNotes(chart, allDates) {
     chart.options.onClick = async function(evt, elements) {
         if (!elements.length) return;
         const idx = elements[0].index;
         const date = allDates[idx];
+        
+        // Get the KPI data for this date
+        const kpiData = await loadKPIData();
+        const entry = kpiData.find(entry => entry.date === date);
+        
         // Open note modal for this date
         const noteModal = document.getElementById('kpiNoteModal');
         const noteDateSpan = document.getElementById('kpiNoteDate');
         const noteText = document.getElementById('kpiNoteText');
         const saveBtn = document.getElementById('saveKpiNoteBtn');
         const deleteBtn = document.getElementById('deleteKpiNoteBtn');
+        
         noteDateSpan.textContent = date;
-        noteText.value = '';
+        noteText.value = entry?.notes || '';
         noteModal.style.display = 'block';
-        // Load note if exists
-        const noteObj = await getNoteForDate(date);
-        if (noteObj) {
-            noteText.value = noteObj.note;
-            deleteBtn.style.display = 'block';
-        } else {
-            deleteBtn.style.display = 'none';
-        }
+        
+        // Show/hide delete button based on whether there's a note
+        deleteBtn.style.display = entry?.notes ? 'block' : 'none';
+        
         // Save handler
         saveBtn.onclick = async function() {
-            await saveNoteForDate(date, noteText.value);
+            // Find the entry in the KPI data
+            const entryToUpdate = kpiData.find(e => e.date === date);
+            if (entryToUpdate) {
+                // Update the entry with the new note
+                const docRef = doc(db, 'kpi', entryToUpdate.id);
+                await updateDoc(docRef, { notes: noteText.value });
+            }
             noteModal.style.display = 'none';
+            
             // Update chart to reflect new note
             const startDate = new Date(document.getElementById('kpiGraphStartDate').value);
             const endDate = new Date(document.getElementById('kpiGraphEndDate').value);
@@ -848,11 +815,19 @@ function addChartClickForNotes(chart, allDates) {
             const dateOrderToggle = document.getElementById('dateOrderToggle');
             await renderKpiChart(startDate, endDate, selectedPeople, dateOrderToggle.checked);
         };
+        
         // Delete handler
         deleteBtn.onclick = async function() {
             if (confirm('Are you sure you want to delete this note?')) {
-                await deleteNoteForDate(date);
+                // Find the entry in the KPI data
+                const entryToUpdate = kpiData.find(e => e.date === date);
+                if (entryToUpdate) {
+                    // Update the entry to remove the note
+                    const docRef = doc(db, 'kpi', entryToUpdate.id);
+                    await updateDoc(docRef, { notes: '' });
+                }
                 noteModal.style.display = 'none';
+                
                 // Update chart to reflect deleted note
                 const startDate = new Date(document.getElementById('kpiGraphStartDate').value);
                 const endDate = new Date(document.getElementById('kpiGraphEndDate').value);

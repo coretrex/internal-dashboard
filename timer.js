@@ -27,7 +27,7 @@ function initializeTimer() {
         isRunning = true;
         clearInterval(timerInterval);
         
-        const timeLeft = initialTime || 20 * 60; // 15 minutes in seconds
+        const timeLeft = initialTime || 10 * 60; // 10 minutes in seconds
         const endTime = Date.now() + (timeLeft * 1000);
         
         localStorage.setItem('timerState', JSON.stringify({
@@ -64,7 +64,7 @@ function initializeTimer() {
         timerBtn.innerHTML = '<i class="fas fa-play"></i> Start Timer';
         timerBtn.classList.remove('running');
         timerDisplay.classList.remove('active');
-        timerDisplay.textContent = '20:00';
+        timerDisplay.textContent = '10:00';
     }
 
     function updateTimerDisplay(timeLeft) {
