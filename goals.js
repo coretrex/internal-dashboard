@@ -397,14 +397,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return txt.trim();
         });
         
-        // Convert body to object format for Firebase compatibility
+        // Convert body to simple object with numbered keys to preserve order
         const bodyObject = {};
         Array.from(kpiTrackerBody.children).forEach((row, rowIndex) => {
             const rowData = {};
             Array.from(row.children).forEach((cell, cellIndex) => {
                 rowData[`cell_${cellIndex}`] = cell.textContent.trim();
             });
-            bodyObject[`row_${rowIndex}`] = rowData;
+            bodyObject[`row_${rowIndex.toString().padStart(3, '0')}`] = rowData;
         });
         
         const data = { header, body: bodyObject };
@@ -425,41 +425,36 @@ document.addEventListener('DOMContentLoaded', () => {
         // Restore body
         kpiTrackerBody.innerHTML = '';
         
-        if (Array.isArray(data.body)) {
-            // Handle old array format
-            data.body.forEach((rowData, i) => {
-                const tr = document.createElement('tr');
-                // Remove extra cells
-                while (tr.children.length > data.header.length) {
-                    tr.removeChild(tr.lastChild);
-                }
-                // Add missing cells
-                while (tr.children.length < data.header.length) {
-                    const td = document.createElement('td');
-                    td.contentEditable = 'true';
-                    td.textContent = '';
-                    tr.appendChild(td);
-                }
-                // Set cell values
-                for (let j = 3; j < data.header.length; j++) {
-                    if (rowData && rowData[j] !== undefined) {
-                        tr.children[j].textContent = rowData[j];
-                    } else {
-                        tr.children[j].textContent = '';
-                    }
-                    tr.children[j].contentEditable = 'true';
-                }
-                kpiTrackerBody.appendChild(tr);
-            });
-        } else {
-            // Handle new object format
-            Object.values(data.body).forEach((rowData, i) => {
+        if (typeof data.body === 'object' && !Array.isArray(data.body)) {
+            // Handle new numbered key format (preserves order)
+            const sortedKeys = Object.keys(data.body).sort();
+            sortedKeys.forEach(key => {
+                const rowData = data.body[key];
                 const tr = document.createElement('tr');
                 // Create cells for each column in header
                 for (let j = 0; j < data.header.length; j++) {
                     const td = document.createElement('td');
                     td.contentEditable = 'true';
                     td.textContent = rowData[`cell_${j}`] || '';
+                    
+                    // Add special class for owner column (first column)
+                    if (j === 0) {
+                        td.className = 'kpi-owner';
+                    }
+                    
+                    tr.appendChild(td);
+                }
+                kpiTrackerBody.appendChild(tr);
+            });
+        } else if (Array.isArray(data.body)) {
+            // Handle old array format (fallback)
+            data.body.forEach((rowData, i) => {
+                const tr = document.createElement('tr');
+                // Create cells for each column in header
+                for (let j = 0; j < data.header.length; j++) {
+                    const td = document.createElement('td');
+                    td.contentEditable = 'true';
+                    td.textContent = rowData.cells ? rowData.cells[`cell_${j}`] || '' : (rowData[j] || '');
                     
                     // Add special class for owner column (first column)
                     if (j === 0) {
@@ -497,21 +492,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('KPI tracker data found in Firebase, applying...');
                 const firebaseData = docSnap.data();
                 console.log('Firebase data received:', firebaseData);
+                console.log('Body type:', typeof firebaseData.body, 'Is array:', Array.isArray(firebaseData.body));
+                if (firebaseData.body && typeof firebaseData.body === 'object') {
+                    console.log('Body keys:', Object.keys(firebaseData.body));
+                }
                 setKpiTrackerFullData(firebaseData);
             } else {
                 console.log('No KPI tracker data found in Firebase, creating default data...');
                 // Create default KPI tracker data
                 const defaultData = {
                     header: ['Owner', 'KPI', 'Goal', '6/12', '6/5', '5/29', '5/22', '5/15', '5/8', '5/1', '4/24'],
-                    body: [
-                        ['Stephen', 'Total Clients', '30', '19', '20', '19', '18', '19', '18', '19', '21'],
-                        ['Robby', 'New Client Signed', '1', '1', '0', '1', '0', '0', '0', '0', '0'],
-                        ['Robby', 'Meetings Booked', '15', '1', '2', '1', '1', '5', '4', '0', '0'],
-                        ['Brandon', 'Clients Managed', '12', '10', '11', '10', '10', '10', '10', '10', '11'],
-                        ['Bobby', 'Clients Managed', '12', '9', '9', '9', '8', '9', '8', '9', '9'],
-                        ['Noah', 'Pod 1 Unhappy', '0', '2', '1', '1', '2', '2', '1', '2', '2'],
-                        ['Noah', 'Pod 2 Unhappy', '0', '0', '0', '1', '0', '1', '0', '1', '0']
-                    ]
+                    body: {
+                        'row_000': {
+                            'cell_0': 'Stephen', 'cell_1': 'Total Clients', 'cell_2': '30',
+                            'cell_3': '19', 'cell_4': '20', 'cell_5': '19', 'cell_6': '18',
+                            'cell_7': '19', 'cell_8': '18', 'cell_9': '19', 'cell_10': '21'
+                        },
+                        'row_001': {
+                            'cell_0': 'Robby', 'cell_1': 'New Client Signed', 'cell_2': '1',
+                            'cell_3': '1', 'cell_4': '0', 'cell_5': '1', 'cell_6': '0',
+                            'cell_7': '0', 'cell_8': '0', 'cell_9': '0', 'cell_10': '0'
+                        },
+                        'row_002': {
+                            'cell_0': 'Robby', 'cell_1': 'Meetings Booked', 'cell_2': '15',
+                            'cell_3': '1', 'cell_4': '2', 'cell_5': '1', 'cell_6': '1',
+                            'cell_7': '5', 'cell_8': '4', 'cell_9': '0', 'cell_10': '0'
+                        },
+                        'row_003': {
+                            'cell_0': 'Brandon', 'cell_1': 'Clients Managed', 'cell_2': '12',
+                            'cell_3': '10', 'cell_4': '11', 'cell_5': '10', 'cell_6': '10',
+                            'cell_7': '10', 'cell_8': '10', 'cell_9': '10', 'cell_10': '11'
+                        },
+                        'row_004': {
+                            'cell_0': 'Bobby', 'cell_1': 'Clients Managed', 'cell_2': '12',
+                            'cell_3': '9', 'cell_4': '9', 'cell_5': '9', 'cell_6': '8',
+                            'cell_7': '9', 'cell_8': '8', 'cell_9': '9', 'cell_10': '9'
+                        },
+                        'row_005': {
+                            'cell_0': 'Noah', 'cell_1': 'Pod 1 Unhappy', 'cell_2': '0',
+                            'cell_3': '2', 'cell_4': '1', 'cell_5': '1', 'cell_6': '2',
+                            'cell_7': '2', 'cell_8': '1', 'cell_9': '2', 'cell_10': '2'
+                        },
+                        'row_006': {
+                            'cell_0': 'Noah', 'cell_1': 'Pod 2 Unhappy', 'cell_2': '0',
+                            'cell_3': '0', 'cell_4': '0', 'cell_5': '1', 'cell_6': '0',
+                            'cell_7': '1', 'cell_8': '0', 'cell_9': '1', 'cell_10': '0'
+                        }
+                    }
                 };
                 setKpiTrackerFullData(defaultData);
                 // Save the default data to Firebase
