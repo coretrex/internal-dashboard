@@ -161,7 +161,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Firebase functions for KPI data
     async function saveKpiToFirebase(kpi, value) {
         try {
+            console.log(`Saving KPI ${kpi}: ${value} to Firebase`);
             await setDoc(doc(db, "kpiData", kpi), { value: value }, { merge: true });
+            console.log(`Successfully saved KPI ${kpi} to Firebase`);
         } catch (error) {
             console.error("Error saving KPI to Firebase:", error);
         }
@@ -169,7 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function saveGoalToFirebase(kpi, goal) {
         try {
+            console.log(`Saving goal ${kpi}: ${goal} to Firebase`);
             await setDoc(doc(db, "kpiGoals", kpi), { goal: goal }, { merge: true });
+            console.log(`Successfully saved goal ${kpi} to Firebase`);
         } catch (error) {
             console.error("Error saving goal to Firebase:", error);
         }
@@ -177,11 +181,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function loadKpiFromFirebase(kpi) {
         try {
+            console.log(`Loading KPI ${kpi} from Firebase`);
             const docRef = doc(db, "kpiData", kpi);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-                return docSnap.data().value;
+                const value = docSnap.data().value;
+                console.log(`Loaded KPI ${kpi}: ${value} from Firebase`);
+                return value;
             }
+            console.log(`No KPI data found for ${kpi} in Firebase`);
             return null;
         } catch (error) {
             console.error("Error loading KPI from Firebase:", error);
@@ -191,11 +199,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function loadGoalFromFirebase(kpi) {
         try {
+            console.log(`Loading goal ${kpi} from Firebase`);
             const docRef = doc(db, "kpiGoals", kpi);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-                return docSnap.data().goal;
+                const goal = docSnap.data().goal;
+                console.log(`Loaded goal ${kpi}: ${goal} from Firebase`);
+                return goal;
             }
+            console.log(`No goal data found for ${kpi} in Firebase`);
             return null;
         } catch (error) {
             console.error("Error loading goal from Firebase:", error);
@@ -205,19 +217,24 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Load KPI values from Firebase or defaults
     async function loadAllKpiData() {
-        for (const key of kpiKeys) {
-            // Load KPI value
-            const val = await loadKpiFromFirebase(key) || kpiDefaults[key];
-            const el = document.getElementById(key.charAt(0).toLowerCase() + key.slice(1) + 'Value');
-            if (el) el.textContent = val;
-            
-            // Load goal value
-            const goalVal = await loadGoalFromFirebase(key) || goalDefaults[key];
-            const goalEl = document.getElementById(key + 'Goal');
-            if (goalEl) {
-                goalEl.textContent = `Goal: ${goalVal}`;
-                updateGoalStatus(key, val, goalVal);
+        try {
+            for (const key of kpiKeys) {
+                // Load KPI value
+                const val = await loadKpiFromFirebase(key) || kpiDefaults[key];
+                const el = document.getElementById(key.charAt(0).toLowerCase() + key.slice(1) + 'Value');
+                if (el) el.textContent = val;
+                
+                // Load goal value
+                const goalVal = await loadGoalFromFirebase(key) || goalDefaults[key];
+                const goalEl = document.getElementById(key + 'Goal');
+                if (goalEl) {
+                    goalEl.textContent = `Goal: ${goalVal}`;
+                    updateGoalStatus(key, val, goalVal);
+                }
             }
+            console.log('KPI data loaded from Firebase');
+        } catch (error) {
+            console.error('Error loading KPI data:', error);
         }
     }
     
@@ -449,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, true);
     }
     // Load on page load
-    loadKpiTrackerFromFirebase();
+    // loadKpiTrackerFromFirebase(); // Removed - now handled by initializePage()
 
     // --- KPI TRACKER ADD WEEK FUNCTIONALITY ---
     const addWeekBtn = document.getElementById('addWeekBtn');
@@ -822,7 +839,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveSprintsToFirebase();
     });
     // On load
-    loadSprintsFromFirebase();
+    // loadSprintsFromFirebase(); // Removed - now handled by initializePage()
 
     // --- TO-DO SECTION LOGIC (FIREBASE) ---
     const TODOS_KEY = 'goalsTodos';
@@ -938,7 +955,7 @@ document.addEventListener('DOMContentLoaded', () => {
             todoForm.reset();
         });
     }
-    loadTodosFromFirebase();
+    // loadTodosFromFirebase(); // Removed - now handled by initializePage()
 
     // --- IDS SECTION ROW MANAGEMENT ---
     const IDS_KEY = 'idsTableData';
@@ -1111,5 +1128,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     // On load
-    loadIdsFromFirebase();
+    // loadIdsFromFirebase(); // Removed - now handled by initializePage()
+
+    // Load all Firebase data
+    async function initializePage() {
+        try {
+            console.log('Initializing page with Firebase data...');
+            
+            // Load KPI data first
+            await loadAllKpiData();
+            
+            // Load other sections
+            await loadKpiTrackerFromFirebase();
+            await loadSprintsFromFirebase();
+            await loadTodosFromFirebase();
+            await loadIdsFromFirebase();
+            
+            console.log('All Firebase data loaded successfully');
+        } catch (error) {
+            console.error('Error initializing page:', error);
+        }
+    }
+    
+    // Initialize the page with Firebase data
+    initializePage();
 }); 
