@@ -911,13 +911,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // Initial coloring
     updateSprintStatusColors();
-    // Listen for changes
-    document.getElementById('monthlySprintsBody')?.addEventListener('change', function(e) {
-        if (e.target.classList.contains('sprint-status')) {
-            updateSprintStatusColors();
-        }
-    });
-
+    
     // --- MONTHLY SPRINTS ROW MANAGEMENT ---
     const MONTHLY_SPRINTS_KEY = 'monthlySprintsData';
     const sprintsBody = document.getElementById('monthlySprintsBody');
@@ -925,17 +919,129 @@ document.addEventListener('DOMContentLoaded', () => {
     let addRowBtn = document.getElementById('addSprintRowBtn');
     let editBtn = document.getElementById('editSprintsBtn');
 
-    // Edit mode toggle
-    if (editBtn) {
-        editBtn.addEventListener('click', function() {
-            document.body.classList.toggle('sprints-edit-mode');
-            renderSprintsRowButtons();
+    // State management
+    let sprintsData = {};
+    let isSavingSprints = false;
+    let saveSprintsTimeout = null;
+    let eventListenersAttached = false;
+
+    // Initialize sprints functionality
+    function initializeSprints() {
+        if (!sprintsBody) {
+            console.log('Sprints body not found, skipping initialization');
+            return;
+        }
+
+        console.log('Initializing sprints functionality...');
+        
+        // Attach event listeners only once
+        if (!eventListenersAttached) {
+            attachSprintsEventListeners();
+            eventListenersAttached = true;
+        }
+
+        // Load data
+        loadSprintsFromFirebase();
+    }
+
+    function attachSprintsEventListeners() {
+        console.log('Attaching sprints event listeners...');
+        
+        // Edit mode toggle
+        if (editBtn) {
+            editBtn.addEventListener('click', function() {
+                console.log('Edit mode toggled for sprints');
+                document.body.classList.toggle('sprints-edit-mode');
+                renderSprintsRowButtons();
+            });
+        }
+
+        // Add row button
+        if (addRowBtn) {
+            addRowBtn.addEventListener('click', function() {
+                console.log('Adding new sprint row');
+                addSprintRow();
+            });
+        }
+
+        // Save button
+        const saveSprintsBtn = document.getElementById('saveSprintsBtn');
+        if (saveSprintsBtn) {
+            saveSprintsBtn.addEventListener('click', async () => {
+                console.log('Save button clicked for Monthly Sprints');
+                try {
+                    await saveSprintsToFirebase();
+                    const originalText = saveSprintsBtn.textContent;
+                    saveSprintsBtn.textContent = 'Saved!';
+                    saveSprintsBtn.style.background = '#27ae60';
+                    setTimeout(() => {
+                        saveSprintsBtn.textContent = originalText;
+                        saveSprintsBtn.style.background = '#2ecc71';
+                    }, 2000);
+                } catch (error) {
+                    console.error('Error saving sprints:', error);
+                    saveSprintsBtn.textContent = 'Error!';
+                    saveSprintsBtn.style.background = '#e74c3c';
+                    setTimeout(() => {
+                        saveSprintsBtn.textContent = 'Save Data';
+                        saveSprintsBtn.style.background = '#2ecc71';
+                    }, 2000);
+                }
+            });
+        }
+
+        // Table event listeners
+        sprintsBody.addEventListener('input', function(e) {
+            if (e.target.matches('[contenteditable]') || e.target.classList.contains('sprint-status')) {
+                debouncedSaveSprints();
+            }
+        }, true);
+        
+        sprintsBody.addEventListener('change', function(e) {
+            if (e.target.classList.contains('sprint-status')) {
+                updateSprintStatusColors();
+                debouncedSaveSprints();
+            }
+        }, true);
+    }
+
+    function addSprintRow() {
+        const tr = document.createElement('tr');
+        for (let i = 0; i < 3; i++) {
+            const td = document.createElement('td');
+            td.contentEditable = 'true';
+            tr.appendChild(td);
+        }
+        const td = document.createElement('td');
+        const select = document.createElement('select');
+        select.className = 'sprint-status';
+        ['Complete','On Track','Off Track'].forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt;
+            o.textContent = opt;
+            select.appendChild(o);
         });
+        td.appendChild(select);
+        tr.appendChild(td);
+        // Empty cell for row controls
+        tr.appendChild(document.createElement('td'));
+        sprintsBody.appendChild(tr);
+        updateSprintStatusColors();
+        renderSprintsRowButtons();
+        debouncedSaveSprints();
     }
 
     function renderSprintsRowButtons() {
+        if (!sprintsBody) {
+            console.log('Sprints body not found');
+            return;
+        }
+        
+        console.log('Rendering sprint row buttons, edit mode:', document.body.classList.contains('sprints-edit-mode'));
         Array.from(sprintsBody.rows).forEach((row, idx, arr) => {
             let cell = row.cells[row.cells.length - 1];
+            if (!cell) return;
+            
             cell.innerHTML = '';
             if (document.body.classList.contains('sprints-edit-mode')) {
                 // Move up button
@@ -946,11 +1052,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 upBtn.onclick = function() {
                     if (idx > 0) {
                         sprintsBody.insertBefore(row, arr[idx - 1]);
-                        saveSprintsToFirebase();
+                        debouncedSaveSprints();
                         renderSprintsRowButtons();
                     }
                 };
                 cell.appendChild(upBtn);
+                
                 // Move down button
                 const downBtn = document.createElement('button');
                 downBtn.className = 'move-sprint-row-btn';
@@ -959,29 +1066,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 downBtn.onclick = function() {
                     if (idx < arr.length - 1) {
                         sprintsBody.insertBefore(arr[idx + 1], row);
-                        saveSprintsToFirebase();
+                        debouncedSaveSprints();
                         renderSprintsRowButtons();
                     }
                 };
                 cell.appendChild(downBtn);
+                
                 // Delete button
                 const delBtn = document.createElement('button');
                 delBtn.className = 'delete-sprint-row-btn';
                 delBtn.title = 'Delete row';
                 delBtn.textContent = '×';
                 delBtn.onclick = function() {
-                    row.remove();
-                    saveSprintsToFirebase();
-                    renderSprintsRowButtons();
+                    if (confirm('Are you sure you want to delete this sprint?')) {
+                        console.log('Deleting sprint row:', idx);
+                        
+                        // Remove the row from DOM
+                        row.remove();
+                        
+                        // Immediately save to Firebase
+                        saveSprintsToFirebase().then(() => {
+                            console.log('Sprint deleted and saved successfully');
+                            // Re-render buttons to update indices
+                            renderSprintsRowButtons();
+                        }).catch(error => {
+                            console.error('Error saving after delete:', error);
+                            alert('Error saving changes. Please try again.');
+                        });
+                    }
                 };
                 cell.appendChild(delBtn);
             }
         });
     }
 
-    // Save/Load
+    function debouncedSaveSprints() {
+        console.log('Debounced save triggered for sprints');
+        if (saveSprintsTimeout) {
+            clearTimeout(saveSprintsTimeout);
+        }
+        saveSprintsTimeout = setTimeout(() => {
+            saveSprintsToFirebase();
+        }, 500);
+    }
+
     function getSprintsData() {
         const sprints = {};
+        if (!sprintsBody) return sprints;
+        
         Array.from(sprintsBody.children).forEach((row, index) => {
             const sprintKey = `sprint_${index.toString().padStart(3, '0')}`;
             sprints[sprintKey] = {
@@ -994,8 +1126,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         return sprints;
     }
+    
     function setSprintsData(data) {
+        if (!sprintsBody) return;
+        
+        console.log('Setting sprints data:', data);
         sprintsBody.innerHTML = '';
+        
         if (Array.isArray(data)) {
             // Handle old array format
             data.forEach(arr => {
@@ -1051,11 +1188,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 sprintsBody.appendChild(tr);
             });
         }
+        
         updateSprintStatusColors();
         renderSprintsRowButtons();
     }
+    
     async function saveSprintsToFirebase() {
+        if (isSavingSprints) {
+            console.log('Save already in progress, skipping...');
+            return;
+        }
+        
         try {
+            isSavingSprints = true;
             const sprintsData = getSprintsData();
             console.log('Saving Monthly Sprints data to Firebase:', sprintsData);
             
@@ -1066,8 +1211,11 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Monthly Sprints data saved successfully to Firebase');
         } catch (error) {
             console.error("Error saving sprints to Firebase:", error);
+        } finally {
+            isSavingSprints = false;
         }
     }
+    
     async function loadSprintsFromFirebase() {
         try {
             console.log('Loading Monthly Sprints data from Firebase...');
@@ -1077,111 +1225,168 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('Monthly Sprints data found in Firebase, applying...');
                 const firebaseData = docSnap.data().sprints;
                 console.log('Firebase data received:', firebaseData);
-                console.log('Sprints type:', typeof firebaseData, 'Is array:', Array.isArray(firebaseData));
-                if (firebaseData && typeof firebaseData === 'object') {
-                    console.log('Sprints keys:', Object.keys(firebaseData));
-                }
-                setSprintsData(firebaseData);
+                
+                // More aggressive cleanup - completely rebuild the data structure
+                const cleanedData = aggressivelyCleanSprintsData(firebaseData);
+                console.log('After aggressive cleaning:', cleanedData);
+                
+                // Always save the cleaned data back to ensure consistency
+                await setDoc(doc(db, "monthlySprints", "data"), { 
+                    sprints: cleanedData,
+                    lastUpdated: new Date().toISOString()
+                }, { merge: true });
+                
+                setSprintsData(cleanedData);
             } else {
                 console.log('No Monthly Sprints data found in Firebase, starting with empty table...');
-                // Temporarily comment out default data creation
-                /*
-                // Create default sprints data
-                const defaultSprints = [
-                    ['Stephen', 'New Headshots (e.g., AI)', '6/31/25', 'On Track'],
-                    ['Stephen', 'Long Term Company Mission Established + Posters', '6/31/25', 'On Track'],
-                    ['Brandon', 'Prime Day Prep + Deployment', '6/31/25', 'On Track'],
-                    ['Brandon', 'AI Listing Builds System Deployed', '6/31/25', 'On Track'],
-                    ['Bobby', 'Create 1 Fully Functioning GPT Specific to Lifestyle Image creation', '6/31/25', 'On Track'],
-                    ['Bobby', 'Prime Day Prep + Deployment', '6/31/25', 'On Track'],
-                    ['Noah', 'Complete All Digital Marketing SOPs', '6/31/25', 'On Track'],
-                    ['Robby', 'Chris and Martin onboarded and calling', '6/31/25', 'On Track'],
-                    ['Robby', '400 Calls per day', '6/31/25', 'On Track'],
-                    ['Robby', 'BusDev SOPs (Integrations debugged, Lead list SOP, Meetings SOP, Training Calendar, Call Audit SOP)', '6/31/25', 'On Track']
-                ];
-                setSprintsData(defaultSprints);
-                // Save the default data to Firebase
-                await saveSprintsToFirebase();
-                */
+                setSprintsData({});
             }
         } catch (error) {
             console.error("Error loading sprints from Firebase:", error);
+            setSprintsData({});
         }
-        updateSprintStatusColors();
-        renderSprintsRowButtons();
     }
-    // Save on blur or status change
-    sprintsBody.addEventListener('blur', function(e) {
-        if (e.target.matches('[contenteditable]')) {
-            console.log('Monthly Sprints cell blur detected, saving...');
-            saveSprintsToFirebase();
+
+    function aggressivelyCleanSprintsData(data) {
+        if (!data || typeof data !== 'object') return {};
+        
+        const cleaned = {};
+        const seen = new Set();
+        let counter = 0;
+        
+        // Handle both array and object formats
+        let items = [];
+        if (Array.isArray(data)) {
+            items = data.map((item, index) => ({ key: `sprint_${index.toString().padStart(3, '0')}`, data: item }));
+        } else {
+            items = Object.entries(data).map(([key, value]) => ({ key, data: value }));
         }
-    }, true);
-    sprintsBody.addEventListener('change', function(e) {
-        if (e.target.classList.contains('sprint-status')) {
-            console.log('Monthly Sprints status change detected, saving...');
-            saveSprintsToFirebase();
-        }
-    });
-    sprintsBody.addEventListener('input', function(e) {
-        if (e.target.matches('[contenteditable]')) {
-            console.log('Monthly Sprints cell input detected, saving...');
-            saveSprintsToFirebase();
-        }
-    }, true);
-    // Add row
-    addRowBtn.addEventListener('click', function() {
-        const tr = document.createElement('tr');
-        for (let i = 0; i < 3; i++) {
-            const td = document.createElement('td');
-            td.contentEditable = 'true';
-            tr.appendChild(td);
-        }
-        const td = document.createElement('td');
-        const select = document.createElement('select');
-        select.className = 'sprint-status';
-        ['Complete','On Track','Off Track'].forEach(opt => {
-            const o = document.createElement('option');
-            o.value = opt;
-            o.textContent = opt;
-            select.appendChild(o);
-        });
-        td.appendChild(select);
-        tr.appendChild(td);
-        // Empty cell for row controls
-        tr.appendChild(document.createElement('td'));
-        sprintsBody.appendChild(tr);
-        updateSprintStatusColors();
-        renderSprintsRowButtons();
-        saveSprintsToFirebase();
-    });
-    // Save button for Monthly Sprints
-    const saveSprintsBtn = document.getElementById('saveSprintsBtn');
-    if (saveSprintsBtn) {
-        saveSprintsBtn.addEventListener('click', async () => {
-            console.log('Save button clicked for Monthly Sprints');
-            try {
-                await saveSprintsToFirebase();
-                const originalText = saveSprintsBtn.textContent;
-                saveSprintsBtn.textContent = 'Saved!';
-                saveSprintsBtn.style.background = '#27ae60';
-                setTimeout(() => {
-                    saveSprintsBtn.textContent = originalText;
-                    saveSprintsBtn.style.background = '#2ecc71';
-                }, 2000);
-            } catch (error) {
-                console.error('Error saving sprints:', error);
-                saveSprintsBtn.textContent = 'Error!';
-                saveSprintsBtn.style.background = '#e74c3c';
-                setTimeout(() => {
-                    saveSprintsBtn.textContent = 'Save Data';
-                    saveSprintsBtn.style.background = '#2ecc71';
-                }, 2000);
+        
+        items.forEach(({ key, data }) => {
+            if (!data || typeof data !== 'object') return;
+            
+            // Extract sprint data regardless of format
+            let owner = '', sprint = '', due = '', status = 'On Track';
+            
+            if (Array.isArray(data)) {
+                owner = data[0] || '';
+                sprint = data[1] || '';
+                due = data[2] || '';
+                status = data[3] || 'On Track';
+            } else {
+                owner = data.owner || data.Owner || '';
+                sprint = data.sprint || data.Sprint || '';
+                due = data.due || data.Due || '';
+                status = data.status || data.Status || 'On Track';
+            }
+            
+            // Create a unique identifier
+            const uniqueId = `${owner.trim()}-${sprint.trim()}-${due.trim()}`;
+            
+            // Only add if we haven't seen this exact sprint before and it has content
+            if (!seen.has(uniqueId) && (owner.trim() || sprint.trim() || due.trim())) {
+                seen.add(uniqueId);
+                const newKey = `sprint_${counter.toString().padStart(3, '0')}`;
+                cleaned[newKey] = {
+                    id: newKey,
+                    owner: owner.trim(),
+                    sprint: sprint.trim(),
+                    due: due.trim(),
+                    status: status
+                };
+                counter++;
+            } else {
+                console.log('Removing duplicate or empty sprint:', uniqueId);
             }
         });
+        
+        console.log('Aggressively cleaned sprints data:', cleaned);
+        return cleaned;
     }
-    // On load
-    // loadSprintsFromFirebase(); // Removed - now handled by initializePage()
+
+    // Initialize sprints on page load
+    initializeSprints();
+
+    // Add a global function to reset sprints data if needed (for debugging)
+    window.resetSprintsData = async function() {
+        if (confirm('Are you sure you want to reset all sprints data? This cannot be undone.')) {
+            try {
+                await setDoc(doc(db, "monthlySprints", "data"), { 
+                    sprints: {},
+                    lastUpdated: new Date().toISOString()
+                });
+                console.log('Sprints data reset successfully');
+                location.reload();
+            } catch (error) {
+                console.error('Error resetting sprints data:', error);
+                alert('Error resetting data: ' + error.message);
+            }
+        }
+    };
+
+    // Add a function to completely clear and rebuild the data
+    window.clearAndRebuildSprints = async function() {
+        if (confirm('This will completely clear all sprints data and start fresh. Continue?')) {
+            try {
+                // Clear the Firebase data
+                await setDoc(doc(db, "monthlySprints", "data"), { 
+                    sprints: {},
+                    lastUpdated: new Date().toISOString()
+                });
+                
+                // Clear the table
+                if (sprintsBody) {
+                    sprintsBody.innerHTML = '';
+                }
+                
+                console.log('Sprints data cleared and table reset');
+                alert('Sprints data cleared. You can now add new sprints.');
+            } catch (error) {
+                console.error('Error clearing sprints data:', error);
+                alert('Error clearing data: ' + error.message);
+            }
+        }
+    };
+
+    // Add a function to manually trigger cleanup
+    window.cleanupSprintsData = async function() {
+        if (confirm('This will clean up any duplicate sprints data. Continue?')) {
+            try {
+                console.log('Manual cleanup triggered');
+                await loadSprintsFromFirebase(); // This will trigger the aggressive cleanup
+                alert('Cleanup completed. Check the console for details.');
+            } catch (error) {
+                console.error('Error during cleanup:', error);
+                alert('Error during cleanup: ' + error.message);
+            }
+        }
+    };
+
+    // Add cleanup button to the page
+    setTimeout(() => {
+        const sprintsContainer = document.querySelector('.monthly-sprints-container');
+        if (sprintsContainer) {
+            const cleanupBtn = document.createElement('button');
+            cleanupBtn.textContent = '🧹 Cleanup';
+            cleanupBtn.style.cssText = `
+                background: #e74c3c;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 12px;
+                margin-left: 10px;
+                cursor: pointer;
+                font-size: 0.9rem;
+            `;
+            cleanupBtn.title = 'Clean up duplicate sprints data';
+            cleanupBtn.onclick = window.cleanupSprintsData;
+            
+            const buttonContainer = sprintsContainer.querySelector('div');
+            if (buttonContainer) {
+                buttonContainer.appendChild(cleanupBtn);
+            }
+        }
+    }, 1000);
 
     // --- TO-DO SECTION LOGIC (FIREBASE) ---
     const TODOS_KEY = 'goalsTodos';
@@ -1494,9 +1699,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('IDS: Table event listeners added');
     }
 
-    // Load data on page load
-    loadIdsData();
-
     // Load all Firebase data
     async function initializePage() {
         try {
@@ -1508,9 +1710,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log('Loading KPI Tracker...');
             await loadKpiTrackerFromFirebase();
-            
-            console.log('Loading Monthly Sprints...');
-            await loadSprintsFromFirebase();
             
             console.log('Loading Todos...');
             await loadTodosFromFirebase();
