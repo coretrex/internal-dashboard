@@ -1370,6 +1370,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         idsData.forEach((item, index) => {
             const row = document.createElement('tr');
+            const isEditMode = document.body.classList.contains('ids-edit-mode');
             row.innerHTML = `
                 <td contenteditable="true">${item.topic || ''}</td>
                 <td contenteditable="true">${item.who || ''}</td>
@@ -1384,8 +1385,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td style="text-align: center;">
                     <input type="checkbox" class="ids-discussed" ${item.discussed ? 'checked' : ''}>
                 </td>
-                <td>
-                    <button class="delete-btn" onclick="deleteIdsRow(${index})">×</button>
+                <td style="text-align: center;">
+                    ${isEditMode ? `<button class="delete-ids-btn" onclick="deleteIdsRow(${index})" title="Delete row"><i class="fas fa-trash"></i></button>` : ''}
                 </td>
             `;
             idsBody.appendChild(row);
@@ -1473,6 +1474,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editIdsBtn.addEventListener('click', () => {
             console.log('IDS: Edit button clicked');
             document.body.classList.toggle('ids-edit-mode');
+            renderIdsTable(); // Re-render to show/hide delete buttons
         });
         console.log('IDS: Edit button listener added');
     }
