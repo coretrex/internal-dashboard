@@ -682,6 +682,13 @@ function setupActivityEntryListeners(entry, docId, activity) {
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
+    // PAGE GUARD
+    if (!hasPageAccess('prospects')) {
+        alert('Access denied. You do not have permission to view this page.');
+        window.location.href = 'index.html';
+        return;
+    }
+
     loadProspects();
     
     // Add this new code
@@ -743,4 +750,17 @@ function updateTimerDisplay() {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
     timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+// Page guard: check login and access
+function hasPageAccess(pageId) {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const userRole = localStorage.getItem('userRole');
+    let pageAccess = [];
+    try {
+        pageAccess = JSON.parse(localStorage.getItem('userPageAccess')) || [];
+    } catch (e) {
+        pageAccess = [];
+    }
+    return isLoggedIn && (userRole === 'admin' || pageAccess.includes(pageId));
 } 

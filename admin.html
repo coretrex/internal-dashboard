@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <title>CoreTrex Admin Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="page-container">
+        <div class="admin-content">
+            <div class="admin-header">
+                <h1><i class="fas fa-shield-alt"></i> Admin Panel</h1>
+                <div class="admin-user-info">
+                    <a href="goals.html" class="admin-btn secondary" style="text-decoration: none; margin-right: 10px;">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                    <span id="currentUser">Loading...</span>
+                    <button id="signOutBtn" class="sign-out-btn">
+                        <i class="fas fa-sign-out-alt"></i> Sign Out
+                    </button>
+                </div>
+            </div>
+
+            <!-- User Management Section -->
+            <div class="admin-section">
+                <h2><i class="fas fa-users"></i> User Management</h2>
+                <div class="user-controls">
+                    <button id="addUserBtn" class="admin-btn primary">
+                        <i class="fas fa-user-plus"></i> Add User
+                    </button>
+                    <button id="refreshUsersBtn" class="admin-btn secondary">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                
+                <div class="users-table-container">
+                    <table class="admin-table" id="usersTable">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Page Access</th>
+                                <th>Last Login</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- Users will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Page Access Management -->
+            <div class="admin-section">
+                <h2><i class="fas fa-lock"></i> Page Access Management</h2>
+                <div class="page-access-grid" id="pageAccessGrid">
+                    <!-- Page access controls will be populated here -->
+                </div>
+            </div>
+
+            <!-- System Settings -->
+            <div class="admin-section">
+                <h2><i class="fas fa-cog"></i> System Settings</h2>
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label for="defaultRole">Default User Role:</label>
+                        <select id="defaultRole" class="admin-select">
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                            <option value="viewer">Viewer</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label for="sessionTimeout">Session Timeout (minutes):</label>
+                        <input type="number" id="sessionTimeout" class="admin-input" value="480" min="30" max="1440">
+                    </div>
+                    <div class="setting-item">
+                        <button id="saveSettingsBtn" class="admin-btn primary">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="admin-modal">
+        <div class="admin-modal-content">
+            <div class="admin-modal-header">
+                <h3><i class="fas fa-user-plus"></i> Add New User</h3>
+                <span class="admin-modal-close">&times;</span>
+            </div>
+            <form id="addUserForm" class="admin-form">
+                <div class="form-group">
+                    <label for="userEmail">Email Address:</label>
+                    <input type="email" id="userEmail" required class="admin-input">
+                </div>
+                <div class="form-group">
+                    <label for="userRole">Role:</label>
+                    <select id="userRole" class="admin-select">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                        <option value="viewer">Viewer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Page Access:</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" value="goals" checked> KPIs & Goals
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" value="kpis" checked> Call Metrics
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" value="prospects" checked> Prospects
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" value="clients" checked> Clients
+                        </label>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="admin-btn primary">Add User</button>
+                    <button type="button" class="admin-btn secondary" id="cancelAddUser">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="admin-modal">
+        <div class="admin-modal-content">
+            <div class="admin-modal-header">
+                <h3><i class="fas fa-user-edit"></i> Edit User</h3>
+                <span class="admin-modal-close">&times;</span>
+            </div>
+            <form id="editUserForm" class="admin-form">
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label for="editUserEmail">Email Address:</label>
+                    <input type="email" id="editUserEmail" readonly class="admin-input">
+                </div>
+                <div class="form-group">
+                    <label for="editUserRole">Role:</label>
+                    <select id="editUserRole" class="admin-select">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                        <option value="viewer">Viewer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Page Access:</label>
+                    <div class="checkbox-group" id="editUserPageAccess">
+                        <!-- Checkboxes will be populated here -->
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="admin-btn primary">Save Changes</button>
+                    <button type="button" class="admin-btn secondary" id="cancelEditUser">Cancel</button>
+                    <button type="button" class="admin-btn danger" id="deleteUserBtn">Delete User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="admin.js"></script>
+</body>
+</html> 

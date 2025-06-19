@@ -26,8 +26,28 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// Page guard: check login and access
+function hasPageAccess(pageId) {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const userRole = localStorage.getItem('userRole');
+    let pageAccess = [];
+    try {
+        pageAccess = JSON.parse(localStorage.getItem('userPageAccess')) || [];
+    } catch (e) {
+        pageAccess = [];
+    }
+    return isLoggedIn && (userRole === 'admin' || pageAccess.includes(pageId));
+}
+
 // Goals page functionality
 document.addEventListener('DOMContentLoaded', () => {
+    // PAGE GUARD
+    if (!hasPageAccess('goals')) {
+        alert('Access denied. You do not have permission to view this page.');
+        window.location.href = 'index.html';
+        return;
+    }
+
     // Check authentication using the correct localStorage key
     if (!localStorage.getItem('isLoggedIn')) {
         window.location.href = 'index.html';
@@ -1251,6 +1271,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const idsBody = document.getElementById('idsBody');
     const addIdsRowBtn = document.getElementById('addIdsRowBtn');
     const editIdsBtn = document.getElementById('editIdsBtn');
+    let isIdsLoading = false; // Flag to prevent save during loading
+    let saveIdsTimeout = null; // For debouncing saves
 
     function getIdsData() {
         const ids = {};
@@ -1267,11 +1289,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         return ids;
     }
+    
+    // Debounced save function
+    function debouncedSaveIds() {
+        if (saveIdsTimeout) {
+            clearTimeout(saveIdsTimeout);
+        }
+        saveIdsTimeout = setTimeout(() => {
+            if (!isIdsLoading) {
+                saveIdsToFirebase();
+            }
+        }, 500); // 500ms delay
+    }
+
     function setIdsData(data) {
+        // Clear the table completely first
+        console.log('Setting IDS data, clearing table first...');
         idsBody.innerHTML = '';
+        
         if (Array.isArray(data)) {
+            console.log('Processing IDS data as array with', data.length, 'items');
             // Handle old array format
-            data.forEach(arr => {
+            data.forEach((arr, index) => {
+                console.log(`Creating row ${index} from array data:`, arr);
                 const tr = document.createElement('tr');
                 for (let i = 0; i < 3; i++) {
                     const td = document.createElement('td');
@@ -1308,8 +1348,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (typeof data === 'object' && !Array.isArray(data)) {
             // Handle new numbered key format (preserves order)
             const sortedKeys = Object.keys(data).sort();
+            console.log('Processing IDS data as object with', sortedKeys.length, 'items');
+            console.log('Sorted keys:', sortedKeys);
+            
             sortedKeys.forEach(key => {
                 const idsItem = data[key];
+                console.log(`Creating row from key ${key}:`, idsItem);
                 const tr = document.createElement('tr');
                 for (let i = 0; i < 3; i++) {
                     const td = document.createElement('td');
@@ -1344,9 +1388,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 idsBody.appendChild(tr);
             });
         }
+        console.log('IDS table now has', idsBody.children.length, 'rows');
         renderIdsRowButtons();
     }
     async function saveIdsToFirebase() {
+        if (isIdsLoading) return; // Don't save while loading
+        
         try {
             const idsData = getIdsData();
             console.log('Saving IDS data to Firebase:', idsData);
@@ -1362,6 +1409,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     async function loadIdsFromFirebase() {
         try {
+            isIdsLoading = true; // Set loading flag
             console.log('Loading IDS data from Firebase...');
             const docRef = doc(db, "idsData", "data");
             const docSnap = await getDoc(docRef);
@@ -1376,30 +1424,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 setIdsData(firebaseData);
             } else {
                 console.log('No IDS data found in Firebase, starting with empty table...');
-                // Temporarily comment out default data creation
-                /*
-                // Create default IDS data
-                const defaultIds = [
-                    ['Category analytics standardization', 'Robby', '', 'Discuss', false],
-                    ['Podmatch for Team Interviews', 'Stephen', '', 'Discuss', false],
-                    ['Team Offsite', 'Stephen', '', 'Discuss', false],
-                    ['BusDev Huddles', 'Robby', '', 'Discuss', false],
-                    ['BusDev Metrics', 'Robby', '', 'Discuss', false],
-                    ['Huddle Training Content', 'Robby', '', 'Discuss', false],
-                    ['SMS?', 'Brandon', '', 'Discuss', false],
-                    ['Brand Growth | Outbound Help', 'Brandon', '', 'Discuss', false],
-                    ['Current Client/Prospects | ICP Check-in', 'Bobby', '', 'Discuss', false],
-                    ['Morning Huddle', 'Stephen', '', 'Discuss', false]
-                ];
-                setIdsData(defaultIds);
-                // Save the default data to Firebase
-                await saveIdsToFirebase();
-                */
+                // Clear the table to ensure it's empty
+                idsBody.innerHTML = '';
+                renderIdsRowButtons();
             }
         } catch (error) {
             console.error("Error loading IDS from Firebase:", error);
+        } finally {
+            isIdsLoading = false; // Clear loading flag
         }
-        renderIdsRowButtons();
     }
     // Add row
     if (addIdsRowBtn) {
@@ -1442,19 +1475,19 @@ document.addEventListener('DOMContentLoaded', () => {
     idsBody.addEventListener('blur', function(e) {
         if (e.target.matches('[contenteditable]')) {
             console.log('IDS cell blur detected, saving...');
-            saveIdsToFirebase();
+            debouncedSaveIds();
         }
     }, true);
     idsBody.addEventListener('change', function(e) {
         if (e.target.classList.contains('ids-discussed') || e.target.classList.contains('ids-type-select')) {
             console.log('IDS dropdown/checkbox change detected, saving...');
-            saveIdsToFirebase();
+            debouncedSaveIds();
         }
     });
     idsBody.addEventListener('input', function(e) {
         if (e.target.matches('[contenteditable]')) {
             console.log('IDS cell input detected, saving...');
-            saveIdsToFirebase();
+            debouncedSaveIds();
         }
     }, true);
     // Edit mode toggle
@@ -1534,6 +1567,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize the page with Firebase data
     initializePage();
+
+    // Cleanup function to clear timeouts
+    window.addEventListener('beforeunload', () => {
+        if (saveIdsTimeout) {
+            clearTimeout(saveIdsTimeout);
+        }
+    });
 
     // Save button for IDS
     const saveIdsBtn = document.getElementById('saveIdsBtn');

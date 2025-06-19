@@ -24,6 +24,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// Page guard: check login and access
+function hasPageAccess(pageId) {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const userRole = localStorage.getItem('userRole');
+    let pageAccess = [];
+    try {
+        pageAccess = JSON.parse(localStorage.getItem('userPageAccess')) || [];
+    } catch (e) {
+        pageAccess = [];
+    }
+    return isLoggedIn && (userRole === 'admin' || pageAccess.includes(pageId));
+}
+
 // Load clients function
 async function loadClients() {
     console.log('Loading clients...');
@@ -292,6 +305,13 @@ function createClientRow(data, docId) {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    // PAGE GUARD
+    if (!hasPageAccess('clients')) {
+        alert('Access denied. You do not have permission to view this page.');
+        window.location.href = 'index.html';
+        return;
+    }
+
     console.log('Initializing clients page...');
     console.log('Firebase app:', app);
     console.log('Firestore database:', db);

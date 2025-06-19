@@ -7,6 +7,14 @@ import {
     onAuthStateChanged,
     signOut
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import {
+    getFirestore,
+    doc,
+    getDoc,
+    setDoc,
+    getDocs,
+    collection
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 // ... other imports
 
 // Firebase configuration
@@ -23,6 +31,34 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
+const db = getFirestore(app);
+
+// Helper: Provision user in Firestore
+async function provisionUser(user) {
+    const userRef = doc(db, "users", user.email);
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+        // User exists, return data
+        return userSnap.data();
+    } else {
+        // Check if this is the first user (make admin)
+        const usersSnap = await getDocs(collection(db, "users"));
+        const isFirstUser = usersSnap.empty;
+        const defaultRole = isFirstUser ? "admin" : "user";
+        const defaultPageAccess = ["goals", "kpis", "prospects", "clients"];
+        const userData = {
+            email: user.email,
+            name: user.displayName,
+            role: defaultRole,
+            pageAccess: defaultPageAccess,
+            enabled: true,
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+        };
+        await setDoc(userRef, userData);
+        return userData;
+    }
+}
 
 // Login functionality
 document.addEventListener('DOMContentLoaded', () => {
@@ -35,12 +71,26 @@ document.addEventListener('DOMContentLoaded', () => {
     loadingSpinner.style.display = 'none';
 
     // Check if user is already signed in
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // User is signed in, redirect to goals page
+            // Provision/check user in Firestore
+            const userData = await provisionUser(user);
+            if (!userData.enabled) {
+                // User is disabled
+                localStorage.clear();
+                if (loginError) {
+                    loginError.style.display = "block";
+                    loginError.innerHTML = `<strong>Access Denied</strong><br>Your account is disabled. Please contact your administrator.`;
+                }
+                await signOut(auth);
+                return;
+            }
+            // Store user info and permissions
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userEmail', user.email);
             localStorage.setItem('userName', user.displayName);
+            localStorage.setItem('userRole', userData.role);
+            localStorage.setItem('userPageAccess', JSON.stringify(userData.pageAccess || []));
             window.location.href = 'goals.html';
         }
     });
@@ -49,44 +99,48 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update button text and remove password input
         loginButton.innerHTML = '<i class="fab fa-google"></i> Sign in with Google';
         loginButton.style.background = 'linear-gradient(45deg, #4285f4, #34a853)';
-        
         // Remove password input if it exists
         const passwordInput = document.getElementById("passwordInput");
         if (passwordInput) {
             passwordInput.parentElement.remove();
         }
-
         loginButton.addEventListener("click", async () => {
             try {
                 // Show loading spinner
                 loginButton.style.display = 'none';
                 loginContainer.appendChild(loadingSpinner);
                 loadingSpinner.style.display = 'block';
-
                 // Sign in with Google
                 const result = await signInWithPopup(auth, provider);
                 const user = result.user;
-                
-                console.log('Successfully signed in:', user.email);
-                
-                // Store user info and redirect
+                // Provision/check user in Firestore
+                const userData = await provisionUser(user);
+                if (!userData.enabled) {
+                    // User is disabled
+                    localStorage.clear();
+                    loadingSpinner.style.display = 'none';
+                    loginButton.style.display = 'block';
+                    if (loginError) {
+                        loginError.style.display = "block";
+                        loginError.innerHTML = `<strong>Access Denied</strong><br>Your account is disabled. Please contact your administrator.`;
+                    }
+                    await signOut(auth);
+                    return;
+                }
+                // Store user info and permissions
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('userEmail', user.email);
                 localStorage.setItem('userName', user.displayName);
-                
+                localStorage.setItem('userRole', userData.role);
+                localStorage.setItem('userPageAccess', JSON.stringify(userData.pageAccess || []));
                 window.location.href = 'goals.html';
-                
             } catch (error) {
                 console.error('Sign-in error:', error);
-                
                 // Hide loading spinner and show error
                 loadingSpinner.style.display = 'none';
                 loginButton.style.display = 'block';
-                
                 if (loginError) {
                     loginError.style.display = "block";
-                    
-                    // Provide specific error messages based on error type
                     if (error.code === 'auth/configuration-not-found') {
                         loginError.innerHTML = `
                             <strong>Google Authentication Not Configured</strong><br>
@@ -127,6 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('userEmail');
             localStorage.removeItem('userName');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userPageAccess');
             window.location.reload();
         } catch (error) {
             console.error('Sign out error:', error);
