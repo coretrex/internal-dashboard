@@ -1700,9 +1700,10 @@ tr.completed button:disabled {
 }
 
 .kpi-label .fa-info-circle[data-tooltip]:hover::after {
-  font-size: 0.98em;
-  text-transform: none;
-  padding: 16px 24px;
+  font-size: 0.75em;
+  text-transform: none !important;
+  padding: 20px 28px;
+  font-family: "Poppins", sans-serif !important;
 }
 
 .kpi-label .fa-info-circle[data-tooltip]:hover::before {
@@ -1735,20 +1736,21 @@ tr.completed button:disabled {
   transform: translateX(-50%);
   background: #23272f;
   color: #fff;
-  padding: 16px 24px;
+  padding: 20px 28px;
   border-radius: 16px;
-  font-size: 0.98em;
-  font-weight: 500;
+  font-size: 0.75em;
+  font-weight: 400;
+  font-family: "Poppins", sans-serif !important;
   white-space: pre-line;
   box-shadow: 0 4px 16px rgba(0,0,0,0.22);
   z-index: 100;
   opacity: 1;
   pointer-events: auto;
-  min-width: 180px;
+  min-width: 200px;
   text-align: center;
-  line-height: 1.7;
-  letter-spacing: 0.01em;
-  text-transform: none;
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+  text-transform: none !important;
 }
 .kpi-tooltip-wrapper .fa-info-circle[data-tooltip]:hover::before,
 .kpi-tooltip-wrapper:hover .fa-info-circle[data-tooltip]::before {
@@ -2631,4 +2633,33 @@ body.ids-edit-mode .move-sprint-row-btn {
 .admin-panel-btn.hidden {
     display: none;
 }
+
+/* IDS Delete Button Styles */
+.delete-ids-btn {
+    background: transparent;
+    border: none;
+    color: #b0b8c1;
+    font-size: 1.1em;
+    opacity: 0.7;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 6px 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-ids-btn:hover {
+    opacity: 1;
+    color: #e57373;
+    background: rgba(229, 115, 115, 0.1);
+    transform: scale(1.1);
+}
+
+.delete-ids-btn i {
+    font-size: 14px;
+}
+
+/* Admin Panel Button */
 
