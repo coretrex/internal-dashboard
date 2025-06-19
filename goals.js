@@ -203,17 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateThermometer();
 
     // --- KPI BLOCKS INTERACTIVITY ---
-    const kpiDefaults = {
-        activeClients: 32,
-        revenue: '$142,000',
-        clientsClosed: 5
-    };
-    const goalDefaults = {
-        activeClients: 35,
-        revenue: '$150,000',
-        clientsClosed: 8
-    };
-    const kpiKeys = Object.keys(kpiDefaults);
+    const kpiKeys = ['activeClients', 'revenue', 'clientsClosed'];
     
     // Firebase functions for KPI data
     async function saveKpiToFirebase(kpi, value) {
@@ -272,19 +262,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Load KPI values from Firebase or defaults
+    // Load KPI values from Firebase only (no defaults)
     async function loadAllKpiData() {
         try {
             for (const key of kpiKeys) {
-                // Load KPI value
-                const val = await loadKpiFromFirebase(key) || kpiDefaults[key];
+                // Load KPI value from Firebase only
+                const val = await loadKpiFromFirebase(key);
                 const el = document.getElementById(key.charAt(0).toLowerCase() + key.slice(1) + 'Value');
-                if (el) el.textContent = val;
+                if (el && val !== null) {
+                    el.textContent = val;
+                }
                 
-                // Load goal value
-                const goalVal = await loadGoalFromFirebase(key) || goalDefaults[key];
+                // Load goal value from Firebase only
+                const goalVal = await loadGoalFromFirebase(key);
                 const goalEl = document.getElementById(key + 'Goal');
-                if (goalEl) {
+                if (goalEl && goalVal !== null) {
                     goalEl.textContent = `Goal: ${goalVal}`;
                     updateGoalStatus(key, val, goalVal);
                 }
@@ -353,7 +345,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Save on blur or Enter
             async function saveKpiEdit() {
                 let newValue = input.value.trim();
-                if (newValue === '') newValue = kpiDefaults[kpi];
+                if (newValue === '') {
+                    // Don't save empty values, just restore the current value
+                    valueEl.textContent = currentValue;
+                    if (kpi === 'revenue') {
+                        revenueValueEl.textContent = currentValue;
+                        updateThermometer();
+                    }
+                    return;
+                }
                 valueEl.textContent = newValue;
                 await saveKpiToFirebase(kpi, newValue);
                 if (kpi === 'revenue') {
@@ -361,8 +361,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateThermometer();
                 }
                 // Update goal status
-                const goalVal = await loadGoalFromFirebase(kpi) || goalDefaults[kpi];
-                updateGoalStatus(kpi, newValue, goalVal);
+                const goalVal = await loadGoalFromFirebase(kpi);
+                if (goalVal !== null) {
+                    updateGoalStatus(kpi, newValue, goalVal);
+                }
             }
             input.addEventListener('blur', saveKpiEdit);
             input.addEventListener('keydown', (evt) => {
@@ -417,13 +419,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Save on blur or Enter
             async function saveGoalEdit() {
                 let newGoal = input.value.trim();
-                if (newGoal === '') newGoal = goalDefaults[kpi];
+                if (newGoal === '') {
+                    // Don't save empty values, just restore the current value
+                    goalEl.textContent = currentGoalText;
+                    return;
+                }
                 goalEl.textContent = `Goal: ${newGoal}`;
                 await saveGoalToFirebase(kpi, newGoal);
                 
                 // Update goal status
-                const currentVal = document.getElementById(kpi + 'Value')?.textContent || kpiDefaults[kpi];
-                updateGoalStatus(kpi, currentVal, newGoal);
+                const currentVal = document.getElementById(kpi + 'Value')?.textContent;
+                if (currentVal) {
+                    updateGoalStatus(kpi, currentVal, newGoal);
+                }
             }
             
             input.addEventListener('blur', saveGoalEdit);
