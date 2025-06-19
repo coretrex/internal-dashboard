@@ -1028,7 +1028,19 @@ document.addEventListener('DOMContentLoaded', () => {
         sprintsBody.appendChild(tr);
         updateSprintStatusColors();
         renderSprintsRowButtons();
-        debouncedSaveSprints();
+        
+        // Save and sort after adding new row
+        saveSprintsToFirebase().then(() => {
+            // Auto-sort after saving
+            const currentData = getSprintsData();
+            const sortedData = sortSprintsByOwner(currentData);
+            setSprintsData(sortedData);
+            // Save the sorted data
+            setDoc(doc(db, "monthlySprints", "data"), { 
+                sprints: sortedData,
+                lastUpdated: new Date().toISOString()
+            }, { merge: true });
+        });
     }
 
     function renderSprintsRowButtons() {
@@ -1300,8 +1312,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        console.log('Aggressively cleaned sprints data:', cleaned);
-        return cleaned;
+        // Sort by owner name
+        const sortedData = sortSprintsByOwner(cleaned);
+        
+        console.log('Aggressively cleaned and sorted sprints data:', sortedData);
+        return sortedData;
+    }
+
+    function sortSprintsByOwner(data) {
+        // Convert to array, sort, then convert back to object
+        const sortedEntries = Object.entries(data).sort(([, a], [, b]) => {
+            const ownerA = (a.owner || '').toLowerCase();
+            const ownerB = (b.owner || '').toLowerCase();
+            return ownerA.localeCompare(ownerB);
+        });
+        
+        // Rebuild object with new keys
+        const sortedData = {};
+        sortedEntries.forEach(([, sprint], index) => {
+            const newKey = `sprint_${index.toString().padStart(3, '0')}`;
+            sortedData[newKey] = {
+                ...sprint,
+                id: newKey
+            };
+        });
+        
+        return sortedData;
     }
 
     // Initialize sprints on page load
@@ -1362,28 +1398,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Add cleanup button to the page
+    // Add a function to manually sort sprints
+    window.sortSprintsByOwner = async function() {
+        try {
+            console.log('Manual sort triggered');
+            const currentData = getSprintsData();
+            const sortedData = sortSprintsByOwner(currentData);
+            
+            // Save the sorted data
+            await setDoc(doc(db, "monthlySprints", "data"), { 
+                sprints: sortedData,
+                lastUpdated: new Date().toISOString()
+            }, { merge: true });
+            
+            // Update the display
+            setSprintsData(sortedData);
+            alert('Sprints sorted by owner name successfully!');
+        } catch (error) {
+            console.error('Error during sort:', error);
+            alert('Error sorting sprints: ' + error.message);
+        }
+    };
+
+    // Add cleanup and sort buttons to the page
     setTimeout(() => {
         const sprintsContainer = document.querySelector('.monthly-sprints-container');
         if (sprintsContainer) {
-            const cleanupBtn = document.createElement('button');
-            cleanupBtn.textContent = '🧹 Cleanup';
-            cleanupBtn.style.cssText = `
-                background: #e74c3c;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 8px 12px;
-                margin-left: 10px;
-                cursor: pointer;
-                font-size: 0.9rem;
-            `;
-            cleanupBtn.title = 'Clean up duplicate sprints data';
-            cleanupBtn.onclick = window.cleanupSprintsData;
-            
             const buttonContainer = sprintsContainer.querySelector('div');
             if (buttonContainer) {
-                buttonContainer.appendChild(cleanupBtn);
+                // Sort button
+                const sortBtn = document.createElement('button');
+                sortBtn.textContent = '📊 Sort by Owner';
+                sortBtn.style.cssText = `
+                    background: #3498db;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 8px 12px;
+                    margin-left: 10px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                `;
+                sortBtn.title = 'Sort sprints by owner name';
+                sortBtn.onclick = window.sortSprintsByOwner;
+                
+                buttonContainer.appendChild(sortBtn);
             }
         }
     }, 1000);
