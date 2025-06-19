@@ -396,13 +396,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return txt.trim();
         });
-        const body = Array.from(kpiTrackerBody.children).map(row => {
-            return Array.from(row.children).map(cell => cell.textContent.trim());
+        
+        // Convert body to object format for Firebase compatibility
+        const bodyObject = {};
+        Array.from(kpiTrackerBody.children).forEach((row, rowIndex) => {
+            const rowData = {};
+            Array.from(row.children).forEach((cell, cellIndex) => {
+                rowData[`cell_${cellIndex}`] = cell.textContent.trim();
+            });
+            bodyObject[`row_${rowIndex}`] = rowData;
         });
-        return { header, body };
+        
+        const data = { header, body: bodyObject };
+        console.log('Captured KPI tracker data:', data);
+        return data;
     }
     function setKpiTrackerFullData(data) {
-        if (!data || !Array.isArray(data.header) || !Array.isArray(data.body)) return;
+        if (!data || !Array.isArray(data.header) || !data.body) return;
         // Restore header (except first 3 columns: Owner, KPI, Goal)
         while (kpiTrackerHeaderRow.children.length > 3) {
             kpiTrackerHeaderRow.removeChild(kpiTrackerHeaderRow.children[3]);
@@ -413,34 +423,67 @@ document.addEventListener('DOMContentLoaded', () => {
             kpiTrackerHeaderRow.appendChild(th);
         }
         // Restore body
-        Array.from(kpiTrackerBody.children).forEach((row, i) => {
-            // Remove extra cells
-            while (row.children.length > data.header.length) {
-                row.removeChild(row.lastChild);
-            }
-            // Add missing cells
-            while (row.children.length < data.header.length) {
-                const td = document.createElement('td');
-                td.contentEditable = 'true';
-                td.textContent = '';
-                row.appendChild(td);
-            }
-            // Set cell values
-            for (let j = 3; j < data.header.length; j++) {
-                if (data.body[i] && data.body[i][j] !== undefined) {
-                    row.children[j].textContent = data.body[i][j];
-                } else {
-                    row.children[j].textContent = '';
+        kpiTrackerBody.innerHTML = '';
+        
+        if (Array.isArray(data.body)) {
+            // Handle old array format
+            data.body.forEach((rowData, i) => {
+                const tr = document.createElement('tr');
+                // Remove extra cells
+                while (tr.children.length > data.header.length) {
+                    tr.removeChild(tr.lastChild);
                 }
-                row.children[j].contentEditable = 'true';
-            }
-        });
+                // Add missing cells
+                while (tr.children.length < data.header.length) {
+                    const td = document.createElement('td');
+                    td.contentEditable = 'true';
+                    td.textContent = '';
+                    tr.appendChild(td);
+                }
+                // Set cell values
+                for (let j = 3; j < data.header.length; j++) {
+                    if (rowData && rowData[j] !== undefined) {
+                        tr.children[j].textContent = rowData[j];
+                    } else {
+                        tr.children[j].textContent = '';
+                    }
+                    tr.children[j].contentEditable = 'true';
+                }
+                kpiTrackerBody.appendChild(tr);
+            });
+        } else {
+            // Handle new object format
+            Object.values(data.body).forEach((rowData, i) => {
+                const tr = document.createElement('tr');
+                // Create cells for each column in header
+                for (let j = 0; j < data.header.length; j++) {
+                    const td = document.createElement('td');
+                    td.contentEditable = 'true';
+                    td.textContent = rowData[`cell_${j}`] || '';
+                    
+                    // Add special class for owner column (first column)
+                    if (j === 0) {
+                        td.className = 'kpi-owner';
+                    }
+                    
+                    tr.appendChild(td);
+                }
+                kpiTrackerBody.appendChild(tr);
+            });
+        }
         renderDeleteWeekButtons();
     }
     async function saveKpiTrackerToFirebase() {
         const data = getKpiTrackerFullData();
         try {
-            await setDoc(doc(db, "kpiTracker", "data"), data, { merge: true });
+            console.log('Saving KPI tracker data to Firebase:', data);
+            // Save with a more explicit structure
+            await setDoc(doc(db, "kpiTracker", "data"), {
+                header: data.header,
+                body: data.body,
+                lastUpdated: new Date().toISOString()
+            }, { merge: true });
+            console.log('KPI tracker data saved successfully to Firebase');
         } catch (error) {
             console.error("Error saving KPI tracker to Firebase:", error);
         }
@@ -452,9 +495,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 console.log('KPI tracker data found in Firebase, applying...');
-                setKpiTrackerFullData(docSnap.data());
+                const firebaseData = docSnap.data();
+                console.log('Firebase data received:', firebaseData);
+                setKpiTrackerFullData(firebaseData);
             } else {
-                console.log('No KPI tracker data found in Firebase, using static data');
+                console.log('No KPI tracker data found in Firebase, creating default data...');
+                // Create default KPI tracker data
+                const defaultData = {
+                    header: ['Owner', 'KPI', 'Goal', '6/12', '6/5', '5/29', '5/22', '5/15', '5/8', '5/1', '4/24'],
+                    body: [
+                        ['Stephen', 'Total Clients', '30', '19', '20', '19', '18', '19', '18', '19', '21'],
+                        ['Robby', 'New Client Signed', '1', '1', '0', '1', '0', '0', '0', '0', '0'],
+                        ['Robby', 'Meetings Booked', '15', '1', '2', '1', '1', '5', '4', '0', '0'],
+                        ['Brandon', 'Clients Managed', '12', '10', '11', '10', '10', '10', '10', '10', '11'],
+                        ['Bobby', 'Clients Managed', '12', '9', '9', '9', '8', '9', '8', '9', '9'],
+                        ['Noah', 'Pod 1 Unhappy', '0', '2', '1', '1', '2', '2', '1', '2', '2'],
+                        ['Noah', 'Pod 2 Unhappy', '0', '0', '0', '1', '0', '1', '0', '1', '0']
+                    ]
+                };
+                setKpiTrackerFullData(defaultData);
+                // Save the default data to Firebase
+                await saveKpiTrackerToFirebase();
             }
         } catch (error) {
             console.error("Error loading KPI tracker from Firebase:", error);
@@ -465,7 +526,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (kpiTrackerBody) {
         kpiTrackerBody.addEventListener('blur', function(e) {
             if (e.target.matches('[contenteditable]')) {
+                console.log('KPI tracker cell blur detected, saving...');
                 saveKpiTrackerToFirebase();
+            }
+        }, true);
+        
+        // Also save on input changes for real-time saving
+        kpiTrackerBody.addEventListener('input', function(e) {
+            if (e.target.matches('[contenteditable]')) {
+                console.log('KPI tracker cell input detected, saving...');
+                saveKpiTrackerToFirebase();
+            }
+        }, true);
+        
+        // Save on keydown for Enter key
+        kpiTrackerBody.addEventListener('keydown', function(e) {
+            if (e.target.matches('[contenteditable]') && e.key === 'Enter') {
+                console.log('KPI tracker Enter key detected, saving...');
+                e.target.blur(); // This will trigger the blur event
             }
         }, true);
     }
@@ -474,6 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- KPI TRACKER ADD WEEK FUNCTIONALITY ---
     const addWeekBtn = document.getElementById('addWeekBtn');
+    const addKpiRowBtn = document.getElementById('addKpiRowBtn');
     if (addWeekBtn && kpiTrackerHeaderRow && kpiTrackerBody) {
         addWeekBtn.addEventListener('click', () => {
             let weekLabel = prompt('Enter new week label (e.g., 6/19):');
@@ -490,6 +569,74 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.insertBefore(td, row.children[3]);
             });
             saveKpiTrackerToFirebase();
+        });
+    }
+
+    // --- KPI TRACKER ADD ROW FUNCTIONALITY ---
+    if (addKpiRowBtn && kpiTrackerHeaderRow && kpiTrackerBody) {
+        addKpiRowBtn.addEventListener('click', () => {
+            // Create new row
+            const newRow = document.createElement('tr');
+            
+            // Add cells for each column in the header
+            for (let i = 0; i < kpiTrackerHeaderRow.children.length; i++) {
+                const td = document.createElement('td');
+                td.contentEditable = 'true';
+                td.textContent = '';
+                
+                // Add special class for owner column (first column)
+                if (i === 0) {
+                    td.className = 'kpi-owner';
+                }
+                
+                newRow.appendChild(td);
+            }
+            
+            // Add the new row to the table body
+            kpiTrackerBody.appendChild(newRow);
+            
+            // Save to Firebase
+            saveKpiTrackerToFirebase();
+            
+            // Update scroll arrows
+            updateScrollArrows();
+        });
+    }
+
+    // --- KPI TRACKER SAVE BUTTON FUNCTIONALITY ---
+    const saveKpiTrackerBtn = document.getElementById('saveKpiTrackerBtn');
+    if (saveKpiTrackerBtn) {
+        saveKpiTrackerBtn.addEventListener('click', async () => {
+            console.log('Save button clicked for KPI Tracker');
+            
+            // Test Firebase connection first
+            try {
+                console.log('Testing Firebase connection...');
+                const testDoc = doc(db, "test", "connection");
+                await setDoc(testDoc, { test: "connection", timestamp: new Date().toISOString() });
+                console.log('Firebase connection test successful');
+                
+                // Now save the actual data
+                await saveKpiTrackerToFirebase();
+                
+                // Visual feedback
+                const originalText = saveKpiTrackerBtn.textContent;
+                saveKpiTrackerBtn.textContent = 'Saved!';
+                saveKpiTrackerBtn.style.background = '#27ae60';
+                setTimeout(() => {
+                    saveKpiTrackerBtn.textContent = originalText;
+                    saveKpiTrackerBtn.style.background = '#2ecc71';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Firebase connection test failed:', error);
+                saveKpiTrackerBtn.textContent = 'Error!';
+                saveKpiTrackerBtn.style.background = '#e74c3c';
+                setTimeout(() => {
+                    saveKpiTrackerBtn.textContent = 'Save Data';
+                    saveKpiTrackerBtn.style.background = '#2ecc71';
+                }, 2000);
+            }
         });
     }
 
@@ -751,47 +898,91 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Save/Load
     function getSprintsData() {
-        return Array.from(sprintsBody.children).map(row => {
-            return [
-                row.children[0]?.textContent.trim() || '',
-                row.children[1]?.textContent.trim() || '',
-                row.children[2]?.textContent.trim() || '',
-                row.children[3]?.querySelector('select')?.value || 'On Track'
-            ];
+        const sprints = Array.from(sprintsBody.children).map((row, index) => {
+            return {
+                id: `sprint_${index}`,
+                owner: row.children[0]?.textContent.trim() || '',
+                sprint: row.children[1]?.textContent.trim() || '',
+                due: row.children[2]?.textContent.trim() || '',
+                status: row.children[3]?.querySelector('select')?.value || 'On Track'
+            };
         });
+        return sprints;
     }
     function setSprintsData(data) {
         sprintsBody.innerHTML = '';
-        data.forEach(arr => {
-            const tr = document.createElement('tr');
-            for (let i = 0; i < 3; i++) {
+        if (Array.isArray(data)) {
+            // Handle old array format
+            data.forEach(arr => {
+                const tr = document.createElement('tr');
+                for (let i = 0; i < 3; i++) {
+                    const td = document.createElement('td');
+                    td.contentEditable = 'true';
+                    td.textContent = arr[i] || '';
+                    tr.appendChild(td);
+                }
                 const td = document.createElement('td');
-                td.contentEditable = 'true';
-                td.textContent = arr[i] || '';
+                const select = document.createElement('select');
+                select.className = 'sprint-status';
+                ['Complete','On Track','Off Track'].forEach(opt => {
+                    const o = document.createElement('option');
+                    o.value = opt;
+                    o.textContent = opt;
+                    if (arr[3] === opt) o.selected = true;
+                    select.appendChild(o);
+                });
+                td.appendChild(select);
                 tr.appendChild(td);
-            }
-            const td = document.createElement('td');
-            const select = document.createElement('select');
-            select.className = 'sprint-status';
-            ['Complete','On Track','Off Track'].forEach(opt => {
-                const o = document.createElement('option');
-                o.value = opt;
-                o.textContent = opt;
-                if (arr[3] === opt) o.selected = true;
-                select.appendChild(o);
+                // Empty cell for row controls
+                tr.appendChild(document.createElement('td'));
+                sprintsBody.appendChild(tr);
             });
-            td.appendChild(select);
-            tr.appendChild(td);
-            // Empty cell for row controls
-            tr.appendChild(document.createElement('td'));
-            sprintsBody.appendChild(tr);
-        });
+        } else {
+            // Handle new object format
+            Object.values(data).forEach(sprint => {
+                const tr = document.createElement('tr');
+                for (let i = 0; i < 3; i++) {
+                    const td = document.createElement('td');
+                    td.contentEditable = 'true';
+                    td.textContent = sprint[['owner', 'sprint', 'due'][i]] || '';
+                    tr.appendChild(td);
+                }
+                const td = document.createElement('td');
+                const select = document.createElement('select');
+                select.className = 'sprint-status';
+                ['Complete','On Track','Off Track'].forEach(opt => {
+                    const o = document.createElement('option');
+                    o.value = opt;
+                    o.textContent = opt;
+                    if (sprint.status === opt) o.selected = true;
+                    select.appendChild(o);
+                });
+                td.appendChild(select);
+                tr.appendChild(td);
+                // Empty cell for row controls
+                tr.appendChild(document.createElement('td'));
+                sprintsBody.appendChild(tr);
+            });
+        }
         updateSprintStatusColors();
         renderSprintsRowButtons();
     }
     async function saveSprintsToFirebase() {
         try {
-            await setDoc(doc(db, "monthlySprints", "data"), { sprints: getSprintsData() }, { merge: true });
+            const sprintsData = getSprintsData();
+            console.log('Saving Monthly Sprints data to Firebase:', sprintsData);
+            
+            // Convert array to object for Firebase compatibility
+            const sprintsObject = {};
+            sprintsData.forEach((sprint, index) => {
+                sprintsObject[`sprint_${index}`] = sprint;
+            });
+            
+            await setDoc(doc(db, "monthlySprints", "data"), { 
+                sprints: sprintsObject,
+                lastUpdated: new Date().toISOString()
+            }, { merge: true });
+            console.log('Monthly Sprints data saved successfully to Firebase');
         } catch (error) {
             console.error("Error saving sprints to Firebase:", error);
         }
@@ -803,9 +994,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists() && docSnap.data().sprints) {
                 console.log('Monthly Sprints data found in Firebase, applying...');
-                setSprintsData(docSnap.data().sprints);
+                const firebaseData = docSnap.data().sprints;
+                console.log('Firebase data received:', firebaseData);
+                setSprintsData(firebaseData);
             } else {
-                console.log('No Monthly Sprints data found in Firebase, using static data');
+                console.log('No Monthly Sprints data found in Firebase, starting with empty table...');
+                // Temporarily comment out default data creation
+                /*
+                // Create default sprints data
+                const defaultSprints = [
+                    ['Stephen', 'New Headshots (e.g., AI)', '6/31/25', 'On Track'],
+                    ['Stephen', 'Long Term Company Mission Established + Posters', '6/31/25', 'On Track'],
+                    ['Brandon', 'Prime Day Prep + Deployment', '6/31/25', 'On Track'],
+                    ['Brandon', 'AI Listing Builds System Deployed', '6/31/25', 'On Track'],
+                    ['Bobby', 'Create 1 Fully Functioning GPT Specific to Lifestyle Image creation', '6/31/25', 'On Track'],
+                    ['Bobby', 'Prime Day Prep + Deployment', '6/31/25', 'On Track'],
+                    ['Noah', 'Complete All Digital Marketing SOPs', '6/31/25', 'On Track'],
+                    ['Robby', 'Chris and Martin onboarded and calling', '6/31/25', 'On Track'],
+                    ['Robby', '400 Calls per day', '6/31/25', 'On Track'],
+                    ['Robby', 'BusDev SOPs (Integrations debugged, Lead list SOP, Meetings SOP, Training Calendar, Call Audit SOP)', '6/31/25', 'On Track']
+                ];
+                setSprintsData(defaultSprints);
+                // Save the default data to Firebase
+                await saveSprintsToFirebase();
+                */
             }
         } catch (error) {
             console.error("Error loading sprints from Firebase:", error);
@@ -815,11 +1027,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // Save on blur or status change
     sprintsBody.addEventListener('blur', function(e) {
-        if (e.target.matches('[contenteditable]')) saveSprintsToFirebase();
+        if (e.target.matches('[contenteditable]')) {
+            console.log('Monthly Sprints cell blur detected, saving...');
+            saveSprintsToFirebase();
+        }
     }, true);
     sprintsBody.addEventListener('change', function(e) {
-        if (e.target.classList.contains('sprint-status')) saveSprintsToFirebase();
+        if (e.target.classList.contains('sprint-status')) {
+            console.log('Monthly Sprints status change detected, saving...');
+            saveSprintsToFirebase();
+        }
     });
+    sprintsBody.addEventListener('input', function(e) {
+        if (e.target.matches('[contenteditable]')) {
+            console.log('Monthly Sprints cell input detected, saving...');
+            saveSprintsToFirebase();
+        }
+    }, true);
     // Add row
     addRowBtn.addEventListener('click', function() {
         const tr = document.createElement('tr');
@@ -846,6 +1070,31 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSprintsRowButtons();
         saveSprintsToFirebase();
     });
+    // Save button for Monthly Sprints
+    const saveSprintsBtn = document.getElementById('saveSprintsBtn');
+    if (saveSprintsBtn) {
+        saveSprintsBtn.addEventListener('click', async () => {
+            console.log('Save button clicked for Monthly Sprints');
+            try {
+                await saveSprintsToFirebase();
+                const originalText = saveSprintsBtn.textContent;
+                saveSprintsBtn.textContent = 'Saved!';
+                saveSprintsBtn.style.background = '#27ae60';
+                setTimeout(() => {
+                    saveSprintsBtn.textContent = originalText;
+                    saveSprintsBtn.style.background = '#2ecc71';
+                }, 2000);
+            } catch (error) {
+                console.error('Error saving sprints:', error);
+                saveSprintsBtn.textContent = 'Error!';
+                saveSprintsBtn.style.background = '#e74c3c';
+                setTimeout(() => {
+                    saveSprintsBtn.textContent = 'Save Data';
+                    saveSprintsBtn.style.background = '#2ecc71';
+                }, 2000);
+            }
+        });
+    }
     // On load
     // loadSprintsFromFirebase(); // Removed - now handled by initializePage()
 
@@ -975,57 +1224,111 @@ document.addEventListener('DOMContentLoaded', () => {
     const editIdsBtn = document.getElementById('editIdsBtn');
 
     function getIdsData() {
-        return Array.from(idsBody.children).map(row => {
-            return [
-                row.children[0]?.textContent.trim() || '',
-                row.children[1]?.textContent.trim() || '',
-                row.children[2]?.textContent.trim() || '',
-                row.children[3]?.querySelector('select')?.value || 'Discuss',
-                row.children[4]?.querySelector('input')?.checked || false
-            ];
+        const ids = Array.from(idsBody.children).map((row, index) => {
+            return {
+                id: `ids_${index}`,
+                topic: row.children[0]?.textContent.trim() || '',
+                who: row.children[1]?.textContent.trim() || '',
+                rank: row.children[2]?.textContent.trim() || '',
+                type: row.children[3]?.querySelector('select')?.value || 'Discuss',
+                discussed: row.children[4]?.querySelector('input')?.checked || false
+            };
         });
+        return ids;
     }
     function setIdsData(data) {
         idsBody.innerHTML = '';
-        data.forEach(arr => {
-            const tr = document.createElement('tr');
-            for (let i = 0; i < 3; i++) {
-                const td = document.createElement('td');
-                td.contentEditable = 'true';
-                td.textContent = arr[i] || '';
-                tr.appendChild(td);
-            }
-            // Type cell with dropdown
-            const typeTd = document.createElement('td');
-            const select = document.createElement('select');
-            select.className = 'ids-type-select';
-            ['Inform', 'Discuss', 'Solve'].forEach(opt => {
-                const o = document.createElement('option');
-                o.value = opt;
-                o.textContent = opt;
-                if (arr[3] === opt) o.selected = true;
-                select.appendChild(o);
+        if (Array.isArray(data)) {
+            // Handle old array format
+            data.forEach(arr => {
+                const tr = document.createElement('tr');
+                for (let i = 0; i < 3; i++) {
+                    const td = document.createElement('td');
+                    td.contentEditable = 'true';
+                    td.textContent = arr[i] || '';
+                    tr.appendChild(td);
+                }
+                // Type cell with dropdown
+                const typeTd = document.createElement('td');
+                const select = document.createElement('select');
+                select.className = 'ids-type-select';
+                ['Inform', 'Discuss', 'Solve'].forEach(opt => {
+                    const o = document.createElement('option');
+                    o.value = opt;
+                    o.textContent = opt;
+                    if (arr[3] === opt) o.selected = true;
+                    select.appendChild(o);
+                });
+                typeTd.appendChild(select);
+                tr.appendChild(typeTd);
+                // Discussed checkbox
+                const discussedTd = document.createElement('td');
+                discussedTd.style.textAlign = 'center';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'ids-discussed';
+                cb.checked = !!arr[4];
+                discussedTd.appendChild(cb);
+                tr.appendChild(discussedTd);
+                // Empty cell for row controls
+                tr.appendChild(document.createElement('td'));
+                idsBody.appendChild(tr);
             });
-            typeTd.appendChild(select);
-            tr.appendChild(typeTd);
-            // Discussed checkbox
-            const discussedTd = document.createElement('td');
-            discussedTd.style.textAlign = 'center';
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.className = 'ids-discussed';
-            cb.checked = !!arr[4];
-            discussedTd.appendChild(cb);
-            tr.appendChild(discussedTd);
-            // Empty cell for row controls
-            tr.appendChild(document.createElement('td'));
-            idsBody.appendChild(tr);
-        });
+        } else {
+            // Handle new object format
+            Object.values(data).forEach(idsItem => {
+                const tr = document.createElement('tr');
+                for (let i = 0; i < 3; i++) {
+                    const td = document.createElement('td');
+                    td.contentEditable = 'true';
+                    td.textContent = idsItem[['topic', 'who', 'rank'][i]] || '';
+                    tr.appendChild(td);
+                }
+                // Type cell with dropdown
+                const typeTd = document.createElement('td');
+                const select = document.createElement('select');
+                select.className = 'ids-type-select';
+                ['Inform', 'Discuss', 'Solve'].forEach(opt => {
+                    const o = document.createElement('option');
+                    o.value = opt;
+                    o.textContent = opt;
+                    if (idsItem.type === opt) o.selected = true;
+                    select.appendChild(o);
+                });
+                typeTd.appendChild(select);
+                tr.appendChild(typeTd);
+                // Discussed checkbox
+                const discussedTd = document.createElement('td');
+                discussedTd.style.textAlign = 'center';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'ids-discussed';
+                cb.checked = !!idsItem.discussed;
+                discussedTd.appendChild(cb);
+                tr.appendChild(discussedTd);
+                // Empty cell for row controls
+                tr.appendChild(document.createElement('td'));
+                idsBody.appendChild(tr);
+            });
+        }
         renderIdsRowButtons();
     }
     async function saveIdsToFirebase() {
         try {
-            await setDoc(doc(db, "idsData", "data"), { ids: getIdsData() }, { merge: true });
+            const idsData = getIdsData();
+            console.log('Saving IDS data to Firebase:', idsData);
+            
+            // Convert array to object for Firebase compatibility
+            const idsObject = {};
+            idsData.forEach((idsItem, index) => {
+                idsObject[`ids_${index}`] = idsItem;
+            });
+            
+            await setDoc(doc(db, "idsData", "data"), { 
+                ids: idsObject,
+                lastUpdated: new Date().toISOString()
+            }, { merge: true });
+            console.log('IDS data saved successfully to Firebase');
         } catch (error) {
             console.error("Error saving IDS to Firebase:", error);
         }
@@ -1037,9 +1340,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists() && docSnap.data().ids) {
                 console.log('IDS data found in Firebase, applying...');
-                setIdsData(docSnap.data().ids);
+                const firebaseData = docSnap.data().ids;
+                console.log('Firebase data received:', firebaseData);
+                setIdsData(firebaseData);
             } else {
-                console.log('No IDS data found in Firebase, using static data');
+                console.log('No IDS data found in Firebase, starting with empty table...');
+                // Temporarily comment out default data creation
+                /*
+                // Create default IDS data
+                const defaultIds = [
+                    ['Category analytics standardization', 'Robby', '', 'Discuss', false],
+                    ['Podmatch for Team Interviews', 'Stephen', '', 'Discuss', false],
+                    ['Team Offsite', 'Stephen', '', 'Discuss', false],
+                    ['BusDev Huddles', 'Robby', '', 'Discuss', false],
+                    ['BusDev Metrics', 'Robby', '', 'Discuss', false],
+                    ['Huddle Training Content', 'Robby', '', 'Discuss', false],
+                    ['SMS?', 'Brandon', '', 'Discuss', false],
+                    ['Brand Growth | Outbound Help', 'Brandon', '', 'Discuss', false],
+                    ['Current Client/Prospects | ICP Check-in', 'Bobby', '', 'Discuss', false],
+                    ['Morning Huddle', 'Stephen', '', 'Discuss', false]
+                ];
+                setIdsData(defaultIds);
+                // Save the default data to Firebase
+                await saveIdsToFirebase();
+                */
             }
         } catch (error) {
             console.error("Error loading IDS from Firebase:", error);
@@ -1085,11 +1409,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // Save on blur or checkbox change
     idsBody.addEventListener('blur', function(e) {
-        if (e.target.matches('[contenteditable]')) saveIdsToFirebase();
+        if (e.target.matches('[contenteditable]')) {
+            console.log('IDS cell blur detected, saving...');
+            saveIdsToFirebase();
+        }
     }, true);
     idsBody.addEventListener('change', function(e) {
-        if (e.target.classList.contains('ids-discussed') || e.target.classList.contains('ids-type-select')) saveIdsToFirebase();
+        if (e.target.classList.contains('ids-discussed') || e.target.classList.contains('ids-type-select')) {
+            console.log('IDS dropdown/checkbox change detected, saving...');
+            saveIdsToFirebase();
+        }
     });
+    idsBody.addEventListener('input', function(e) {
+        if (e.target.matches('[contenteditable]')) {
+            console.log('IDS cell input detected, saving...');
+            saveIdsToFirebase();
+        }
+    }, true);
     // Edit mode toggle
     if (editIdsBtn) {
         editIdsBtn.addEventListener('click', function() {
@@ -1167,4 +1503,30 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize the page with Firebase data
     initializePage();
+
+    // Save button for IDS
+    const saveIdsBtn = document.getElementById('saveIdsBtn');
+    if (saveIdsBtn) {
+        saveIdsBtn.addEventListener('click', async () => {
+            console.log('Save button clicked for IDS');
+            try {
+                await saveIdsToFirebase();
+                const originalText = saveIdsBtn.textContent;
+                saveIdsBtn.textContent = 'Saved!';
+                saveIdsBtn.style.background = '#27ae60';
+                setTimeout(() => {
+                    saveIdsBtn.textContent = originalText;
+                    saveIdsBtn.style.background = '#2ecc71';
+                }, 2000);
+            } catch (error) {
+                console.error('Error saving IDS:', error);
+                saveIdsBtn.textContent = 'Error!';
+                saveIdsBtn.style.background = '#e74c3c';
+                setTimeout(() => {
+                    saveIdsBtn.textContent = 'Save Data';
+                    saveIdsBtn.style.background = '#2ecc71';
+                }, 2000);
+            }
+        });
+    }
 }); 

@@ -65,97 +65,7 @@
                                 </tr>
                             </thead>
                             <tbody id="kpiTrackerBody">
-                                <tr>
-                                    <td contenteditable="true" class="kpi-owner">Stephen</td>
-                                    <td contenteditable="true">Total Clients</td>
-                                    <td contenteditable="true">30</td>
-                                    <td contenteditable="true">19</td>
-                                    <td contenteditable="true">20</td>
-                                    <td contenteditable="true">19</td>
-                                    <td contenteditable="true">18</td>
-                                    <td contenteditable="true">19</td>
-                                    <td contenteditable="true">18</td>
-                                    <td contenteditable="true">19</td>
-                                    <td contenteditable="true">21</td>
-                                </tr>
-                                <tr>
-                                    <td contenteditable="true" class="kpi-owner">Robby</td>
-                                    <td contenteditable="true">New Client Signed</td>
-                                    <td contenteditable="true">1</td>
-                                    <td contenteditable="true">1</td>
-                                    <td contenteditable="true">0</td>
-                                    <td contenteditable="true">1</td>
-                                    <td contenteditable="true">0</td>
-                                    <td contenteditable="true">0</td>
-                                    <td contenteditable="true">0</td>
-                                    <td contenteditable="true">0</td>
-                                    <td contenteditable="true">0</td>
-                                </tr>
-                                <tr>
-                                    <td contenteditable="true" class="kpi-owner">Robby</td>
-                                    <td contenteditable="true">Meetings Booked</td>
-                                    <td contenteditable="true">15</td>
-                                    <td contenteditable="true">1</td>
-                                    <td contenteditable="true">2</td>
-                                    <td contenteditable="true">1</td>
-                                    <td contenteditable="true">1</td>
-                                    <td contenteditable="true">5</td>
-                                    <td contenteditable="true">4</td>
-                                    <td contenteditable="true">0</td>
-                                    <td contenteditable="true">0</td>
-                                </tr>
-                                <tr>
-                                    <td contenteditable="true" class="kpi-owner">Brandon</td>
-                                    <td contenteditable="true">Clients Managed</td>
-                                    <td contenteditable="true">12</td>
-                                    <td contenteditable="true">10</td>
-                                    <td contenteditable="true">11</td>
-                                    <td contenteditable="true">10</td>
-                                    <td contenteditable="true">10</td>
-                                    <td contenteditable="true">10</td>
-                                    <td contenteditable="true">10</td>
-                                    <td contenteditable="true">10</td>
-                                    <td contenteditable="true">11</td>
-                                </tr>
-                                <tr>
-                                    <td contenteditable="true" class="kpi-owner">Bobby</td>
-                                    <td contenteditable="true">Clients Managed</td>
-                                    <td contenteditable="true">12</td>
-                                    <td contenteditable="true">9</td>
-                                    <td contenteditable="true">9</td>
-                                    <td contenteditable="true">9</td>
-                                    <td contenteditable="true">8</td>
-                                    <td contenteditable="true">9</td>
-                                    <td contenteditable="true">8</td>
-                                    <td contenteditable="true">9</td>
-                                    <td contenteditable="true">9</td>
-                                </tr>
-                                <tr>
-                                    <td contenteditable="true" class="kpi-owner">Noah</td>
-                                    <td contenteditable="true">Pod 1 Unhappy</td>
-                                    <td contenteditable="true">0</td>
-                                    <td contenteditable="true">2</td>
-                                    <td contenteditable="true">1</td>
-                                    <td contenteditable="true">1</td>
-                                    <td contenteditable="true">2</td>
-                                    <td contenteditable="true">2</td>
-                                    <td contenteditable="true">1</td>
-                                    <td contenteditable="true">2</td>
-                                    <td contenteditable="true">2</td>
-                                </tr>
-                                <tr>
-                                    <td contenteditable="true" class="kpi-owner">Noah</td>
-                                    <td contenteditable="true">Pod 2 Unhappy</td>
-                                    <td contenteditable="true">0</td>
-                                    <td contenteditable="true">0</td>
-                                    <td contenteditable="true">0</td>
-                                    <td contenteditable="true">1</td>
-                                    <td contenteditable="true">0</td>
-                                    <td contenteditable="true">1</td>
-                                    <td contenteditable="true">0</td>
-                                    <td contenteditable="true">1</td>
-                                    <td contenteditable="true">0</td>
-                                </tr>
+                                <!-- Firebase will populate this data -->
                             </tbody>
                         </table>
                     </div>
@@ -163,6 +73,8 @@
                 </div>
                 <div style="margin-top: 16px; text-align: left;">
                     <button id="addWeekBtn" class="add-btn" style="font-size: 1rem;">+ Add Week</button>
+                    <button id="addKpiRowBtn" class="add-btn" style="font-size: 1rem; margin-left: 10px;">+ Add Row</button>
+                    <button id="saveKpiTrackerBtn" class="add-btn" style="font-size: 1rem; margin-left: 10px; background: #2ecc71; color: white; border-color: #2ecc71;">Save Data</button>
                 </div>
             </div>
             <!-- KPI TRACKER END -->
@@ -181,81 +93,13 @@
                         </tr>
                     </thead>
                     <tbody id="monthlySprintsBody">
-                        <tr>
-                            <td contenteditable="true">Stephen</td>
-                            <td contenteditable="true">New Headshots (e.g., AI)</td>
-                            <td contenteditable="true">6/31/25</td>
-                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Stephen</td>
-                            <td contenteditable="true">Long Term Company Mission Established + Posters</td>
-                            <td contenteditable="true">6/31/25</td>
-                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Brandon</td>
-                            <td contenteditable="true">Prime Day Prep + Deployment</td>
-                            <td contenteditable="true">6/31/25</td>
-                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Brandon</td>
-                            <td contenteditable="true">AI Listing Builds System Deployed</td>
-                            <td contenteditable="true">6/31/25</td>
-                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Bobby</td>
-                            <td contenteditable="true">Create 1 Fully Functioning GPT Specific to Lifestyle Image creation</td>
-                            <td contenteditable="true">6/31/25</td>
-                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Bobby</td>
-                            <td contenteditable="true">Prime Day Prep + Deployment</td>
-                            <td contenteditable="true">6/31/25</td>
-                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Noah</td>
-                            <td contenteditable="true">Complete All Digital Marketing SOPs</td>
-                            <td contenteditable="true">6/31/25</td>
-                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Robby</td>
-                            <td contenteditable="true">Chris and Martin onboarded and calling</td>
-                            <td contenteditable="true">6/31/25</td>
-                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Robby</td>
-                            <td contenteditable="true">400 Calls per day</td>
-                            <td contenteditable="true">6/31/25</td>
-                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Robby</td>
-                            <td contenteditable="true">BusDev SOPs (Integrations debugged, Lead list SOP, Meetings SOP, Training Calendar, Call Audit SOP)</td>
-                            <td contenteditable="true">6/31/25</td>
-                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
-                            <td></td>
-                        </tr>
+                        <!-- Firebase will populate this data -->
                     </tbody>
                 </table>
                 <div style="margin-top: 8px;">
                     <button id="addSprintRowBtn" class="add-btn">+ Add Row</button>
                     <button id="editSprintsBtn" class="edit-sprints-btn" title="Edit Rows"><i class="fas fa-pen"></i></button>
+                    <button id="saveSprintsBtn" class="add-btn" style="margin-left: 10px; background: #2ecc71; color: white; border-color: #2ecc71;">Save Data</button>
                 </div>
             </div>
             <!-- Monthly Sprints Section END -->
@@ -315,91 +159,13 @@
                         </tr>
                     </thead>
                     <tbody id="idsBody">
-                        <tr>
-                            <td contenteditable="true">Category analytics standardization</td>
-                            <td contenteditable="true">Robby</td>
-                            <td contenteditable="true"></td>
-                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
-                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Podmatch for Team Interviews</td>
-                            <td contenteditable="true">Stephen</td>
-                            <td contenteditable="true"></td>
-                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
-                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Team Offsite</td>
-                            <td contenteditable="true">Stephen</td>
-                            <td contenteditable="true"></td>
-                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
-                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">BusDev Huddles</td>
-                            <td contenteditable="true">Robby</td>
-                            <td contenteditable="true"></td>
-                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
-                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">BusDev Metrics</td>
-                            <td contenteditable="true">Robby</td>
-                            <td contenteditable="true"></td>
-                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
-                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Huddle Training Content</td>
-                            <td contenteditable="true">Robby</td>
-                            <td contenteditable="true"></td>
-                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
-                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">SMS?</td>
-                            <td contenteditable="true">Brandon</td>
-                            <td contenteditable="true"></td>
-                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
-                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Brand Growth | Outbound Help</td>
-                            <td contenteditable="true">Brandon</td>
-                            <td contenteditable="true"></td>
-                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
-                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Current Client/Prospects | ICP Check-in</td>
-                            <td contenteditable="true">Bobby</td>
-                            <td contenteditable="true"></td>
-                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
-                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
-                            <td></td>
-                        </tr>
-                        <tr>
-                            <td contenteditable="true">Morning Huddle</td>
-                            <td contenteditable="true">Stephen</td>
-                            <td contenteditable="true"></td>
-                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
-                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
-                            <td></td>
-                        </tr>
+                        <!-- Firebase will populate this data -->
                     </tbody>
                 </table>
                 <div style="margin-top: 24px;">
                     <button id="addIdsRowBtn" class="add-btn">+ Add Row</button>
                     <button id="editIdsBtn" class="edit-sprints-btn" title="Edit Rows"><i class="fas fa-pen"></i></button>
+                    <button id="saveIdsBtn" class="add-btn" style="margin-left: 10px; background: #2ecc71; color: white; border-color: #2ecc71;">Save Data</button>
                 </div>
             </div>
             <!-- IDS Section END -->
