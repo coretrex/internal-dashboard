@@ -925,9 +925,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Save/Load
     function getSprintsData() {
-        const sprints = Array.from(sprintsBody.children).map((row, index) => {
-            return {
-                id: `sprint_${index}`,
+        const sprints = {};
+        Array.from(sprintsBody.children).forEach((row, index) => {
+            const sprintKey = `sprint_${index.toString().padStart(3, '0')}`;
+            sprints[sprintKey] = {
+                id: sprintKey,
                 owner: row.children[0]?.textContent.trim() || '',
                 sprint: row.children[1]?.textContent.trim() || '',
                 due: row.children[2]?.textContent.trim() || '',
@@ -964,9 +966,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 tr.appendChild(document.createElement('td'));
                 sprintsBody.appendChild(tr);
             });
-        } else {
-            // Handle new object format
-            Object.values(data).forEach(sprint => {
+        } else if (typeof data === 'object' && !Array.isArray(data)) {
+            // Handle new numbered key format (preserves order)
+            const sortedKeys = Object.keys(data).sort();
+            sortedKeys.forEach(key => {
+                const sprint = data[key];
                 const tr = document.createElement('tr');
                 for (let i = 0; i < 3; i++) {
                     const td = document.createElement('td');
@@ -999,14 +1003,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const sprintsData = getSprintsData();
             console.log('Saving Monthly Sprints data to Firebase:', sprintsData);
             
-            // Convert array to object for Firebase compatibility
-            const sprintsObject = {};
-            sprintsData.forEach((sprint, index) => {
-                sprintsObject[`sprint_${index}`] = sprint;
-            });
-            
             await setDoc(doc(db, "monthlySprints", "data"), { 
-                sprints: sprintsObject,
+                sprints: sprintsData,
                 lastUpdated: new Date().toISOString()
             }, { merge: true });
             console.log('Monthly Sprints data saved successfully to Firebase');
@@ -1023,6 +1021,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('Monthly Sprints data found in Firebase, applying...');
                 const firebaseData = docSnap.data().sprints;
                 console.log('Firebase data received:', firebaseData);
+                console.log('Sprints type:', typeof firebaseData, 'Is array:', Array.isArray(firebaseData));
+                if (firebaseData && typeof firebaseData === 'object') {
+                    console.log('Sprints keys:', Object.keys(firebaseData));
+                }
                 setSprintsData(firebaseData);
             } else {
                 console.log('No Monthly Sprints data found in Firebase, starting with empty table...');
@@ -1251,9 +1253,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const editIdsBtn = document.getElementById('editIdsBtn');
 
     function getIdsData() {
-        const ids = Array.from(idsBody.children).map((row, index) => {
-            return {
-                id: `ids_${index}`,
+        const ids = {};
+        Array.from(idsBody.children).forEach((row, index) => {
+            const idsKey = `ids_${index.toString().padStart(3, '0')}`;
+            ids[idsKey] = {
+                id: idsKey,
                 topic: row.children[0]?.textContent.trim() || '',
                 who: row.children[1]?.textContent.trim() || '',
                 rank: row.children[2]?.textContent.trim() || '',
@@ -1301,9 +1305,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 tr.appendChild(document.createElement('td'));
                 idsBody.appendChild(tr);
             });
-        } else {
-            // Handle new object format
-            Object.values(data).forEach(idsItem => {
+        } else if (typeof data === 'object' && !Array.isArray(data)) {
+            // Handle new numbered key format (preserves order)
+            const sortedKeys = Object.keys(data).sort();
+            sortedKeys.forEach(key => {
+                const idsItem = data[key];
                 const tr = document.createElement('tr');
                 for (let i = 0; i < 3; i++) {
                     const td = document.createElement('td');
@@ -1345,14 +1351,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const idsData = getIdsData();
             console.log('Saving IDS data to Firebase:', idsData);
             
-            // Convert array to object for Firebase compatibility
-            const idsObject = {};
-            idsData.forEach((idsItem, index) => {
-                idsObject[`ids_${index}`] = idsItem;
-            });
-            
             await setDoc(doc(db, "idsData", "data"), { 
-                ids: idsObject,
+                ids: idsData,
                 lastUpdated: new Date().toISOString()
             }, { merge: true });
             console.log('IDS data saved successfully to Firebase');
@@ -1369,6 +1369,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('IDS data found in Firebase, applying...');
                 const firebaseData = docSnap.data().ids;
                 console.log('Firebase data received:', firebaseData);
+                console.log('IDS type:', typeof firebaseData, 'Is array:', Array.isArray(firebaseData));
+                if (firebaseData && typeof firebaseData === 'object') {
+                    console.log('IDS keys:', Object.keys(firebaseData));
+                }
                 setIdsData(firebaseData);
             } else {
                 console.log('No IDS data found in Firebase, starting with empty table...');
