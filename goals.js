@@ -443,6 +443,251 @@ document.addEventListener('DOMContentLoaded', () => {
     const kpiTrackerBody = document.getElementById('kpiTrackerBody');
     const kpiTrackerHeaderRow = document.getElementById('kpiTrackerHeaderRow');
 
+    // State management for KPI Tracker
+    let isSavingKpiTracker = false;
+    let saveKpiTrackerTimeout = null;
+    let kpiTrackerEventListenersAttached = false;
+
+    // Initialize KPI Tracker functionality
+    function initializeKpiTracker() {
+        if (!kpiTrackerBody) {
+            console.log('KPI Tracker body not found, skipping initialization');
+            return;
+        }
+
+        console.log('Initializing KPI Tracker functionality...');
+        
+        // Attach event listeners only once
+        if (!kpiTrackerEventListenersAttached) {
+            attachKpiTrackerEventListeners();
+            kpiTrackerEventListenersAttached = true;
+        }
+
+        // Load data
+        loadKpiTrackerFromFirebase();
+    }
+
+    function attachKpiTrackerEventListeners() {
+        console.log('Attaching KPI Tracker event listeners...');
+        
+        // Single event listener for all KPI Tracker changes
+        if (kpiTrackerBody) {
+            kpiTrackerBody.addEventListener('input', function(e) {
+                if (e.target.matches('[contenteditable]')) {
+                    console.log('KPI tracker cell input detected, saving...');
+                    debouncedSaveKpiTracker();
+                }
+            }, true);
+            
+            kpiTrackerBody.addEventListener('keydown', function(e) {
+                if (e.target.matches('[contenteditable]') && e.key === 'Enter') {
+                    console.log('KPI tracker Enter key detected, saving...');
+                    e.target.blur(); // This will trigger the blur event
+                }
+            }, true);
+        }
+
+        // Add week button
+        const addWeekBtn = document.getElementById('addWeekBtn');
+        if (addWeekBtn && kpiTrackerHeaderRow && kpiTrackerBody) {
+            addWeekBtn.addEventListener('click', () => {
+                let weekLabel = prompt('Enter new week label (e.g., 6/19):');
+                if (!weekLabel) return;
+                // Insert new header cell after Goal (index 2)
+                const th = document.createElement('th');
+                th.textContent = weekLabel;
+                kpiTrackerHeaderRow.insertBefore(th, kpiTrackerHeaderRow.children[3]);
+                // Insert new editable cell for each row after Goal
+                Array.from(kpiTrackerBody.children).forEach(row => {
+                    const td = document.createElement('td');
+                    td.contentEditable = 'true';
+                    td.textContent = '';
+                    row.insertBefore(td, row.children[3]);
+                });
+                saveKpiTrackerToFirebase();
+                updateScrollArrows();
+                renderDeleteWeekButtons();
+            });
+        }
+
+        // Add row button
+        const addKpiRowBtn = document.getElementById('addKpiRowBtn');
+        if (addKpiRowBtn && kpiTrackerHeaderRow && kpiTrackerBody) {
+            addKpiRowBtn.addEventListener('click', () => {
+                // Create new row
+                const newRow = document.createElement('tr');
+                
+                // Add cells for each column in the header
+                for (let i = 0; i < kpiTrackerHeaderRow.children.length; i++) {
+                    const td = document.createElement('td');
+                    td.contentEditable = 'true';
+                    td.textContent = '';
+                    
+                    // Add special class for owner column (first column)
+                    if (i === 0) {
+                        td.className = 'kpi-owner';
+                    }
+                    
+                    newRow.appendChild(td);
+                }
+                
+                // Add the new row to the table body
+                kpiTrackerBody.appendChild(newRow);
+                
+                // Save to Firebase
+                saveKpiTrackerToFirebase();
+                
+                // Update scroll arrows
+                updateScrollArrows();
+            });
+        }
+
+        // Save button
+        const saveKpiTrackerBtn = document.getElementById('saveKpiTrackerBtn');
+        if (saveKpiTrackerBtn) {
+            saveKpiTrackerBtn.addEventListener('click', async () => {
+                console.log('Save button clicked for KPI Tracker');
+                
+                // Test Firebase connection first
+                try {
+                    console.log('Testing Firebase connection...');
+                    const testDoc = doc(db, "test", "connection");
+                    await setDoc(testDoc, { test: "connection", timestamp: new Date().toISOString() });
+                    console.log('Firebase connection test successful');
+                    
+                    // Now save the actual data
+                    await saveKpiTrackerToFirebase();
+                    
+                    // Visual feedback
+                    const originalText = saveKpiTrackerBtn.textContent;
+                    saveKpiTrackerBtn.textContent = 'Saved!';
+                    saveKpiTrackerBtn.style.background = '#27ae60';
+                    setTimeout(() => {
+                        saveKpiTrackerBtn.textContent = originalText;
+                        saveKpiTrackerBtn.style.background = '#2ecc71';
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('Firebase connection test failed:', error);
+                    saveKpiTrackerBtn.textContent = 'Error!';
+                    saveKpiTrackerBtn.style.background = '#e74c3c';
+                    setTimeout(() => {
+                        saveKpiTrackerBtn.textContent = 'Save Data';
+                        saveKpiTrackerBtn.style.background = '#2ecc71';
+                    }, 2000);
+                }
+            });
+        }
+
+        // Scroll arrows
+        const scrollLeftBtn = document.getElementById('scrollLeftBtn');
+        const scrollRightBtn = document.getElementById('scrollRightBtn');
+        const kpiTableScroll = document.getElementById('kpiTableScroll');
+        
+        if (scrollLeftBtn && scrollRightBtn && kpiTableScroll) {
+            scrollLeftBtn.addEventListener('click', () => {
+                kpiTableScroll.scrollBy({ left: -200, behavior: 'smooth' });
+            });
+            scrollRightBtn.addEventListener('click', () => {
+                kpiTableScroll.scrollBy({ left: 200, behavior: 'smooth' });
+            });
+            kpiTableScroll.addEventListener('scroll', updateScrollArrows);
+            window.addEventListener('resize', updateScrollArrows);
+        }
+
+        // Delete week functionality
+        if (kpiTrackerHeaderRow && kpiTrackerBody) {
+            kpiTrackerHeaderRow.addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-week-btn')) {
+                    const colIdx = parseInt(e.target.getAttribute('data-col'), 10);
+                    // Remove header cell
+                    kpiTrackerHeaderRow.removeChild(kpiTrackerHeaderRow.children[colIdx]);
+                    // Remove cell in each row
+                    Array.from(kpiTrackerBody.children).forEach(row => {
+                        if (row.children[colIdx]) row.removeChild(row.children[colIdx]);
+                    });
+                    saveKpiTrackerToFirebase();
+                    updateScrollArrows();
+                    renderDeleteWeekButtons();
+                }
+            });
+        }
+
+        // Edit week label functionality
+        if (kpiTrackerHeaderRow) {
+            kpiTrackerHeaderRow.addEventListener('click', function(e) {
+                // Only allow editing if clicking the text node, not the delete button
+                if (e.target.tagName === 'TH' && e.target.cellIndex >= 3) {
+                    const th = e.target;
+                    if (th.querySelector('input')) return;
+                    // Get only the label text (exclude any buttons)
+                    let oldLabel = '';
+                    for (const node of th.childNodes) {
+                        if (node.nodeType === Node.TEXT_NODE) {
+                            oldLabel += node.textContent;
+                        }
+                    }
+                    oldLabel = oldLabel.trim();
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = oldLabel;
+                    input.style.width = '60px';
+                    input.style.fontSize = '1em';
+                    input.style.textAlign = 'center';
+                    // Remove all children (label and buttons)
+                    while (th.firstChild) th.removeChild(th.firstChild);
+                    th.appendChild(input);
+                    input.focus();
+                    input.select();
+                    function saveEdit() {
+                        let newLabel = input.value.trim();
+                        // Prevent empty or duplicate labels
+                        const labels = Array.from(kpiTrackerHeaderRow.children).map(th => {
+                            let txt = '';
+                            for (const node of th.childNodes) {
+                                if (node.nodeType === Node.TEXT_NODE) txt += node.textContent;
+                            }
+                            return txt.trim();
+                        });
+                        if (!newLabel || (labels.includes(newLabel) && newLabel !== oldLabel)) {
+                            newLabel = oldLabel;
+                        }
+                        // Remove all children
+                        while (th.firstChild) th.removeChild(th.firstChild);
+                        th.appendChild(document.createTextNode(newLabel));
+                        // Do NOT add a delete button here; let renderDeleteWeekButtons handle it
+                        // Ensure header and body columns match
+                        Array.from(kpiTrackerBody.children).forEach(row => {
+                            while (row.children.length < kpiTrackerHeaderRow.children.length) {
+                                const td = document.createElement('td');
+                                td.contentEditable = 'true';
+                                td.textContent = '';
+                                row.appendChild(td);
+                            }
+                            while (row.children.length > kpiTrackerHeaderRow.children.length) {
+                                row.removeChild(row.lastChild);
+                            }
+                        });
+                        saveKpiTrackerToFirebase();
+                        renderDeleteWeekButtons();
+                        updateScrollArrows();
+                    }
+                    input.addEventListener('blur', saveEdit);
+                    input.addEventListener('keydown', function(evt) {
+                        if (evt.key === 'Enter') {
+                            input.blur();
+                        } else if (evt.key === 'Escape') {
+                            // Restore old label only, do NOT add a delete button here
+                            while (th.firstChild) th.removeChild(th.firstChild);
+                            th.appendChild(document.createTextNode(oldLabel));
+                            renderDeleteWeekButtons();
+                        }
+                    });
+                }
+            });
+        }
+    }
+
     function getKpiTrackerFullData() {
         // Save both header and body
         const header = Array.from(kpiTrackerHeaderRow.children).map(th => {
@@ -468,6 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Captured KPI tracker data:', data);
         return data;
     }
+
     function setKpiTrackerFullData(data) {
         if (!data || !Array.isArray(data.header) || !data.body) return;
         // Restore header (except first 3 columns: Owner, KPI, Goal)
@@ -525,9 +771,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         renderDeleteWeekButtons();
     }
+
+    // Debounced save function for KPI Tracker
+    function debouncedSaveKpiTracker() {
+        console.log('Debounced save triggered for KPI Tracker');
+        if (saveKpiTrackerTimeout) {
+            clearTimeout(saveKpiTrackerTimeout);
+        }
+        saveKpiTrackerTimeout = setTimeout(() => {
+            saveKpiTrackerToFirebase();
+        }, 1000);
+    }
+
     async function saveKpiTrackerToFirebase() {
+        if (isSavingKpiTracker) {
+            console.log('KPI Tracker: Save already in progress, skipping...');
+            return;
+        }
+        
         const data = getKpiTrackerFullData();
         try {
+            isSavingKpiTracker = true;
             console.log('Saving KPI tracker data to Firebase:', data);
             // Save with a more explicit structure
             await setDoc(doc(db, "kpiTracker", "data"), {
@@ -538,8 +802,11 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('KPI tracker data saved successfully to Firebase');
         } catch (error) {
             console.error("Error saving KPI tracker to Firebase:", error);
+        } finally {
+            isSavingKpiTracker = false;
         }
     }
+
     async function loadKpiTrackerFromFirebase() {
         try {
             console.log('Loading KPI tracker data from Firebase...');
@@ -549,11 +816,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('KPI tracker data found in Firebase, applying...');
                 const firebaseData = docSnap.data();
                 console.log('Firebase data received:', firebaseData);
-                console.log('Body type:', typeof firebaseData.body, 'Is array:', Array.isArray(firebaseData.body));
-                if (firebaseData.body && typeof firebaseData.body === 'object') {
-                    console.log('Body keys:', Object.keys(firebaseData.body));
-                }
-                setKpiTrackerFullData(firebaseData);
+                
+                // Clean up any duplicate data
+                const cleanedData = cleanKpiTrackerData(firebaseData);
+                console.log('After cleaning:', cleanedData);
+                
+                // Always save the cleaned data back to ensure consistency
+                await setDoc(doc(db, "kpiTracker", "data"), cleanedData, { merge: true });
+                
+                setKpiTrackerFullData(cleanedData);
             } else {
                 console.log('No KPI tracker data found in Firebase, creating default data...');
                 // Create default KPI tracker data
@@ -606,122 +877,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         renderDeleteWeekButtons();
     }
-    // Save on blur of any editable cell
-    if (kpiTrackerBody) {
-        kpiTrackerBody.addEventListener('blur', function(e) {
-            if (e.target.matches('[contenteditable]')) {
-                console.log('KPI tracker cell blur detected, saving...');
-                saveKpiTrackerToFirebase();
-            }
-        }, true);
-        
-        // Also save on input changes for real-time saving
-        kpiTrackerBody.addEventListener('input', function(e) {
-            if (e.target.matches('[contenteditable]')) {
-                console.log('KPI tracker cell input detected, saving...');
-                saveKpiTrackerToFirebase();
-            }
-        }, true);
-        
-        // Save on keydown for Enter key
-        kpiTrackerBody.addEventListener('keydown', function(e) {
-            if (e.target.matches('[contenteditable]') && e.key === 'Enter') {
-                console.log('KPI tracker Enter key detected, saving...');
-                e.target.blur(); // This will trigger the blur event
-            }
-        }, true);
-    }
-    // Load on page load
-    // loadKpiTrackerFromFirebase(); // Removed - now handled by initializePage()
 
-    // --- KPI TRACKER ADD WEEK FUNCTIONALITY ---
-    const addWeekBtn = document.getElementById('addWeekBtn');
-    const addKpiRowBtn = document.getElementById('addKpiRowBtn');
-    if (addWeekBtn && kpiTrackerHeaderRow && kpiTrackerBody) {
-        addWeekBtn.addEventListener('click', () => {
-            let weekLabel = prompt('Enter new week label (e.g., 6/19):');
-            if (!weekLabel) return;
-            // Insert new header cell after Goal (index 2)
-            const th = document.createElement('th');
-            th.textContent = weekLabel;
-            kpiTrackerHeaderRow.insertBefore(th, kpiTrackerHeaderRow.children[3]);
-            // Insert new editable cell for each row after Goal
-            Array.from(kpiTrackerBody.children).forEach(row => {
-                const td = document.createElement('td');
-                td.contentEditable = 'true';
-                td.textContent = '';
-                row.insertBefore(td, row.children[3]);
-            });
-            saveKpiTrackerToFirebase();
-        });
-    }
-
-    // --- KPI TRACKER ADD ROW FUNCTIONALITY ---
-    if (addKpiRowBtn && kpiTrackerHeaderRow && kpiTrackerBody) {
-        addKpiRowBtn.addEventListener('click', () => {
-            // Create new row
-            const newRow = document.createElement('tr');
+    function cleanKpiTrackerData(data) {
+        if (!data || typeof data !== 'object') return data;
+        
+        // Clean up body data - remove duplicates and ensure proper structure
+        if (data.body && typeof data.body === 'object') {
+            const cleanedBody = {};
+            const seen = new Set();
+            let counter = 0;
             
-            // Add cells for each column in the header
-            for (let i = 0; i < kpiTrackerHeaderRow.children.length; i++) {
-                const td = document.createElement('td');
-                td.contentEditable = 'true';
-                td.textContent = '';
+            // Handle both array and object formats
+            let items = [];
+            if (Array.isArray(data.body)) {
+                items = data.body.map((item, index) => ({ key: `row_${index.toString().padStart(3, '0')}`, data: item }));
+            } else {
+                items = Object.entries(data.body).map(([key, value]) => ({ key, data: value }));
+            }
+            
+            items.forEach(({ key, data }) => {
+                if (!data || typeof data !== 'object') return;
                 
-                // Add special class for owner column (first column)
-                if (i === 0) {
-                    td.className = 'kpi-owner';
+                // Create a unique identifier for this row
+                const rowData = data.cells || data;
+                const uniqueId = `${rowData.cell_0 || ''}-${rowData.cell_1 || ''}-${rowData.cell_2 || ''}`;
+                
+                // Only add if we haven't seen this exact row before and it has content
+                if (!seen.has(uniqueId) && (rowData.cell_0 || rowData.cell_1 || rowData.cell_2)) {
+                    seen.add(uniqueId);
+                    const newKey = `row_${counter.toString().padStart(3, '0')}`;
+                    cleanedBody[newKey] = data;
+                    counter++;
+                } else {
+                    console.log('Removing duplicate or empty KPI tracker row:', uniqueId);
                 }
-                
-                newRow.appendChild(td);
-            }
+            });
             
-            // Add the new row to the table body
-            kpiTrackerBody.appendChild(newRow);
-            
-            // Save to Firebase
-            saveKpiTrackerToFirebase();
-            
-            // Update scroll arrows
-            updateScrollArrows();
-        });
-    }
-
-    // --- KPI TRACKER SAVE BUTTON FUNCTIONALITY ---
-    const saveKpiTrackerBtn = document.getElementById('saveKpiTrackerBtn');
-    if (saveKpiTrackerBtn) {
-        saveKpiTrackerBtn.addEventListener('click', async () => {
-            console.log('Save button clicked for KPI Tracker');
-            
-            // Test Firebase connection first
-            try {
-                console.log('Testing Firebase connection...');
-                const testDoc = doc(db, "test", "connection");
-                await setDoc(testDoc, { test: "connection", timestamp: new Date().toISOString() });
-                console.log('Firebase connection test successful');
-                
-                // Now save the actual data
-                await saveKpiTrackerToFirebase();
-                
-                // Visual feedback
-                const originalText = saveKpiTrackerBtn.textContent;
-                saveKpiTrackerBtn.textContent = 'Saved!';
-                saveKpiTrackerBtn.style.background = '#27ae60';
-                setTimeout(() => {
-                    saveKpiTrackerBtn.textContent = originalText;
-                    saveKpiTrackerBtn.style.background = '#2ecc71';
-                }, 2000);
-                
-            } catch (error) {
-                console.error('Firebase connection test failed:', error);
-                saveKpiTrackerBtn.textContent = 'Error!';
-                saveKpiTrackerBtn.style.background = '#e74c3c';
-                setTimeout(() => {
-                    saveKpiTrackerBtn.textContent = 'Save Data';
-                    saveKpiTrackerBtn.style.background = '#2ecc71';
-                }, 2000);
-            }
-        });
+            data.body = cleanedBody;
+        }
+        
+        return data;
     }
 
     // --- KPI TRACKER SCROLL ARROWS ---
@@ -740,42 +935,8 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollRightBtn.style.display = 'none';
         }
     }
-    if (scrollLeftBtn && scrollRightBtn && kpiTableScroll) {
-        scrollLeftBtn.addEventListener('click', () => {
-            kpiTableScroll.scrollBy({ left: -200, behavior: 'smooth' });
-        });
-        scrollRightBtn.addEventListener('click', () => {
-            kpiTableScroll.scrollBy({ left: 200, behavior: 'smooth' });
-        });
-        kpiTableScroll.addEventListener('scroll', updateScrollArrows);
-        window.addEventListener('resize', updateScrollArrows);
-    }
-    // Call after adding a week
-    if (addWeekBtn) {
-        addWeekBtn.addEventListener('click', () => {
-            setTimeout(updateScrollArrows, 100);
-        });
-    }
-    // Call on load
-    updateScrollArrows();
 
     // --- KPI TRACKER DELETE WEEK FUNCTIONALITY ---
-    if (kpiTrackerHeaderRow && kpiTrackerBody) {
-        kpiTrackerHeaderRow.addEventListener('click', function(e) {
-            if (e.target.classList.contains('delete-week-btn')) {
-                const colIdx = parseInt(e.target.getAttribute('data-col'), 10);
-                // Remove header cell
-                kpiTrackerHeaderRow.removeChild(kpiTrackerHeaderRow.children[colIdx]);
-                // Remove cell in each row
-                Array.from(kpiTrackerBody.children).forEach(row => {
-                    if (row.children[colIdx]) row.removeChild(row.children[colIdx]);
-                });
-                saveKpiTrackerToFirebase();
-                updateScrollArrows();
-            }
-        });
-    }
-
     function renderDeleteWeekButtons() {
         if (!kpiTrackerHeaderRow) return;
         // Remove all existing delete buttons from week columns
@@ -802,129 +963,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
-    // Call after any table structure change
-    loadKpiTrackerFromFirebase = (function(orig) {
-        return function() {
-            orig();
-            renderDeleteWeekButtons();
-        };
-    })(loadKpiTrackerFromFirebase);
-    const origAddWeek = addWeekBtn && addWeekBtn.onclick;
-    if (addWeekBtn) {
-        addWeekBtn.addEventListener('click', function() {
-            setTimeout(renderDeleteWeekButtons, 100);
-        });
-    }
-    kpiTrackerHeaderRow && kpiTrackerHeaderRow.addEventListener('click', function(e) {
-        if (e.target.classList.contains('delete-week-btn')) {
-            setTimeout(renderDeleteWeekButtons, 100);
-        }
-    });
-    // Initial render
-    renderDeleteWeekButtons();
 
-    // --- KPI TRACKER EDIT WEEK LABEL FUNCTIONALITY ---
-    if (kpiTrackerHeaderRow) {
-        kpiTrackerHeaderRow.addEventListener('click', function(e) {
-            // Only allow editing if clicking the text node, not the delete button
-            if (e.target.tagName === 'TH' && e.target.cellIndex >= 3) {
-                const th = e.target;
-                if (th.querySelector('input')) return;
-                // Get only the label text (exclude any buttons)
-                let oldLabel = '';
-                for (const node of th.childNodes) {
-                    if (node.nodeType === Node.TEXT_NODE) {
-                        oldLabel += node.textContent;
-                    }
-                }
-                oldLabel = oldLabel.trim();
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = oldLabel;
-                input.style.width = '60px';
-                input.style.fontSize = '1em';
-                input.style.textAlign = 'center';
-                // Remove all children (label and buttons)
-                while (th.firstChild) th.removeChild(th.firstChild);
-                th.appendChild(input);
-                input.focus();
-                input.select();
-                function saveEdit() {
-                    let newLabel = input.value.trim();
-                    // Prevent empty or duplicate labels
-                    const labels = Array.from(kpiTrackerHeaderRow.children).map(th => {
-                        let txt = '';
-                        for (const node of th.childNodes) {
-                            if (node.nodeType === Node.TEXT_NODE) txt += node.textContent;
-                        }
-                        return txt.trim();
-                    });
-                    if (!newLabel || (labels.includes(newLabel) && newLabel !== oldLabel)) {
-                        newLabel = oldLabel;
-                    }
-                    // Remove all children
-                    while (th.firstChild) th.removeChild(th.firstChild);
-                    th.appendChild(document.createTextNode(newLabel));
-                    // Do NOT add a delete button here; let renderDeleteWeekButtons handle it
-                    // Ensure header and body columns match
-                    Array.from(kpiTrackerBody.children).forEach(row => {
-                        while (row.children.length < kpiTrackerHeaderRow.children.length) {
-                            const td = document.createElement('td');
-                            td.contentEditable = 'true';
-                            td.textContent = '';
-                            row.appendChild(td);
-                        }
-                        while (row.children.length > kpiTrackerHeaderRow.children.length) {
-                            row.removeChild(row.lastChild);
-                        }
-                    });
-                    saveKpiTrackerToFirebase();
-                    renderDeleteWeekButtons();
-                    updateScrollArrows();
-                }
-                input.addEventListener('blur', saveEdit);
-                input.addEventListener('keydown', function(evt) {
-                    if (evt.key === 'Enter') {
-                        input.blur();
-                    } else if (evt.key === 'Escape') {
-                        // Restore old label only, do NOT add a delete button here
-                        while (th.firstChild) th.removeChild(th.firstChild);
-                        th.appendChild(document.createTextNode(oldLabel));
-                        renderDeleteWeekButtons();
-                    }
-                });
-            }
-        });
-    }
-
-    // --- MONTHLY SPRINTS STATUS COLOR CODING ---
-    function updateSprintStatusColors() {
-        document.querySelectorAll('.sprint-status').forEach(select => {
-            select.classList.remove('sprint-status-complete', 'sprint-status-ontrack', 'sprint-status-offtrack');
-            if (select.value === 'Complete') {
-                select.classList.add('sprint-status-complete');
-            } else if (select.value === 'On Track') {
-                select.classList.add('sprint-status-ontrack');
-            } else if (select.value === 'Off Track') {
-                select.classList.add('sprint-status-offtrack');
-            }
-        });
-    }
-    // Initial coloring
-    updateSprintStatusColors();
+    // --- MONTHLY SPRINTS SECTION ---
+    console.log('=== MONTHLY SPRINTS SECTION INITIALIZATION ===');
     
-    // --- MONTHLY SPRINTS ROW MANAGEMENT ---
-    const MONTHLY_SPRINTS_KEY = 'monthlySprintsData';
     const sprintsBody = document.getElementById('monthlySprintsBody');
-    const sprintsTable = document.querySelector('.monthly-sprints-table');
-    let addRowBtn = document.getElementById('addSprintRowBtn');
-    let editBtn = document.getElementById('editSprintsBtn');
+    const addSprintRowBtn = document.getElementById('addSprintRowBtn');
+    const editSprintsBtn = document.getElementById('editSprintsBtn');
+    const saveSprintsBtn = document.getElementById('saveSprintsBtn');
+    
+    console.log('Monthly Sprints elements found:', { sprintsBody, addSprintRowBtn, editSprintsBtn, saveSprintsBtn });
 
     // State management
     let sprintsData = {};
     let isSavingSprints = false;
     let saveSprintsTimeout = null;
-    let eventListenersAttached = false;
+    let sprintsEventListenersAttached = false;
 
     // Initialize sprints functionality
     function initializeSprints() {
@@ -936,9 +990,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Initializing sprints functionality...');
         
         // Attach event listeners only once
-        if (!eventListenersAttached) {
+        if (!sprintsEventListenersAttached) {
             attachSprintsEventListeners();
-            eventListenersAttached = true;
+            sprintsEventListenersAttached = true;
         }
 
         // Load data
@@ -947,10 +1001,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function attachSprintsEventListeners() {
         console.log('Attaching sprints event listeners...');
-        
+
         // Edit mode toggle
-        if (editBtn) {
-            editBtn.addEventListener('click', function() {
+        if (editSprintsBtn) {
+            editSprintsBtn.addEventListener('click', function() {
                 console.log('Edit mode toggled for sprints');
                 document.body.classList.toggle('sprints-edit-mode');
                 renderSprintsRowButtons();
@@ -958,15 +1012,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Add row button
-        if (addRowBtn) {
-            addRowBtn.addEventListener('click', function() {
+        if (addSprintRowBtn) {
+            addSprintRowBtn.addEventListener('click', function() {
                 console.log('Adding new sprint row');
                 addSprintRow();
             });
         }
 
         // Save button
-        const saveSprintsBtn = document.getElementById('saveSprintsBtn');
         if (saveSprintsBtn) {
             saveSprintsBtn.addEventListener('click', async () => {
                 console.log('Save button clicked for Monthly Sprints');
@@ -1341,65 +1394,77 @@ document.addEventListener('DOMContentLoaded', () => {
         return sortedData;
     }
 
-    // Initialize sprints on page load
-    initializeSprints();
-
-    // Add a global function to reset sprints data if needed (for debugging)
-    window.resetSprintsData = async function() {
-        if (confirm('Are you sure you want to reset all sprints data? This cannot be undone.')) {
-            try {
-                await setDoc(doc(db, "monthlySprints", "data"), { 
-                    sprints: {},
-                    lastUpdated: new Date().toISOString()
-                });
-                console.log('Sprints data reset successfully');
-                location.reload();
-            } catch (error) {
-                console.error('Error resetting sprints data:', error);
-                alert('Error resetting data: ' + error.message);
+    // --- MONTHLY SPRINTS STATUS COLOR CODING ---
+    function updateSprintStatusColors() {
+        document.querySelectorAll('.sprint-status').forEach(select => {
+            select.classList.remove('sprint-status-complete', 'sprint-status-ontrack', 'sprint-status-offtrack');
+            if (select.value === 'Complete') {
+                select.classList.add('sprint-status-complete');
+            } else if (select.value === 'On Track') {
+                select.classList.add('sprint-status-ontrack');
+            } else if (select.value === 'Off Track') {
+                select.classList.add('sprint-status-offtrack');
             }
+        });
+    }
+
+    // Add debugging functions for Monthly Sprints
+    window.debugSprints = async function() {
+        console.log('=== MONTHLY SPRINTS DEBUG INFO ===');
+        console.log('Is saving:', isSavingSprints);
+        console.log('Event listeners attached:', sprintsEventListenersAttached);
+        console.log('Current table rows:', sprintsBody ? sprintsBody.children.length : 'No body');
+        
+        // Check Firebase data
+        try {
+            const docRef = doc(db, "monthlySprints", "data");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                console.log('Firebase Monthly Sprints data:', data);
+                console.log('Sprints keys count:', Object.keys(data.sprints || {}).length);
+            } else {
+                console.log('No Monthly Sprints data in Firebase');
+            }
+        } catch (error) {
+            console.error('Error checking Monthly Sprints Firebase:', error);
         }
     };
 
-    // Add a function to completely clear and rebuild the data
-    window.clearAndRebuildSprints = async function() {
-        if (confirm('This will completely clear all sprints data and start fresh. Continue?')) {
+    window.cleanupSprints = async function() {
+        if (confirm('This will clean up any duplicate Monthly Sprints data. Continue?')) {
             try {
-                // Clear the Firebase data
-                await setDoc(doc(db, "monthlySprints", "data"), { 
-                    sprints: {},
-                    lastUpdated: new Date().toISOString()
-                });
-                
-                // Clear the table
-                if (sprintsBody) {
-                    sprintsBody.innerHTML = '';
-                }
-                
-                console.log('Sprints data cleared and table reset');
-                alert('Sprints data cleared. You can now add new sprints.');
+                console.log('Monthly Sprints cleanup triggered');
+                await loadSprintsFromFirebase(); // This will reload and clean the data
+                alert('Monthly Sprints cleanup completed. Check the console for details.');
             } catch (error) {
-                console.error('Error clearing sprints data:', error);
-                alert('Error clearing data: ' + error.message);
-            }
-        }
-    };
-
-    // Add a function to manually trigger cleanup
-    window.cleanupSprintsData = async function() {
-        if (confirm('This will clean up any duplicate sprints data. Continue?')) {
-            try {
-                console.log('Manual cleanup triggered');
-                await loadSprintsFromFirebase(); // This will trigger the aggressive cleanup
-                alert('Cleanup completed. Check the console for details.');
-            } catch (error) {
-                console.error('Error during cleanup:', error);
+                console.error('Error during Monthly Sprints cleanup:', error);
                 alert('Error during cleanup: ' + error.message);
             }
         }
     };
 
-    // Add a function to manually sort sprints
+    window.clearSprints = async function() {
+        if (confirm('This will clear ALL Monthly Sprints data. This cannot be undone. Continue?')) {
+            try {
+                await setDoc(doc(db, "monthlySprints", "data"), { 
+                    sprints: {},
+                    lastUpdated: new Date().toISOString()
+                });
+                
+                if (sprintsBody) {
+                    sprintsBody.innerHTML = '';
+                }
+                
+                alert('Monthly Sprints data cleared.');
+                location.reload();
+            } catch (error) {
+                console.error('Error clearing Monthly Sprints data:', error);
+                alert('Error clearing data: ' + error.message);
+            }
+        }
+    };
+
     window.sortSprintsByOwner = async function() {
         try {
             console.log('Manual sort triggered');
@@ -1421,7 +1486,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Add cleanup and sort buttons to the page
+    // Add sort button to the page
     setTimeout(() => {
         const sprintsContainer = document.querySelector('.monthly-sprints-container');
         if (sprintsContainer) {
@@ -1970,7 +2035,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Initialize IDS on page load
-    initializeIds();
+    // initializeIds(); // REMOVED - now handled by initializePage()
 
     // Add debugging functions for IDS
     window.debugIds = async function() {
@@ -2034,14 +2099,17 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Loading KPI data...');
             await loadAllKpiData();
             
-            console.log('Loading KPI Tracker...');
-            await loadKpiTrackerFromFirebase();
+            console.log('Initializing KPI Tracker...');
+            initializeKpiTracker();
             
             console.log('Loading Todos...');
             await loadTodosFromFirebase();
             
-            console.log('Loading IDS...');
-            await loadIdsData();
+            console.log('Initializing IDS...');
+            initializeIds();
+            
+            console.log('Initializing Monthly Sprints...');
+            initializeSprints();
             
             console.log('=== PAGE INITIALIZATION COMPLETE ===');
         } catch (error) {
@@ -2057,4 +2125,76 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Failed to initialize page:', error);
         alert('Failed to initialize page. Please try refreshing.');
     });
+
+    // Add debugging functions for KPI Tracker
+    window.debugKpiTracker = async function() {
+        console.log('=== KPI TRACKER DEBUG INFO ===');
+        console.log('Is saving:', isSavingKpiTracker);
+        console.log('Event listeners attached:', kpiTrackerEventListenersAttached);
+        console.log('Current table rows:', kpiTrackerBody ? kpiTrackerBody.children.length : 'No body');
+        
+        // Check Firebase data
+        try {
+            const docRef = doc(db, "kpiTracker", "data");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                console.log('Firebase KPI Tracker data:', data);
+                console.log('Body keys count:', Object.keys(data.body || {}).length);
+            } else {
+                console.log('No KPI Tracker data in Firebase');
+            }
+        } catch (error) {
+            console.error('Error checking KPI Tracker Firebase:', error);
+        }
+    };
+
+    window.cleanupKpiTracker = async function() {
+        if (confirm('This will clean up any duplicate KPI Tracker data. Continue?')) {
+            try {
+                console.log('KPI Tracker cleanup triggered');
+                await loadKpiTrackerFromFirebase(); // This will reload and clean the data
+                alert('KPI Tracker cleanup completed. Check the console for details.');
+            } catch (error) {
+                console.error('Error during KPI Tracker cleanup:', error);
+                alert('Error during cleanup: ' + error.message);
+            }
+        }
+    };
+
+    window.clearKpiTracker = async function() {
+        if (confirm('This will clear ALL KPI Tracker data. This cannot be undone. Continue?')) {
+            try {
+                await setDoc(doc(db, "kpiTracker", "data"), {
+                    header: ['Owner', 'KPI', 'Goal'],
+                    body: {},
+                    lastUpdated: new Date().toISOString()
+                });
+                
+                if (kpiTrackerBody) {
+                    kpiTrackerBody.innerHTML = '';
+                }
+                
+                alert('KPI Tracker data cleared.');
+                location.reload();
+            } catch (error) {
+                console.error('Error clearing KPI Tracker data:', error);
+                alert('Error clearing data: ' + error.message);
+            }
+        }
+    };
+
+    // Add a function to manually trigger cleanup
+    window.cleanupKpiTrackerData = async function() {
+        if (confirm('This will clean up any duplicate KPI Tracker data. Continue?')) {
+            try {
+                console.log('Manual KPI Tracker cleanup triggered');
+                await loadKpiTrackerFromFirebase(); // This will trigger the cleanup
+                alert('KPI Tracker cleanup completed. Check the console for details.');
+            } catch (error) {
+                console.error('Error during KPI Tracker cleanup:', error);
+                alert('Error during cleanup: ' + error.message);
+            }
+        }
+    };
 }); 
