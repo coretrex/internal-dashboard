@@ -12,6 +12,9 @@ import {
     getDoc
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+console.log('=== GOALS.JS LOADING ===');
+console.log('Firebase imports loaded');
+
 // Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo",
@@ -22,41 +25,177 @@ const firebaseConfig = {
     appId: "1:16273988237:web:956c63742712c22185e0c4"
 };
 
+console.log('Firebase config loaded');
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+console.log('Firebase initialized');
+
+// Global flags
+let isIdsLoading = false;
+
 // Page guard: check login and access
 function hasPageAccess(pageId) {
+    console.log('=== CHECKING PAGE ACCESS ===');
+    console.log('Requested page:', pageId);
+    
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    console.log('Is logged in:', isLoggedIn);
+    
     const userRole = localStorage.getItem('userRole');
+    console.log('User role:', userRole);
+    
     let pageAccess = [];
     try {
         pageAccess = JSON.parse(localStorage.getItem('userPageAccess')) || [];
+        console.log('User page access:', pageAccess);
     } catch (e) {
+        console.error('Error parsing page access:', e);
         pageAccess = [];
     }
-    return isLoggedIn && (userRole === 'admin' || pageAccess.includes(pageId));
+    
+    const hasAccess = isLoggedIn && (userRole === 'admin' || pageAccess.includes(pageId));
+    console.log('Has access:', hasAccess);
+    console.log('Access granted:', hasAccess);
+    
+    return hasAccess;
 }
 
 // Goals page functionality
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('=== DOM CONTENT LOADED ===');
+    console.log('Page: goals.html');
+    console.log('DOM fully loaded and parsed');
+    
     // PAGE GUARD
+    console.log('Checking page access...');
     if (!hasPageAccess('goals')) {
+        console.error('Access denied - no permission for goals page');
         alert('Access denied. You do not have permission to view this page.');
         window.location.href = 'index.html';
         return;
     }
+    console.log('Page access granted');
 
     // Check authentication using the correct localStorage key
+    console.log('Checking authentication...');
     if (!localStorage.getItem('isLoggedIn')) {
+        console.error('Not logged in - redirecting to login');
         window.location.href = 'index.html';
         return;
     }
+    console.log('Authentication verified');
 
     // Add navigation component
+    console.log('Adding navigation component...');
     const navElement = document.createElement('nav-menu');
     document.body.appendChild(navElement);
+    console.log('Navigation component added');
+
+    // Add test button to verify script is working
+    const testButton = document.createElement('button');
+    testButton.textContent = 'Test Script';
+    testButton.style.cssText = `
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: #ff6b6b;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        z-index: 1000;
+    `;
+    testButton.addEventListener('click', async () => {
+        console.log('=== TEST BUTTON CLICKED ===');
+        console.log('Script is working!');
+        
+        // Test Firebase connection
+        try {
+            const docRef = doc(db, "idsData", "data");
+            const docSnap = await getDoc(docRef);
+            console.log('Firebase test - Document exists:', docSnap.exists());
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                console.log('Firebase test - Current data:', JSON.stringify(data, null, 2));
+            } else {
+                console.log('Firebase test - No document found');
+            }
+            
+            // Test simple save/load
+            console.log('Firebase test - Testing simple save/load...');
+            const testData = {
+                test: {
+                    id: 'test123',
+                    topic: 'Test Topic',
+                    who: 'Test User',
+                    rank: '1',
+                    type: 'Discuss',
+                    discussed: false
+                }
+            };
+            
+            await setDoc(doc(db, "testData", "simple"), { ids: testData });
+            console.log('Firebase test - Simple data saved');
+            
+            const testDoc = await getDoc(doc(db, "testData", "simple"));
+            const loadedData = testDoc.data().ids;
+            console.log('Firebase test - Simple data loaded:', JSON.stringify(loadedData, null, 2));
+            
+            const testMatches = JSON.stringify(testData) === JSON.stringify(loadedData);
+            console.log('Firebase test - Simple data matches:', testMatches);
+            
+            // Test manual save of current IDS data
+            console.log('Firebase test - Testing manual save of current IDS data...');
+            const currentIdsData = getIdsData();
+            console.log('Firebase test - Current IDS data:', JSON.stringify(currentIdsData, null, 2));
+            
+            await setDoc(doc(db, "testData", "manual"), { ids: currentIdsData });
+            console.log('Firebase test - Manual IDS data saved');
+            
+            const manualDoc = await getDoc(doc(db, "testData", "manual"));
+            const manualLoadedData = manualDoc.data().ids;
+            console.log('Firebase test - Manual IDS data loaded:', JSON.stringify(manualLoadedData, null, 2));
+            
+            const manualMatches = JSON.stringify(currentIdsData) === JSON.stringify(manualLoadedData);
+            console.log('Firebase test - Manual IDS data matches:', manualMatches);
+            
+        } catch (error) {
+            console.error('Firebase test error:', error);
+        }
+        
+        alert('Script is working! Check console for logs.');
+    });
+    document.body.appendChild(testButton);
+    console.log('Test button added');
+
+    // Add manual save button
+    const manualSaveButton = document.createElement('button');
+    manualSaveButton.textContent = 'Manual Save IDS';
+    manualSaveButton.style.cssText = `
+        position: fixed;
+        top: 40px;
+        left: 10px;
+        background: #2ecc71;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        z-index: 1000;
+    `;
+    manualSaveButton.addEventListener('click', async () => {
+        console.log('=== MANUAL SAVE BUTTON CLICKED ===');
+        await saveIdsToFirebase();
+        alert('Manual save completed! Check console for logs.');
+    });
+    document.body.appendChild(manualSaveButton);
+    console.log('Manual save button added');
 
     // --- MRR (Revenue) Thermometer Sync with Revenue KPI ---
     const mrrDefaults = 94000;
@@ -1266,358 +1405,232 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // loadTodosFromFirebase(); // Removed - now handled by initializePage()
 
-    // --- IDS SECTION ROW MANAGEMENT ---
-    const IDS_KEY = 'idsTableData';
+    // --- IDS SECTION - RECREATED FROM SCRATCH ---
+    console.log('=== IDS SECTION INITIALIZATION ===');
+    
     const idsBody = document.getElementById('idsBody');
     const addIdsRowBtn = document.getElementById('addIdsRowBtn');
     const editIdsBtn = document.getElementById('editIdsBtn');
-    let isIdsLoading = false; // Flag to prevent save during loading
-    let saveIdsTimeout = null; // For debouncing saves
-
-    function getIdsData() {
-        const ids = {};
-        Array.from(idsBody.children).forEach((row, index) => {
-            const idsKey = `ids_${index.toString().padStart(3, '0')}`;
-            ids[idsKey] = {
-                id: idsKey,
-                topic: row.children[0]?.textContent.trim() || '',
-                who: row.children[1]?.textContent.trim() || '',
-                rank: row.children[2]?.textContent.trim() || '',
-                type: row.children[3]?.querySelector('select')?.value || 'Discuss',
-                discussed: row.children[4]?.querySelector('input')?.checked || false
-            };
-        });
-        return ids;
-    }
+    const saveIdsBtn = document.getElementById('saveIdsBtn');
     
-    // Debounced save function
-    function debouncedSaveIds() {
-        if (saveIdsTimeout) {
-            clearTimeout(saveIdsTimeout);
+    console.log('IDS elements found:', { idsBody, addIdsRowBtn, editIdsBtn, saveIdsBtn });
+
+    // Simple data structure
+    let idsData = [];
+
+    // Simple save function
+    async function saveIdsData() {
+        try {
+            console.log('IDS: Saving data...');
+            console.log('IDS: Current data:', idsData);
+            
+            const docRef = doc(db, "idsData", "data");
+            await setDoc(docRef, { 
+                data: idsData,
+                lastUpdated: new Date().toISOString()
+            });
+            
+            console.log('IDS: Data saved successfully');
+            return true;
+        } catch (error) {
+            console.error('IDS: Save error:', error);
+            alert('Error saving IDS data: ' + error.message);
+            return false;
         }
-        saveIdsTimeout = setTimeout(() => {
-            if (!isIdsLoading) {
-                saveIdsToFirebase();
-            }
-        }, 500); // 500ms delay
     }
 
-    function setIdsData(data) {
-        // Prevent multiple calls
-        if (isIdsLoading) {
-            console.log('IDS is currently loading, skipping setIdsData call');
-            return;
-        }
-        
-        // Clear the table completely first
-        console.log('Setting IDS data, clearing table first...');
-        idsBody.innerHTML = '';
-        
-        if (Array.isArray(data)) {
-            console.log('Processing IDS data as array with', data.length, 'items');
-            // Handle old array format
-            data.forEach((arr, index) => {
-                console.log(`Creating row ${index} from array data:`, arr);
-                const tr = document.createElement('tr');
-                for (let i = 0; i < 3; i++) {
-                    const td = document.createElement('td');
-                    td.contentEditable = 'true';
-                    td.textContent = arr[i] || '';
-                    tr.appendChild(td);
-                }
-                // Type cell with dropdown
-                const typeTd = document.createElement('td');
-                const select = document.createElement('select');
-                select.className = 'ids-type-select';
-                ['Inform', 'Discuss', 'Solve'].forEach(opt => {
-                    const o = document.createElement('option');
-                    o.value = opt;
-                    o.textContent = opt;
-                    if (arr[3] === opt) o.selected = true;
-                    select.appendChild(o);
-                });
-                typeTd.appendChild(select);
-                tr.appendChild(typeTd);
-                // Discussed checkbox
-                const discussedTd = document.createElement('td');
-                discussedTd.style.textAlign = 'center';
-                const cb = document.createElement('input');
-                cb.type = 'checkbox';
-                cb.className = 'ids-discussed';
-                cb.checked = !!arr[4];
-                discussedTd.appendChild(cb);
-                tr.appendChild(discussedTd);
-                // Empty cell for row controls
-                tr.appendChild(document.createElement('td'));
-                idsBody.appendChild(tr);
-            });
-        } else if (typeof data === 'object' && !Array.isArray(data)) {
-            // Handle new numbered key format (preserves order)
-            const sortedKeys = Object.keys(data).sort();
-            console.log('Processing IDS data as object with', sortedKeys.length, 'items');
-            console.log('Sorted keys:', sortedKeys);
-            
-            sortedKeys.forEach(key => {
-                const idsItem = data[key];
-                console.log(`Creating row from key ${key}:`, idsItem);
-                const tr = document.createElement('tr');
-                for (let i = 0; i < 3; i++) {
-                    const td = document.createElement('td');
-                    td.contentEditable = 'true';
-                    td.textContent = idsItem[['topic', 'who', 'rank'][i]] || '';
-                    tr.appendChild(td);
-                }
-                // Type cell with dropdown
-                const typeTd = document.createElement('td');
-                const select = document.createElement('select');
-                select.className = 'ids-type-select';
-                ['Inform', 'Discuss', 'Solve'].forEach(opt => {
-                    const o = document.createElement('option');
-                    o.value = opt;
-                    o.textContent = opt;
-                    if (idsItem.type === opt) o.selected = true;
-                    select.appendChild(o);
-                });
-                typeTd.appendChild(select);
-                tr.appendChild(typeTd);
-                // Discussed checkbox
-                const discussedTd = document.createElement('td');
-                discussedTd.style.textAlign = 'center';
-                const cb = document.createElement('input');
-                cb.type = 'checkbox';
-                cb.className = 'ids-discussed';
-                cb.checked = !!idsItem.discussed;
-                discussedTd.appendChild(cb);
-                tr.appendChild(discussedTd);
-                // Empty cell for row controls
-                tr.appendChild(document.createElement('td'));
-                idsBody.appendChild(tr);
-            });
-        }
-        console.log('IDS table now has', idsBody.children.length, 'rows');
-        renderIdsRowButtons();
-    }
-    async function saveIdsToFirebase() {
-        if (isIdsLoading) return; // Don't save while loading
-        
+    // Simple load function
+    async function loadIdsData() {
         try {
-            const idsData = getIdsData();
-            console.log('Saving IDS data to Firebase:', idsData);
-            
-            await setDoc(doc(db, "idsData", "data"), { 
-                ids: idsData,
-                lastUpdated: new Date().toISOString()
-            }, { merge: true });
-            console.log('IDS data saved successfully to Firebase');
-        } catch (error) {
-            console.error("Error saving IDS to Firebase:", error);
-        }
-    }
-    async function loadIdsFromFirebase() {
-        try {
-            isIdsLoading = true; // Set loading flag
-            console.log('Loading IDS data from Firebase...');
-            
-            // Force clear the table before loading
-            console.log('Forcing table clear before load...');
-            idsBody.innerHTML = '';
-            console.log('Table cleared, current row count:', idsBody.children.length);
+            console.log('IDS: Loading data...');
             
             const docRef = doc(db, "idsData", "data");
             const docSnap = await getDoc(docRef);
-            if (docSnap.exists() && docSnap.data().ids) {
-                console.log('IDS data found in Firebase, applying...');
-                const firebaseData = docSnap.data().ids;
-                console.log('Firebase data received:', firebaseData);
-                console.log('IDS type:', typeof firebaseData, 'Is array:', Array.isArray(firebaseData));
-                if (firebaseData && typeof firebaseData === 'object') {
-                    console.log('IDS keys:', Object.keys(firebaseData));
-                }
-                
-                // Double-check table is empty before setting data
-                if (idsBody.children.length > 0) {
-                    console.warn('Table still has rows before setting data, clearing again...');
-                    idsBody.innerHTML = '';
-                }
-                
-                setIdsData(firebaseData);
+            
+            if (docSnap.exists()) {
+                const firebaseData = docSnap.data();
+                idsData = firebaseData.data || [];
+                console.log('IDS: Loaded data:', idsData);
             } else {
-                console.log('No IDS data found in Firebase, starting with empty table...');
-                // Clear the table to ensure it's empty
-                idsBody.innerHTML = '';
-                renderIdsRowButtons();
+                idsData = [];
+                console.log('IDS: No data found, starting with empty array');
             }
-            console.log('IDS initialization complete. Final row count:', idsBody.children.length);
+            
+            renderIdsTable();
         } catch (error) {
-            console.error("Error loading IDS from Firebase:", error);
-        } finally {
-            isIdsLoading = false; // Clear loading flag
+            console.error('IDS: Load error:', error);
+            idsData = [];
+            renderIdsTable();
         }
     }
-    // Add row
+
+    // Render table function
+    function renderIdsTable() {
+        if (!idsBody) return;
+        
+        console.log('IDS: Rendering table with data:', idsData);
+        idsBody.innerHTML = '';
+        
+        idsData.forEach((item, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td contenteditable="true">${item.topic || ''}</td>
+                <td contenteditable="true">${item.who || ''}</td>
+                <td contenteditable="true">${item.rank || ''}</td>
+                <td>
+                    <select class="ids-type-select">
+                        <option value="Inform" ${item.type === 'Inform' ? 'selected' : ''}>Inform</option>
+                        <option value="Discuss" ${item.type === 'Discuss' ? 'selected' : ''}>Discuss</option>
+                        <option value="Solve" ${item.type === 'Solve' ? 'selected' : ''}>Solve</option>
+                    </select>
+                </td>
+                <td style="text-align: center;">
+                    <input type="checkbox" class="ids-discussed" ${item.discussed ? 'checked' : ''}>
+                </td>
+                <td>
+                    <button class="delete-btn" onclick="deleteIdsRow(${index})">×</button>
+                </td>
+            `;
+            idsBody.appendChild(row);
+        });
+        
+        console.log('IDS: Table rendered with', idsData.length, 'rows');
+    }
+
+    // Add row function
+    function addIdsRow() {
+        console.log('IDS: Adding new row');
+        const newItem = {
+            topic: '',
+            who: '',
+            rank: '',
+            type: 'Discuss',
+            discussed: false
+        };
+        
+        idsData.push(newItem);
+        renderIdsTable();
+        console.log('IDS: New row added, total rows:', idsData.length);
+    }
+
+    // Delete row function
+    function deleteIdsRow(index) {
+        console.log('IDS: Deleting row at index:', index);
+        idsData.splice(index, 1);
+        renderIdsTable();
+        console.log('IDS: Row deleted, total rows:', idsData.length);
+    }
+
+    // Make deleteIdsRow globally accessible
+    window.deleteIdsRow = deleteIdsRow;
+
+    // Collect data from table
+    function collectIdsData() {
+        console.log('IDS: Collecting data from table...');
+        const rows = idsBody.querySelectorAll('tr');
+        const newData = [];
+        
+        rows.forEach((row, index) => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 5) {
+                const item = {
+                    topic: cells[0].textContent.trim(),
+                    who: cells[1].textContent.trim(),
+                    rank: cells[2].textContent.trim(),
+                    type: cells[3].querySelector('select').value,
+                    discussed: cells[4].querySelector('input').checked
+                };
+                newData.push(item);
+            }
+        });
+        
+        idsData = newData;
+        console.log('IDS: Collected data:', idsData);
+        return idsData;
+    }
+
+    // Event listeners
     if (addIdsRowBtn) {
-        addIdsRowBtn.addEventListener('click', async function() {
-            const tr = document.createElement('tr');
-            for (let i = 0; i < 3; i++) {
-                const td = document.createElement('td');
-                td.contentEditable = 'true';
-                tr.appendChild(td);
-            }
-            // Type cell with dropdown
-            const typeTd = document.createElement('td');
-            const select = document.createElement('select');
-            select.className = 'ids-type-select';
-            ['Inform', 'Discuss', 'Solve'].forEach(opt => {
-                const o = document.createElement('option');
-                o.value = opt;
-                o.textContent = opt;
-                if (opt === 'Discuss') o.selected = true;
-                select.appendChild(o);
-            });
-            typeTd.appendChild(select);
-            tr.appendChild(typeTd);
-            // Discussed checkbox
-            const discussedTd = document.createElement('td');
-            discussedTd.style.textAlign = 'center';
-            const cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.className = 'ids-discussed';
-            discussedTd.appendChild(cb);
-            tr.appendChild(discussedTd);
-            // Empty cell for row controls
-            tr.appendChild(document.createElement('td'));
-            idsBody.appendChild(tr);
-            await saveIdsToFirebase();
-            renderIdsRowButtons();
-        });
+        addIdsRowBtn.addEventListener('click', addIdsRow);
+        console.log('IDS: Add row button listener added');
     }
-    // Save on blur or checkbox change
-    idsBody.addEventListener('blur', function(e) {
-        if (e.target.matches('[contenteditable]')) {
-            console.log('IDS cell blur detected, saving...');
-            debouncedSaveIds();
-        }
-    }, true);
-    idsBody.addEventListener('change', function(e) {
-        if (e.target.classList.contains('ids-discussed') || e.target.classList.contains('ids-type-select')) {
-            console.log('IDS dropdown/checkbox change detected, saving...');
-            debouncedSaveIds();
-        }
-    });
-    idsBody.addEventListener('input', function(e) {
-        if (e.target.matches('[contenteditable]')) {
-            console.log('IDS cell input detected, saving...');
-            debouncedSaveIds();
-        }
-    }, true);
-    // Edit mode toggle
-    if (editIdsBtn) {
-        editIdsBtn.addEventListener('click', function() {
-            document.body.classList.toggle('ids-edit-mode');
-            renderIdsRowButtons();
-        });
-    }
-    function renderIdsRowButtons() {
-        Array.from(idsBody.rows).forEach((row, idx, arr) => {
-            let cell = row.cells[row.cells.length - 1];
-            cell.innerHTML = '';
-            if (document.body.classList.contains('ids-edit-mode')) {
-                // Move up button
-                const upBtn = document.createElement('button');
-                upBtn.className = 'move-sprint-row-btn';
-                upBtn.title = 'Move up';
-                upBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-                upBtn.onclick = async function() {
-                    if (idx > 0) {
-                        idsBody.insertBefore(row, arr[idx - 1]);
-                        await saveIdsToFirebase();
-                        renderIdsRowButtons();
-                    }
-                };
-                cell.appendChild(upBtn);
-                // Move down button
-                const downBtn = document.createElement('button');
-                downBtn.className = 'move-sprint-row-btn';
-                downBtn.title = 'Move down';
-                downBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
-                downBtn.onclick = async function() {
-                    if (idx < arr.length - 1) {
-                        idsBody.insertBefore(arr[idx + 1], row);
-                        await saveIdsToFirebase();
-                        renderIdsRowButtons();
-                    }
-                };
-                cell.appendChild(downBtn);
-                // Delete button
-                const delBtn = document.createElement('button');
-                delBtn.className = 'delete-sprint-row-btn';
-                delBtn.title = 'Delete row';
-                delBtn.textContent = '×';
-                delBtn.onclick = async function() {
-                    row.remove();
-                    await saveIdsToFirebase();
-                    renderIdsRowButtons();
-                };
-                cell.appendChild(delBtn);
-            }
-        });
-    }
-    // On load
-    // loadIdsFromFirebase(); // Removed - now handled by initializePage()
 
-    // Load all Firebase data
-    async function initializePage() {
-        try {
-            console.log('Initializing page with Firebase data...');
-            
-            // Load KPI data first
-            await loadAllKpiData();
-            
-            // Load other sections
-            await loadKpiTrackerFromFirebase();
-            await loadSprintsFromFirebase();
-            await loadTodosFromFirebase();
-            await loadIdsFromFirebase();
-            
-            console.log('All Firebase data loaded successfully');
-        } catch (error) {
-            console.error('Error initializing page:', error);
-        }
-    }
-    
-    // Initialize the page with Firebase data
-    initializePage();
-
-    // Cleanup function to clear timeouts
-    window.addEventListener('beforeunload', () => {
-        if (saveIdsTimeout) {
-            clearTimeout(saveIdsTimeout);
-        }
-    });
-
-    // Save button for IDS
-    const saveIdsBtn = document.getElementById('saveIdsBtn');
     if (saveIdsBtn) {
         saveIdsBtn.addEventListener('click', async () => {
-            console.log('Save button clicked for IDS');
-            try {
-                await saveIdsToFirebase();
-                const originalText = saveIdsBtn.textContent;
+            console.log('IDS: Save button clicked');
+            collectIdsData();
+            const success = await saveIdsData();
+            if (success) {
                 saveIdsBtn.textContent = 'Saved!';
                 saveIdsBtn.style.background = '#27ae60';
-                setTimeout(() => {
-                    saveIdsBtn.textContent = originalText;
-                    saveIdsBtn.style.background = '#2ecc71';
-                }, 2000);
-            } catch (error) {
-                console.error('Error saving IDS:', error);
-                saveIdsBtn.textContent = 'Error!';
-                saveIdsBtn.style.background = '#e74c3c';
                 setTimeout(() => {
                     saveIdsBtn.textContent = 'Save Data';
                     saveIdsBtn.style.background = '#2ecc71';
                 }, 2000);
             }
         });
+        console.log('IDS: Save button listener added');
     }
+
+    if (editIdsBtn) {
+        editIdsBtn.addEventListener('click', () => {
+            console.log('IDS: Edit button clicked');
+            document.body.classList.toggle('ids-edit-mode');
+        });
+        console.log('IDS: Edit button listener added');
+    }
+
+    // Auto-save on changes
+    if (idsBody) {
+        idsBody.addEventListener('input', () => {
+            console.log('IDS: Table input detected');
+            collectIdsData();
+        });
+        
+        idsBody.addEventListener('change', () => {
+            console.log('IDS: Table change detected');
+            collectIdsData();
+        });
+        
+        console.log('IDS: Table event listeners added');
+    }
+
+    // Load data on page load
+    loadIdsData();
+
+    // Load all Firebase data
+    async function initializePage() {
+        try {
+            console.log('=== PAGE INITIALIZATION START ===');
+            
+            // Load data in sequence
+            console.log('Loading KPI data...');
+            await loadAllKpiData();
+            
+            console.log('Loading KPI Tracker...');
+            await loadKpiTrackerFromFirebase();
+            
+            console.log('Loading Monthly Sprints...');
+            await loadSprintsFromFirebase();
+            
+            console.log('Loading Todos...');
+            await loadTodosFromFirebase();
+            
+            console.log('Loading IDS...');
+            await loadIdsData();
+            
+            console.log('=== PAGE INITIALIZATION COMPLETE ===');
+        } catch (error) {
+            console.error('=== PAGE INITIALIZATION ERROR ===');
+            console.error('Error:', error);
+            console.error('Stack:', error.stack);
+            alert('There was an error loading the page data. Please try refreshing the page.');
+        }
+    }
+    
+    // Initialize the page with Firebase data
+    initializePage().catch(error => {
+        console.error('Failed to initialize page:', error);
+        alert('Failed to initialize page. Please try refreshing.');
+    });
 }); 
