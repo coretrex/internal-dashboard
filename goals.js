@@ -9,7 +9,8 @@ import {
     doc, 
     updateDoc,
     setDoc,
-    getDoc
+    getDoc,
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 console.log('=== GOALS.JS LOADING ===');
@@ -1576,52 +1577,285 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log('IDS elements found:', { idsBody, addIdsRowBtn, editIdsBtn, saveIdsBtn });
 
-    // Simple data structure
-    let idsData = [];
+    // State management
+    let idsData = {};
+    let isSavingIds = false;
+    let saveIdsTimeout = null;
+    let idsEventListenersAttached = false;
 
-    // Simple save function
-    async function saveIdsData() {
-        try {
-            console.log('IDS: Saving data...');
-            console.log('IDS: Current data:', idsData);
-            
-            const docRef = doc(db, "idsData", "data");
-            await setDoc(docRef, { 
-                data: idsData,
-                lastUpdated: new Date().toISOString()
+    // Initialize IDS functionality
+    function initializeIds() {
+        if (!idsBody) {
+            console.log('IDS body not found, skipping initialization');
+            return;
+        }
+
+        console.log('Initializing IDS functionality...');
+        
+        // Attach event listeners only once
+        if (!idsEventListenersAttached) {
+            attachIdsEventListeners();
+            idsEventListenersAttached = true;
+        }
+
+        // Load data
+        loadIdsData();
+    }
+
+    function attachIdsEventListeners() {
+        console.log('Attaching IDS event listeners...');
+        
+        // Add row button
+        if (addIdsRowBtn) {
+            addIdsRowBtn.addEventListener('click', addIdsRow);
+            console.log('IDS: Add row button listener added');
+        }
+
+        // Save button
+        if (saveIdsBtn) {
+            saveIdsBtn.addEventListener('click', async () => {
+                console.log('IDS: Save button clicked');
+                const success = await saveIdsData();
+                if (success) {
+                    saveIdsBtn.textContent = 'Saved!';
+                    saveIdsBtn.style.background = '#27ae60';
+                    setTimeout(() => {
+                        saveIdsBtn.textContent = 'Save Data';
+                        saveIdsBtn.style.background = '#2ecc71';
+                    }, 2000);
+                }
+            });
+            console.log('IDS: Save button listener added');
+        }
+
+        // Edit mode toggle
+        if (editIdsBtn) {
+            editIdsBtn.addEventListener('click', () => {
+                console.log('IDS: Edit button clicked');
+                document.body.classList.toggle('ids-edit-mode');
+                renderIdsTable(); // Re-render to show/hide delete buttons
+            });
+            console.log('IDS: Edit button listener added');
+        }
+
+        // Table event listeners
+        if (idsBody) {
+            idsBody.addEventListener('input', () => {
+                console.log('IDS: Table input detected');
+                debouncedSaveIds();
             });
             
-            console.log('IDS: Data saved successfully');
+            idsBody.addEventListener('change', () => {
+                console.log('IDS: Table change detected');
+                debouncedSaveIds();
+            });
+            
+            console.log('IDS: Table event listeners added');
+        }
+    }
+
+    // Debounced save function
+    function debouncedSaveIds() {
+        console.log('Debounced save triggered for IDS');
+        if (saveIdsTimeout) {
+            clearTimeout(saveIdsTimeout);
+        }
+        saveIdsTimeout = setTimeout(() => {
+            saveIdsData();
+        }, 1000);
+    }
+
+    // Save individual IDS item
+    async function saveIdsItem(itemId, itemData) {
+        try {
+            console.log(`IDS: Saving item ${itemId}:`, itemData);
+            await setDoc(doc(db, "idsData", itemId), {
+                ...itemData,
+                lastUpdated: new Date().toISOString(),
+                updatedBy: localStorage.getItem('userName') || 'Unknown'
+            }, { merge: true });
+            console.log(`IDS: Item ${itemId} saved successfully`);
             return true;
         } catch (error) {
-            console.error('IDS: Save error:', error);
-            alert('Error saving IDS data: ' + error.message);
+            console.error(`IDS: Error saving item ${itemId}:`, error);
             return false;
         }
     }
 
-    // Simple load function
+    // Save all IDS data
+    async function saveIdsData() {
+        if (isSavingIds) {
+            console.log('IDS: Save already in progress, skipping...');
+            return false;
+        }
+        
+        try {
+            isSavingIds = true;
+            console.log('IDS: Saving all data...');
+            
+            // Collect current data from table
+            const currentData = collectIdsData();
+            
+            // Save each item individually
+            const savePromises = Object.entries(currentData).map(([itemId, itemData]) => 
+                saveIdsItem(itemId, itemData)
+            );
+            
+            const results = await Promise.all(savePromises);
+            const success = results.every(result => result);
+            
+            if (success) {
+                console.log('IDS: All data saved successfully');
+                return true;
+            } else {
+                console.error('IDS: Some items failed to save');
+                return false;
+            }
+        } catch (error) {
+            console.error('IDS: Save error:', error);
+            return false;
+        } finally {
+            isSavingIds = false;
+        }
+    }
+
+    // Load IDS data
     async function loadIdsData() {
         try {
             console.log('IDS: Loading data...');
             
-            const docRef = doc(db, "idsData", "data");
-            const docSnap = await getDoc(docRef);
+            // First, try to load from the new individual document format
+            const idsCollection = collection(db, "idsData");
+            const querySnapshot = await getDocs(idsCollection);
             
-            if (docSnap.exists()) {
-                const firebaseData = docSnap.data();
-                idsData = firebaseData.data || [];
-                console.log('IDS: Loaded data:', idsData);
-            } else {
-                idsData = [];
-                console.log('IDS: No data found, starting with empty array');
+            idsData = {};
+            let hasNewFormatData = false;
+            
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                // Check if this is a new format document (has topic, who, rank fields)
+                if (data.topic || data.who || data.rank) {
+                    hasNewFormatData = true;
+                    idsData[doc.id] = {
+                        topic: data.topic || '',
+                        who: data.who || '',
+                        rank: data.rank || '',
+                        type: data.type || 'Discuss',
+                        discussed: data.discussed || false,
+                        lastUpdated: data.lastUpdated,
+                        updatedBy: data.updatedBy
+                    };
+                }
+            });
+            
+            // If no new format data found, try to migrate from old format
+            if (!hasNewFormatData) {
+                console.log('IDS: No new format data found, checking for old format...');
+                await migrateIdsFromOldFormat();
             }
             
+            console.log('IDS: Loaded data:', idsData);
             renderIdsTable();
+            
+            // Set up real-time listener for changes from other users
+            setupIdsRealtimeListener();
         } catch (error) {
             console.error('IDS: Load error:', error);
-            idsData = [];
+            idsData = {};
             renderIdsTable();
+        }
+    }
+
+    // Migrate from old format to new format
+    async function migrateIdsFromOldFormat() {
+        try {
+            console.log('IDS: Attempting migration from old format...');
+            
+            // Try to load from the old single document format
+            const oldDocRef = doc(db, "idsData", "data");
+            const oldDocSnap = await getDoc(oldDocRef);
+            
+            if (oldDocSnap.exists()) {
+                const oldData = oldDocSnap.data();
+                if (oldData.data && Array.isArray(oldData.data)) {
+                    console.log('IDS: Found old format data, migrating...');
+                    
+                    // Convert old array format to new individual documents
+                    for (let i = 0; i < oldData.data.length; i++) {
+                        const item = oldData.data[i];
+                        if (item && (item.topic || item.who || item.rank)) {
+                            const newItemId = `ids_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
+                            
+                            const newItemData = {
+                                topic: item.topic || '',
+                                who: item.who || '',
+                                rank: item.rank || '',
+                                type: item.type || 'Discuss',
+                                discussed: item.discussed || false,
+                                lastUpdated: new Date().toISOString(),
+                                updatedBy: 'Migration'
+                            };
+                            
+                            // Save as new individual document
+                            await setDoc(doc(db, "idsData", newItemId), newItemData);
+                            
+                            // Add to local data
+                            idsData[newItemId] = newItemData;
+                        }
+                    }
+                    
+                    console.log('IDS: Migration completed successfully');
+                    
+                    // Optionally, delete the old document
+                    // await deleteDoc(oldDocRef);
+                }
+            }
+        } catch (error) {
+            console.error('IDS: Migration error:', error);
+        }
+    }
+
+    // Set up real-time listener for IDS changes
+    function setupIdsRealtimeListener() {
+        try {
+            console.log('IDS: Setting up real-time listener...');
+            
+            const idsCollection = collection(db, "idsData");
+            
+            onSnapshot(idsCollection, (snapshot) => {
+                console.log('IDS: Real-time update received');
+                
+                // Only update if we're not currently saving
+                if (!isSavingIds) {
+                    snapshot.docChanges().forEach((change) => {
+                        const docId = change.doc.id;
+                        const data = change.doc.data();
+                        
+                        if (change.type === "added" || change.type === "modified") {
+                            if (data.topic || data.who || data.rank) {
+                                idsData[docId] = {
+                                    topic: data.topic || '',
+                                    who: data.who || '',
+                                    rank: data.rank || '',
+                                    type: data.type || 'Discuss',
+                                    discussed: data.discussed || false,
+                                    lastUpdated: data.lastUpdated,
+                                    updatedBy: data.updatedBy
+                                };
+                            }
+                        } else if (change.type === "removed") {
+                            delete idsData[docId];
+                        }
+                    });
+                    
+                    // Re-render the table with updated data
+                    renderIdsTable();
+                }
+            }, (error) => {
+                console.error('IDS: Real-time listener error:', error);
+            });
+        } catch (error) {
+            console.error('IDS: Error setting up real-time listener:', error);
         }
     }
 
@@ -1632,8 +1866,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('IDS: Rendering table with data:', idsData);
         idsBody.innerHTML = '';
         
-        idsData.forEach((item, index) => {
+        Object.entries(idsData).forEach(([itemId, item]) => {
             const row = document.createElement('tr');
+            row.setAttribute('data-item-id', itemId);
             const isEditMode = document.body.classList.contains('ids-edit-mode');
             row.innerHTML = `
                 <td contenteditable="true">${item.topic || ''}</td>
@@ -1650,18 +1885,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input type="checkbox" class="ids-discussed" ${item.discussed ? 'checked' : ''}>
                 </td>
                 <td style="text-align: center;">
-                    ${isEditMode ? `<button class="delete-ids-btn" onclick="deleteIdsRow(${index})" title="Delete row"><i class="fas fa-trash"></i></button>` : ''}
+                    ${isEditMode ? `<button class="delete-ids-btn" onclick="deleteIdsRow('${itemId}')" title="Delete row"><i class="fas fa-trash"></i></button>` : ''}
                 </td>
             `;
             idsBody.appendChild(row);
         });
         
-        console.log('IDS: Table rendered with', idsData.length, 'rows');
+        console.log('IDS: Table rendered with', Object.keys(idsData).length, 'rows');
     }
 
     // Add row function
-    function addIdsRow() {
+    async function addIdsRow() {
         console.log('IDS: Adding new row');
+        const itemId = `ids_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const newItem = {
             topic: '',
             who: '',
@@ -1670,17 +1906,37 @@ document.addEventListener('DOMContentLoaded', () => {
             discussed: false
         };
         
-        idsData.push(newItem);
+        // Add to local data
+        idsData[itemId] = newItem;
+        
+        // Save to Firebase immediately
+        await saveIdsItem(itemId, newItem);
+        
+        // Update display
         renderIdsTable();
-        console.log('IDS: New row added, total rows:', idsData.length);
+        console.log('IDS: New row added, total rows:', Object.keys(idsData).length);
     }
 
     // Delete row function
-    function deleteIdsRow(index) {
-        console.log('IDS: Deleting row at index:', index);
-        idsData.splice(index, 1);
-        renderIdsTable();
-        console.log('IDS: Row deleted, total rows:', idsData.length);
+    async function deleteIdsRow(itemId) {
+        console.log('IDS: Deleting row:', itemId);
+        
+        if (confirm('Are you sure you want to delete this IDS item?')) {
+            try {
+                // Remove from Firebase
+                await deleteDoc(doc(db, "idsData", itemId));
+                
+                // Remove from local data
+                delete idsData[itemId];
+                
+                // Update display
+                renderIdsTable();
+                console.log('IDS: Row deleted, total rows:', Object.keys(idsData).length);
+            } catch (error) {
+                console.error('IDS: Error deleting row:', error);
+                alert('Error deleting item: ' + error.message);
+            }
+        }
     }
 
     // Make deleteIdsRow globally accessible
@@ -1690,19 +1946,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function collectIdsData() {
         console.log('IDS: Collecting data from table...');
         const rows = idsBody.querySelectorAll('tr');
-        const newData = [];
+        const newData = {};
         
-        rows.forEach((row, index) => {
+        rows.forEach((row) => {
+            const itemId = row.getAttribute('data-item-id');
+            if (!itemId) return;
+            
             const cells = row.querySelectorAll('td');
             if (cells.length >= 5) {
-                const item = {
+                newData[itemId] = {
                     topic: cells[0].textContent.trim(),
                     who: cells[1].textContent.trim(),
                     rank: cells[2].textContent.trim(),
                     type: cells[3].querySelector('select').value,
                     discussed: cells[4].querySelector('input').checked
                 };
-                newData.push(item);
             }
         });
         
@@ -1711,52 +1969,61 @@ document.addEventListener('DOMContentLoaded', () => {
         return idsData;
     }
 
-    // Event listeners
-    if (addIdsRowBtn) {
-        addIdsRowBtn.addEventListener('click', addIdsRow);
-        console.log('IDS: Add row button listener added');
-    }
+    // Initialize IDS on page load
+    initializeIds();
 
-    if (saveIdsBtn) {
-        saveIdsBtn.addEventListener('click', async () => {
-            console.log('IDS: Save button clicked');
-            collectIdsData();
-            const success = await saveIdsData();
-            if (success) {
-                saveIdsBtn.textContent = 'Saved!';
-                saveIdsBtn.style.background = '#27ae60';
-                setTimeout(() => {
-                    saveIdsBtn.textContent = 'Save Data';
-                    saveIdsBtn.style.background = '#2ecc71';
-                }, 2000);
+    // Add debugging functions for IDS
+    window.debugIds = async function() {
+        console.log('=== IDS DEBUG INFO ===');
+        console.log('Current IDS data:', idsData);
+        console.log('Is saving:', isSavingIds);
+        console.log('Event listeners attached:', idsEventListenersAttached);
+        
+        // Check Firebase data
+        try {
+            const idsCollection = collection(db, "idsData");
+            const querySnapshot = await getDocs(idsCollection);
+            console.log('Firebase documents count:', querySnapshot.size);
+            
+            querySnapshot.forEach((doc) => {
+                console.log(`Document ${doc.id}:`, doc.data());
+            });
+        } catch (error) {
+            console.error('Error checking Firebase:', error);
+        }
+    };
+
+    window.migrateIdsData = async function() {
+        if (confirm('This will migrate IDS data from old format to new format. Continue?')) {
+            try {
+                await migrateIdsFromOldFormat();
+                alert('Migration completed. Check console for details.');
+                location.reload();
+            } catch (error) {
+                console.error('Migration failed:', error);
+                alert('Migration failed: ' + error.message);
             }
-        });
-        console.log('IDS: Save button listener added');
-    }
+        }
+    };
 
-    if (editIdsBtn) {
-        editIdsBtn.addEventListener('click', () => {
-            console.log('IDS: Edit button clicked');
-            document.body.classList.toggle('ids-edit-mode');
-            renderIdsTable(); // Re-render to show/hide delete buttons
-        });
-        console.log('IDS: Edit button listener added');
-    }
-
-    // Auto-save on changes
-    if (idsBody) {
-        idsBody.addEventListener('input', () => {
-            console.log('IDS: Table input detected');
-            collectIdsData();
-        });
-        
-        idsBody.addEventListener('change', () => {
-            console.log('IDS: Table change detected');
-            collectIdsData();
-        });
-        
-        console.log('IDS: Table event listeners added');
-    }
+    window.clearIdsData = async function() {
+        if (confirm('This will clear ALL IDS data. This cannot be undone. Continue?')) {
+            try {
+                const idsCollection = collection(db, "idsData");
+                const querySnapshot = await getDocs(idsCollection);
+                
+                const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+                await Promise.all(deletePromises);
+                
+                idsData = {};
+                renderIdsTable();
+                alert('All IDS data cleared.');
+            } catch (error) {
+                console.error('Error clearing data:', error);
+                alert('Error clearing data: ' + error.message);
+            }
+        }
+    };
 
     // Load all Firebase data
     async function initializePage() {
