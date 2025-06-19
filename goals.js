@@ -1273,6 +1273,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const editIdsBtn = document.getElementById('editIdsBtn');
     let isIdsLoading = false; // Flag to prevent save during loading
     let saveIdsTimeout = null; // For debouncing saves
+    let idsInitialized = false; // Flag to prevent multiple initializations
 
     function getIdsData() {
         const ids = {};
@@ -1303,6 +1304,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setIdsData(data) {
+        // Prevent multiple calls
+        if (isIdsLoading) {
+            console.log('IDS is currently loading, skipping setIdsData call');
+            return;
+        }
+        
         // Clear the table completely first
         console.log('Setting IDS data, clearing table first...');
         idsBody.innerHTML = '';
@@ -1408,9 +1415,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     async function loadIdsFromFirebase() {
+        // Prevent multiple loads
+        if (idsInitialized) {
+            console.log('IDS already initialized, skipping load');
+            return;
+        }
+        
         try {
             isIdsLoading = true; // Set loading flag
             console.log('Loading IDS data from Firebase...');
+            
+            // Force clear the table before loading
+            console.log('Forcing table clear before load...');
+            idsBody.innerHTML = '';
+            console.log('Table cleared, current row count:', idsBody.children.length);
+            
             const docRef = doc(db, "idsData", "data");
             const docSnap = await getDoc(docRef);
             if (docSnap.exists() && docSnap.data().ids) {
@@ -1421,6 +1440,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (firebaseData && typeof firebaseData === 'object') {
                     console.log('IDS keys:', Object.keys(firebaseData));
                 }
+                
+                // Double-check table is empty before setting data
+                if (idsBody.children.length > 0) {
+                    console.warn('Table still has rows before setting data, clearing again...');
+                    idsBody.innerHTML = '';
+                }
+                
                 setIdsData(firebaseData);
             } else {
                 console.log('No IDS data found in Firebase, starting with empty table...');
@@ -1428,6 +1454,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 idsBody.innerHTML = '';
                 renderIdsRowButtons();
             }
+            idsInitialized = true; // Mark as initialized
+            console.log('IDS initialization complete. Final row count:', idsBody.children.length);
         } catch (error) {
             console.error("Error loading IDS from Firebase:", error);
         } finally {
@@ -1546,7 +1574,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // loadIdsFromFirebase(); // Removed - now handled by initializePage()
 
     // Load all Firebase data
+    let pageInitialized = false; // Global flag to prevent multiple initializations
+    
     async function initializePage() {
+        // Prevent multiple initializations
+        if (pageInitialized) {
+            console.log('Page already initialized, skipping...');
+            return;
+        }
+        
         try {
             console.log('Initializing page with Firebase data...');
             
@@ -1560,6 +1596,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadIdsFromFirebase();
             
             console.log('All Firebase data loaded successfully');
+            pageInitialized = true; // Mark as initialized
         } catch (error) {
             console.error('Error initializing page:', error);
         }
