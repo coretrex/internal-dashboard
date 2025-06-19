@@ -1,3 +1,31 @@
+// Import Firebase modules
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+    getFirestore, 
+    collection, 
+    addDoc, 
+    getDocs, 
+    deleteDoc, 
+    doc, 
+    updateDoc,
+    setDoc,
+    getDoc
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo",
+    authDomain: "coretrex-internal-dashboard.firebaseapp.com",
+    projectId: "coretrex-internal-dashboard",
+    storageBucket: "coretrex-internal-dashboard.firebasestorage.app",
+    messagingSenderId: "16273988237",
+    appId: "1:16273988237:web:956c63742712c22185e0c4"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 // Goals page functionality
 document.addEventListener('DOMContentLoaded', () => {
     // Check authentication using the correct localStorage key
@@ -130,20 +158,68 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const kpiKeys = Object.keys(kpiDefaults);
     
-    // Load KPI values from localStorage or defaults
-    kpiKeys.forEach(key => {
-        const val = localStorage.getItem('kpi_' + key) || kpiDefaults[key];
-        const el = document.getElementById(key.charAt(0).toLowerCase() + key.slice(1) + 'Value');
-        if (el) el.textContent = val;
-        
-        // Load goal values
-        const goalVal = localStorage.getItem('goal_' + key) || goalDefaults[key];
-        const goalEl = document.getElementById(key + 'Goal');
-        if (goalEl) {
-            goalEl.textContent = `Goal: ${goalVal}`;
-            updateGoalStatus(key, val, goalVal);
+    // Firebase functions for KPI data
+    async function saveKpiToFirebase(kpi, value) {
+        try {
+            await setDoc(doc(db, "kpiData", kpi), { value: value }, { merge: true });
+        } catch (error) {
+            console.error("Error saving KPI to Firebase:", error);
         }
-    });
+    }
+    
+    async function saveGoalToFirebase(kpi, goal) {
+        try {
+            await setDoc(doc(db, "kpiGoals", kpi), { goal: goal }, { merge: true });
+        } catch (error) {
+            console.error("Error saving goal to Firebase:", error);
+        }
+    }
+    
+    async function loadKpiFromFirebase(kpi) {
+        try {
+            const docRef = doc(db, "kpiData", kpi);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                return docSnap.data().value;
+            }
+            return null;
+        } catch (error) {
+            console.error("Error loading KPI from Firebase:", error);
+            return null;
+        }
+    }
+    
+    async function loadGoalFromFirebase(kpi) {
+        try {
+            const docRef = doc(db, "kpiGoals", kpi);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                return docSnap.data().goal;
+            }
+            return null;
+        } catch (error) {
+            console.error("Error loading goal from Firebase:", error);
+            return null;
+        }
+    }
+    
+    // Load KPI values from Firebase or defaults
+    async function loadAllKpiData() {
+        for (const key of kpiKeys) {
+            // Load KPI value
+            const val = await loadKpiFromFirebase(key) || kpiDefaults[key];
+            const el = document.getElementById(key.charAt(0).toLowerCase() + key.slice(1) + 'Value');
+            if (el) el.textContent = val;
+            
+            // Load goal value
+            const goalVal = await loadGoalFromFirebase(key) || goalDefaults[key];
+            const goalEl = document.getElementById(key + 'Goal');
+            if (goalEl) {
+                goalEl.textContent = `Goal: ${goalVal}`;
+                updateGoalStatus(key, val, goalVal);
+            }
+        }
+    }
     
     // Function to update goal status (reached, close, behind)
     function updateGoalStatus(kpi, currentVal, goalVal) {
@@ -201,17 +277,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             // Save on blur or Enter
-            function saveKpiEdit() {
+            async function saveKpiEdit() {
                 let newValue = input.value.trim();
                 if (newValue === '') newValue = kpiDefaults[kpi];
                 valueEl.textContent = newValue;
-                localStorage.setItem('kpi_' + kpi, newValue);
+                await saveKpiToFirebase(kpi, newValue);
                 if (kpi === 'revenue') {
                     revenueValueEl.textContent = newValue;
                     updateThermometer();
                 }
                 // Update goal status
-                const goalVal = localStorage.getItem('goal_' + kpi) || goalDefaults[kpi];
+                const goalVal = await loadGoalFromFirebase(kpi) || goalDefaults[kpi];
                 updateGoalStatus(kpi, newValue, goalVal);
             }
             input.addEventListener('blur', saveKpiEdit);
@@ -265,11 +341,11 @@ document.addEventListener('DOMContentLoaded', () => {
             input.select();
             
             // Save on blur or Enter
-            function saveGoalEdit() {
+            async function saveGoalEdit() {
                 let newGoal = input.value.trim();
                 if (newGoal === '') newGoal = goalDefaults[kpi];
                 goalEl.textContent = `Goal: ${newGoal}`;
-                localStorage.setItem('goal_' + kpi, newGoal);
+                await saveGoalToFirebase(kpi, newGoal);
                 
                 // Update goal status
                 const currentVal = document.getElementById(kpi + 'Value')?.textContent || kpiDefaults[kpi];
@@ -344,16 +420,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         renderDeleteWeekButtons();
     }
-    function saveKpiTrackerToStorage() {
+    async function saveKpiTrackerToFirebase() {
         const data = getKpiTrackerFullData();
-        localStorage.setItem(KPI_TRACKER_KEY, JSON.stringify(data));
+        try {
+            await setDoc(doc(db, "kpiTracker", "data"), data, { merge: true });
+        } catch (error) {
+            console.error("Error saving KPI tracker to Firebase:", error);
+        }
     }
-    function loadKpiTrackerFromStorage() {
-        const data = localStorage.getItem(KPI_TRACKER_KEY);
-        if (data) {
-            try {
-                setKpiTrackerFullData(JSON.parse(data));
-            } catch {}
+    async function loadKpiTrackerFromFirebase() {
+        try {
+            const docRef = doc(db, "kpiTracker", "data");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                setKpiTrackerFullData(docSnap.data());
+            }
+        } catch (error) {
+            console.error("Error loading KPI tracker from Firebase:", error);
         }
         renderDeleteWeekButtons();
     }
@@ -361,12 +444,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (kpiTrackerBody) {
         kpiTrackerBody.addEventListener('blur', function(e) {
             if (e.target.matches('[contenteditable]')) {
-                saveKpiTrackerToStorage();
+                saveKpiTrackerToFirebase();
             }
         }, true);
     }
     // Load on page load
-    loadKpiTrackerFromStorage();
+    loadKpiTrackerFromFirebase();
 
     // --- KPI TRACKER ADD WEEK FUNCTIONALITY ---
     const addWeekBtn = document.getElementById('addWeekBtn');
@@ -385,7 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 td.textContent = '';
                 row.insertBefore(td, row.children[3]);
             });
-            saveKpiTrackerToStorage();
+            saveKpiTrackerToFirebase();
         });
     }
 
@@ -435,7 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 Array.from(kpiTrackerBody.children).forEach(row => {
                     if (row.children[colIdx]) row.removeChild(row.children[colIdx]);
                 });
-                saveKpiTrackerToStorage();
+                saveKpiTrackerToFirebase();
                 updateScrollArrows();
             }
         });
@@ -468,12 +551,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     // Call after any table structure change
-    loadKpiTrackerFromStorage = (function(orig) {
+    loadKpiTrackerFromFirebase = (function(orig) {
         return function() {
             orig();
             renderDeleteWeekButtons();
         };
-    })(loadKpiTrackerFromStorage);
+    })(loadKpiTrackerFromFirebase);
     const origAddWeek = addWeekBtn && addWeekBtn.onclick;
     if (addWeekBtn) {
         addWeekBtn.addEventListener('click', function() {
@@ -543,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             row.removeChild(row.lastChild);
                         }
                     });
-                    saveKpiTrackerToStorage();
+                    saveKpiTrackerToFirebase();
                     renderDeleteWeekButtons();
                     updateScrollArrows();
                 }
@@ -612,7 +695,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 upBtn.onclick = function() {
                     if (idx > 0) {
                         sprintsBody.insertBefore(row, arr[idx - 1]);
-                        saveSprintsToStorage();
+                        saveSprintsToFirebase();
                         renderSprintsRowButtons();
                     }
                 };
@@ -625,7 +708,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 downBtn.onclick = function() {
                     if (idx < arr.length - 1) {
                         sprintsBody.insertBefore(arr[idx + 1], row);
-                        saveSprintsToStorage();
+                        saveSprintsToFirebase();
                         renderSprintsRowButtons();
                     }
                 };
@@ -637,7 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 delBtn.textContent = '×';
                 delBtn.onclick = function() {
                     row.remove();
-                    saveSprintsToStorage();
+                    saveSprintsToFirebase();
                     renderSprintsRowButtons();
                 };
                 cell.appendChild(delBtn);
@@ -685,23 +768,32 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSprintStatusColors();
         renderSprintsRowButtons();
     }
-    function saveSprintsToStorage() {
-        localStorage.setItem(MONTHLY_SPRINTS_KEY, JSON.stringify(getSprintsData()));
+    async function saveSprintsToFirebase() {
+        try {
+            await setDoc(doc(db, "monthlySprints", "data"), { sprints: getSprintsData() }, { merge: true });
+        } catch (error) {
+            console.error("Error saving sprints to Firebase:", error);
+        }
     }
-    function loadSprintsFromStorage() {
-        const data = localStorage.getItem(MONTHLY_SPRINTS_KEY);
-        if (data) {
-            try { setSprintsData(JSON.parse(data)); } catch {}
+    async function loadSprintsFromFirebase() {
+        try {
+            const docRef = doc(db, "monthlySprints", "data");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists() && docSnap.data().sprints) {
+                setSprintsData(docSnap.data().sprints);
+            }
+        } catch (error) {
+            console.error("Error loading sprints from Firebase:", error);
         }
         updateSprintStatusColors();
         renderSprintsRowButtons();
     }
     // Save on blur or status change
     sprintsBody.addEventListener('blur', function(e) {
-        if (e.target.matches('[contenteditable]')) saveSprintsToStorage();
+        if (e.target.matches('[contenteditable]')) saveSprintsToFirebase();
     }, true);
     sprintsBody.addEventListener('change', function(e) {
-        if (e.target.classList.contains('sprint-status')) saveSprintsToStorage();
+        if (e.target.classList.contains('sprint-status')) saveSprintsToFirebase();
     });
     // Add row
     addRowBtn.addEventListener('click', function() {
@@ -727,24 +819,41 @@ document.addEventListener('DOMContentLoaded', () => {
         sprintsBody.appendChild(tr);
         updateSprintStatusColors();
         renderSprintsRowButtons();
-        saveSprintsToStorage();
+        saveSprintsToFirebase();
     });
     // On load
-    loadSprintsFromStorage();
+    loadSprintsFromFirebase();
 
-    // --- TO-DO SECTION LOGIC (LOCALSTORAGE) ---
+    // --- TO-DO SECTION LOGIC (FIREBASE) ---
     const TODOS_KEY = 'goalsTodos';
     const todoForm = document.getElementById('todoForm');
     const todosTable = document.getElementById('todosTable');
     let todos = [];
-    function saveTodos() {
-        localStorage.setItem(TODOS_KEY, JSON.stringify(todos));
+    
+    async function saveTodosToFirebase() {
+        try {
+            await setDoc(doc(db, "goalsTodos", "data"), { todos: todos }, { merge: true });
+        } catch (error) {
+            console.error("Error saving todos to Firebase:", error);
+        }
     }
-    function loadTodos() {
-        const data = localStorage.getItem(TODOS_KEY);
-        todos = data ? JSON.parse(data) : [];
+    
+    async function loadTodosFromFirebase() {
+        try {
+            const docRef = doc(db, "goalsTodos", "data");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists() && docSnap.data().todos) {
+                todos = docSnap.data().todos;
+            } else {
+                todos = [];
+            }
+        } catch (error) {
+            console.error("Error loading todos from Firebase:", error);
+            todos = [];
+        }
         renderTodos();
     }
+    
     function renderTodos() {
         const tbody = todosTable.querySelector('tbody');
         tbody.innerHTML = '';
@@ -779,7 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.children[2].innerHTML = `<input type="date" value="${todo.dueDate}" class="edit-input">`;
                 row.children[3].innerHTML = `<button class="action-btn save-btn"><i class="fas fa-save"></i></button><button class="action-btn cancel-btn"><i class="fas fa-times"></i></button>`;
                 // Save
-                row.querySelector('.save-btn').addEventListener('click', () => {
+                row.querySelector('.save-btn').addEventListener('click', async () => {
                     const newText = row.children[0].querySelector('input').value.trim();
                     const newAssignee = row.children[1].querySelector('select').value;
                     const newDueDate = row.children[2].querySelector('input').value;
@@ -788,7 +897,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
                     todos[idx] = { text: newText, assignee: newAssignee, dueDate: newDueDate, completed: todo.completed };
-                    saveTodos();
+                    await saveTodosToFirebase();
                     renderTodos();
                 });
                 // Cancel
@@ -797,16 +906,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
             // Delete
-            row.querySelector('.delete-btn').addEventListener('click', () => {
+            row.querySelector('.delete-btn').addEventListener('click', async () => {
                 todos.splice(idx, 1);
-                saveTodos();
+                await saveTodosToFirebase();
                 renderTodos();
             });
             // Complete
-            row.querySelector('.complete-btn').addEventListener('click', () => {
+            row.querySelector('.complete-btn').addEventListener('click', async () => {
                 if (!todo.completed) {
                     todos[idx].completed = true;
-                    saveTodos();
+                    await saveTodosToFirebase();
                     renderTodos();
                 }
             });
@@ -814,7 +923,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     if (todoForm) {
-        todoForm.addEventListener('submit', function(e) {
+        todoForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const text = document.getElementById('todoDescription').value.trim();
             const assignee = document.getElementById('todoAssignee').value;
@@ -824,12 +933,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             todos.push({ text, assignee, dueDate });
-            saveTodos();
+            await saveTodosToFirebase();
             renderTodos();
             todoForm.reset();
         });
     }
-    loadTodos();
+    loadTodosFromFirebase();
 
     // --- IDS SECTION ROW MANAGEMENT ---
     const IDS_KEY = 'idsTableData';
@@ -886,19 +995,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         renderIdsRowButtons();
     }
-    function saveIdsToStorage() {
-        localStorage.setItem(IDS_KEY, JSON.stringify(getIdsData()));
+    async function saveIdsToFirebase() {
+        try {
+            await setDoc(doc(db, "idsData", "data"), { ids: getIdsData() }, { merge: true });
+        } catch (error) {
+            console.error("Error saving IDS to Firebase:", error);
+        }
     }
-    function loadIdsFromStorage() {
-        const data = localStorage.getItem(IDS_KEY);
-        if (data) {
-            try { setIdsData(JSON.parse(data)); } catch {}
+    async function loadIdsFromFirebase() {
+        try {
+            const docRef = doc(db, "idsData", "data");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists() && docSnap.data().ids) {
+                setIdsData(docSnap.data().ids);
+            }
+        } catch (error) {
+            console.error("Error loading IDS from Firebase:", error);
         }
         renderIdsRowButtons();
     }
     // Add row
     if (addIdsRowBtn) {
-        addIdsRowBtn.addEventListener('click', function() {
+        addIdsRowBtn.addEventListener('click', async function() {
             const tr = document.createElement('tr');
             for (let i = 0; i < 3; i++) {
                 const td = document.createElement('td');
@@ -929,16 +1047,16 @@ document.addEventListener('DOMContentLoaded', () => {
             // Empty cell for row controls
             tr.appendChild(document.createElement('td'));
             idsBody.appendChild(tr);
-            saveIdsToStorage();
+            await saveIdsToFirebase();
             renderIdsRowButtons();
         });
     }
     // Save on blur or checkbox change
     idsBody.addEventListener('blur', function(e) {
-        if (e.target.matches('[contenteditable]')) saveIdsToStorage();
+        if (e.target.matches('[contenteditable]')) saveIdsToFirebase();
     }, true);
     idsBody.addEventListener('change', function(e) {
-        if (e.target.classList.contains('ids-discussed') || e.target.classList.contains('ids-type-select')) saveIdsToStorage();
+        if (e.target.classList.contains('ids-discussed') || e.target.classList.contains('ids-type-select')) saveIdsToFirebase();
     });
     // Edit mode toggle
     if (editIdsBtn) {
@@ -957,10 +1075,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 upBtn.className = 'move-sprint-row-btn';
                 upBtn.title = 'Move up';
                 upBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-                upBtn.onclick = function() {
+                upBtn.onclick = async function() {
                     if (idx > 0) {
                         idsBody.insertBefore(row, arr[idx - 1]);
-                        saveIdsToStorage();
+                        await saveIdsToFirebase();
                         renderIdsRowButtons();
                     }
                 };
@@ -970,10 +1088,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 downBtn.className = 'move-sprint-row-btn';
                 downBtn.title = 'Move down';
                 downBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
-                downBtn.onclick = function() {
+                downBtn.onclick = async function() {
                     if (idx < arr.length - 1) {
                         idsBody.insertBefore(arr[idx + 1], row);
-                        saveIdsToStorage();
+                        await saveIdsToFirebase();
                         renderIdsRowButtons();
                     }
                 };
@@ -983,9 +1101,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 delBtn.className = 'delete-sprint-row-btn';
                 delBtn.title = 'Delete row';
                 delBtn.textContent = '×';
-                delBtn.onclick = function() {
+                delBtn.onclick = async function() {
                     row.remove();
-                    saveIdsToStorage();
+                    await saveIdsToFirebase();
                     renderIdsRowButtons();
                 };
                 cell.appendChild(delBtn);
@@ -993,5 +1111,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     // On load
-    loadIdsFromStorage();
+    loadIdsFromFirebase();
 }); 
