@@ -447,10 +447,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     async function loadKpiTrackerFromFirebase() {
         try {
+            console.log('Loading KPI tracker data from Firebase...');
             const docRef = doc(db, "kpiTracker", "data");
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
+                console.log('KPI tracker data found in Firebase, applying...');
                 setKpiTrackerFullData(docSnap.data());
+            } else {
+                console.log('No KPI tracker data found in Firebase, using static data');
             }
         } catch (error) {
             console.error("Error loading KPI tracker from Firebase:", error);
@@ -794,10 +798,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     async function loadSprintsFromFirebase() {
         try {
+            console.log('Loading Monthly Sprints data from Firebase...');
             const docRef = doc(db, "monthlySprints", "data");
             const docSnap = await getDoc(docRef);
             if (docSnap.exists() && docSnap.data().sprints) {
+                console.log('Monthly Sprints data found in Firebase, applying...');
                 setSprintsData(docSnap.data().sprints);
+            } else {
+                console.log('No Monthly Sprints data found in Firebase, using static data');
             }
         } catch (error) {
             console.error("Error loading sprints from Firebase:", error);
@@ -857,11 +865,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function loadTodosFromFirebase() {
         try {
+            console.log('Loading Todos data from Firebase...');
             const docRef = doc(db, "goalsTodos", "data");
             const docSnap = await getDoc(docRef);
             if (docSnap.exists() && docSnap.data().todos) {
+                console.log('Todos data found in Firebase, applying...');
                 todos = docSnap.data().todos;
             } else {
+                console.log('No Todos data found in Firebase, using empty array');
                 todos = [];
             }
         } catch (error) {
@@ -1021,10 +1032,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     async function loadIdsFromFirebase() {
         try {
+            console.log('Loading IDS data from Firebase...');
             const docRef = doc(db, "idsData", "data");
             const docSnap = await getDoc(docRef);
             if (docSnap.exists() && docSnap.data().ids) {
+                console.log('IDS data found in Firebase, applying...');
                 setIdsData(docSnap.data().ids);
+            } else {
+                console.log('No IDS data found in Firebase, using static data');
             }
         } catch (error) {
             console.error("Error loading IDS from Firebase:", error);
