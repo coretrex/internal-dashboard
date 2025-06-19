@@ -1273,7 +1273,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const editIdsBtn = document.getElementById('editIdsBtn');
     let isIdsLoading = false; // Flag to prevent save during loading
     let saveIdsTimeout = null; // For debouncing saves
-    let idsInitialized = false; // Flag to prevent multiple initializations
 
     function getIdsData() {
         const ids = {};
@@ -1415,12 +1414,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     async function loadIdsFromFirebase() {
-        // Prevent multiple loads
-        if (idsInitialized) {
-            console.log('IDS already initialized, skipping load');
-            return;
-        }
-        
         try {
             isIdsLoading = true; // Set loading flag
             console.log('Loading IDS data from Firebase...');
@@ -1454,7 +1447,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 idsBody.innerHTML = '';
                 renderIdsRowButtons();
             }
-            idsInitialized = true; // Mark as initialized
             console.log('IDS initialization complete. Final row count:', idsBody.children.length);
         } catch (error) {
             console.error("Error loading IDS from Firebase:", error);
@@ -1574,15 +1566,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // loadIdsFromFirebase(); // Removed - now handled by initializePage()
 
     // Load all Firebase data
-    let pageInitialized = false; // Global flag to prevent multiple initializations
-    
     async function initializePage() {
-        // Prevent multiple initializations
-        if (pageInitialized) {
-            console.log('Page already initialized, skipping...');
-            return;
-        }
-        
         try {
             console.log('Initializing page with Firebase data...');
             
@@ -1596,7 +1580,6 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadIdsFromFirebase();
             
             console.log('All Firebase data loaded successfully');
-            pageInitialized = true; // Mark as initialized
         } catch (error) {
             console.error('Error initializing page:', error);
         }
