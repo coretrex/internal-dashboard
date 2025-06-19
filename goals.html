@@ -13,32 +13,396 @@
 <body>
     <div class="page-container">
         <div class="goals-content">
-            <div class="goals-header">
-                <h1>Sales Goals & Milestones</h1>
-                <div class="current-mrr">Current MRR: $94K</div>
+            <h1 style="margin-bottom: 32px;">Sales Goals & Milestones</h1>
+            <!-- KPI BLOCKS START -->
+            <div class="stats-container" id="kpiBlocks">
+                <div class="stat kpi-block" data-kpi="activeClients">
+                    <div class="stat-number" id="activeClientsValue">32</div>
+                    <div class="stat-label kpi-label">Active Clients <span class="kpi-tooltip-wrapper"><i class="fas fa-info-circle" data-tooltip="Active clients who's exit window exceeds 30 days"></i></span></div>
+                    <div class="kpi-goal" id="activeClientsGoal">Goal: 35</div>
+                    <button class="edit-kpi-btn" data-kpi="activeClients" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="edit-goal-btn" data-kpi="activeClients" title="Edit Goal"><i class="fas fa-bullseye"></i></button>
+                </div>
+                <div class="stat kpi-block" data-kpi="revenue">
+                    <div class="stat-number" id="revenueValue">$142,000</div>
+                    <div class="stat-label kpi-label">Revenue <span class="kpi-tooltip-wrapper"><i class="fas fa-info-circle" data-tooltip="Forecasted Revenue based on client retainers + expected commission"></i></span></div>
+                    <div class="kpi-goal" id="revenueGoal">Goal: $150,000</div>
+                    <button class="edit-kpi-btn" data-kpi="revenue" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="edit-goal-btn" data-kpi="revenue" title="Edit Goal"><i class="fas fa-bullseye"></i></button>
+                </div>
+                <div class="stat kpi-block" data-kpi="clientsClosed">
+                    <div class="stat-number" id="clientsClosedValue">5</div>
+                    <div class="stat-label kpi-label">New Clients <span class="kpi-tooltip-wrapper"><i class="fas fa-info-circle" data-tooltip="New clients acquired this month"></i></span></div>
+                    <div class="kpi-goal" id="clientsClosedGoal">Goal: 8</div>
+                    <button class="edit-kpi-btn" data-kpi="clientsClosed" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="edit-goal-btn" data-kpi="clientsClosed" title="Edit Goal"><i class="fas fa-bullseye"></i></button>
+                </div>
             </div>
+            <!-- KPI BLOCKS END -->
             
-            <div class="thermometer-container">
-                <div class="thermometer-labels">
-                    <div class="label">$75K</div>
-                    <div class="label">$90K</div>
-                    <div class="label">$100K</div>
-                    <div class="label">$110K</div>
-                    <div class="label">$120K</div>
+            <!-- KPI TRACKER START -->
+            <div class="kpi-tracker-container" style="margin-top: 48px; position: relative;">
+                <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 12px;">
+                    <h2 style="color: white; font-size: 1.4rem; font-weight: 700;">KPI Tracker</h2>
                 </div>
-                <div class="thermometer">
-                    <div class="thermometer-progress" style="width: 42%;">
-                        <div class="progress-value">$94K</div>
+                <div style="position: relative;">
+                    <button id="scrollLeftBtn" class="kpi-scroll-arrow" style="display:none; position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 2;">&#8592;</button>
+                    <div id="kpiTableScroll" style="overflow-x: auto; max-width: 1300px;">
+                        <table class="kpi-tracker-table" id="kpiTrackerTable" style="min-width: 1200px;">
+                            <thead>
+                                <tr id="kpiTrackerHeaderRow">
+                                    <th>Owner</th>
+                                    <th>KPI</th>
+                                    <th>Goal</th>
+                                    <th>6/12</th>
+                                    <th>6/5</th>
+                                    <th>5/29</th>
+                                    <th>5/22</th>
+                                    <th>5/15</th>
+                                    <th>5/8</th>
+                                    <th>5/1</th>
+                                    <th>4/24</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kpiTrackerBody">
+                                <tr>
+                                    <td contenteditable="true" class="kpi-owner">Stephen</td>
+                                    <td contenteditable="true">Total Clients</td>
+                                    <td contenteditable="true">30</td>
+                                    <td contenteditable="true">19</td>
+                                    <td contenteditable="true">20</td>
+                                    <td contenteditable="true">19</td>
+                                    <td contenteditable="true">18</td>
+                                    <td contenteditable="true">19</td>
+                                    <td contenteditable="true">18</td>
+                                    <td contenteditable="true">19</td>
+                                    <td contenteditable="true">21</td>
+                                </tr>
+                                <tr>
+                                    <td contenteditable="true" class="kpi-owner">Robby</td>
+                                    <td contenteditable="true">New Client Signed</td>
+                                    <td contenteditable="true">1</td>
+                                    <td contenteditable="true">1</td>
+                                    <td contenteditable="true">0</td>
+                                    <td contenteditable="true">1</td>
+                                    <td contenteditable="true">0</td>
+                                    <td contenteditable="true">0</td>
+                                    <td contenteditable="true">0</td>
+                                    <td contenteditable="true">0</td>
+                                    <td contenteditable="true">0</td>
+                                </tr>
+                                <tr>
+                                    <td contenteditable="true" class="kpi-owner">Robby</td>
+                                    <td contenteditable="true">Meetings Booked</td>
+                                    <td contenteditable="true">15</td>
+                                    <td contenteditable="true">1</td>
+                                    <td contenteditable="true">2</td>
+                                    <td contenteditable="true">1</td>
+                                    <td contenteditable="true">1</td>
+                                    <td contenteditable="true">5</td>
+                                    <td contenteditable="true">4</td>
+                                    <td contenteditable="true">0</td>
+                                    <td contenteditable="true">0</td>
+                                </tr>
+                                <tr>
+                                    <td contenteditable="true" class="kpi-owner">Brandon</td>
+                                    <td contenteditable="true">Clients Managed</td>
+                                    <td contenteditable="true">12</td>
+                                    <td contenteditable="true">10</td>
+                                    <td contenteditable="true">11</td>
+                                    <td contenteditable="true">10</td>
+                                    <td contenteditable="true">10</td>
+                                    <td contenteditable="true">10</td>
+                                    <td contenteditable="true">10</td>
+                                    <td contenteditable="true">10</td>
+                                    <td contenteditable="true">11</td>
+                                </tr>
+                                <tr>
+                                    <td contenteditable="true" class="kpi-owner">Bobby</td>
+                                    <td contenteditable="true">Clients Managed</td>
+                                    <td contenteditable="true">12</td>
+                                    <td contenteditable="true">9</td>
+                                    <td contenteditable="true">9</td>
+                                    <td contenteditable="true">9</td>
+                                    <td contenteditable="true">8</td>
+                                    <td contenteditable="true">9</td>
+                                    <td contenteditable="true">8</td>
+                                    <td contenteditable="true">9</td>
+                                    <td contenteditable="true">9</td>
+                                </tr>
+                                <tr>
+                                    <td contenteditable="true" class="kpi-owner">Noah</td>
+                                    <td contenteditable="true">Pod 1 Unhappy</td>
+                                    <td contenteditable="true">0</td>
+                                    <td contenteditable="true">2</td>
+                                    <td contenteditable="true">1</td>
+                                    <td contenteditable="true">1</td>
+                                    <td contenteditable="true">2</td>
+                                    <td contenteditable="true">2</td>
+                                    <td contenteditable="true">1</td>
+                                    <td contenteditable="true">2</td>
+                                    <td contenteditable="true">2</td>
+                                </tr>
+                                <tr>
+                                    <td contenteditable="true" class="kpi-owner">Noah</td>
+                                    <td contenteditable="true">Pod 2 Unhappy</td>
+                                    <td contenteditable="true">0</td>
+                                    <td contenteditable="true">0</td>
+                                    <td contenteditable="true">0</td>
+                                    <td contenteditable="true">1</td>
+                                    <td contenteditable="true">0</td>
+                                    <td contenteditable="true">1</td>
+                                    <td contenteditable="true">0</td>
+                                    <td contenteditable="true">1</td>
+                                    <td contenteditable="true">0</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
+                    <button id="scrollRightBtn" class="kpi-scroll-arrow" style="display:none; position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 2;">&#8594;</button>
                 </div>
-                <div class="thermometer-dates">
-                    <div class="date"></div>
-                    <div class="date"></div>
-                    <div class="date">April 1st</div>
-                    <div class="date">May 1st</div>
-                    <div class="date">June 1st</div>
+                <div style="margin-top: 16px; text-align: left;">
+                    <button id="addWeekBtn" class="add-btn" style="font-size: 1rem;">+ Add Week</button>
                 </div>
             </div>
+            <!-- KPI TRACKER END -->
+
+            <!-- Monthly Sprints Section START -->
+            <div class="monthly-sprints-container" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                <h2 style="color: white; font-size: 1.4rem; font-weight: 700; margin-bottom: 16px;">Monthly Sprints</h2>
+                <table class="monthly-sprints-table" style="width:100%; background: #23272f; color: #f3f3f3; border-radius: 12px; overflow: hidden;">
+                    <thead>
+                        <tr>
+                            <th>Owner</th>
+                            <th>Sprint</th>
+                            <th>Due</th>
+                            <th>Status<br><span style="font-size:0.85em; font-weight:400;">(On Track/Off Track)</span></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlySprintsBody">
+                        <tr>
+                            <td contenteditable="true">Stephen</td>
+                            <td contenteditable="true">New Headshots (e.g., AI)</td>
+                            <td contenteditable="true">6/31/25</td>
+                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Stephen</td>
+                            <td contenteditable="true">Long Term Company Mission Established + Posters</td>
+                            <td contenteditable="true">6/31/25</td>
+                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Brandon</td>
+                            <td contenteditable="true">Prime Day Prep + Deployment</td>
+                            <td contenteditable="true">6/31/25</td>
+                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Brandon</td>
+                            <td contenteditable="true">AI Listing Builds System Deployed</td>
+                            <td contenteditable="true">6/31/25</td>
+                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Bobby</td>
+                            <td contenteditable="true">Create 1 Fully Functioning GPT Specific to Lifestyle Image creation</td>
+                            <td contenteditable="true">6/31/25</td>
+                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Bobby</td>
+                            <td contenteditable="true">Prime Day Prep + Deployment</td>
+                            <td contenteditable="true">6/31/25</td>
+                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Noah</td>
+                            <td contenteditable="true">Complete All Digital Marketing SOPs</td>
+                            <td contenteditable="true">6/31/25</td>
+                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Robby</td>
+                            <td contenteditable="true">Chris and Martin onboarded and calling</td>
+                            <td contenteditable="true">6/31/25</td>
+                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Robby</td>
+                            <td contenteditable="true">400 Calls per day</td>
+                            <td contenteditable="true">6/31/25</td>
+                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Robby</td>
+                            <td contenteditable="true">BusDev SOPs (Integrations debugged, Lead list SOP, Meetings SOP, Training Calendar, Call Audit SOP)</td>
+                            <td contenteditable="true">6/31/25</td>
+                            <td><select class="sprint-status"><option>Complete</option><option selected>On Track</option><option>Off Track</option></select></td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 8px;">
+                    <button id="addSprintRowBtn" class="add-btn">+ Add Row</button>
+                    <button id="editSprintsBtn" class="edit-sprints-btn" title="Edit Rows"><i class="fas fa-pen"></i></button>
+                </div>
+            </div>
+            <!-- Monthly Sprints Section END -->
+
+            <!-- To-Do Section START -->
+            <div class="todos-container" style="margin-top: 2.5rem; margin-bottom: 2.5rem;">
+                <h2 style="color: white; font-size: 1.4rem; font-weight: 700; margin-bottom: 16px;">Task List</h2>
+                <form id="todoForm" class="input-section">
+                    <div class="input-field-group">
+                        <label for="todoDescription">To-Do Description</label>
+                        <input type="text" id="todoDescription" class="input-field" placeholder="Enter to-do description">
+                    </div>
+                    <div class="input-field-group">
+                        <label for="todoAssignee">Assigned To</label>
+                        <select id="todoAssignee" class="input-field dropdown">
+                            <option value="">Select Assignee</option>
+                            <option value="Robby">Robby</option>
+                            <option value="Greyson">Greyson</option>
+                            <option value="Stephen">Stephen</option>
+                            <option value="Bobby">Bobby</option>
+                            <option value="Brandon">Brandon</option>
+                            <option value="Noah">Noah</option>
+                        </select>
+                    </div>
+                    <div class="input-field-group">
+                        <label for="todoDueDate">Due Date</label>
+                        <input type="date" id="todoDueDate" class="input-field date-picker">
+                    </div>
+                    <button type="submit" id="addTodoBtn" class="add-btn">Add To-Do</button>
+                </form>
+                <table class="dashboard-table" id="todosTable">
+                    <thead>
+                        <tr>
+                            <th>Task</th>
+                            <th>Assignee</th>
+                            <th>Due Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <!-- To-Do Section END -->
+
+            <!-- IDS Section START -->
+            <div class="ids-container" style="margin-top: 2.5rem; margin-bottom: 2.5rem;">
+                <h2 style="color: white; font-size: 1.4rem; font-weight: 700; margin-bottom: 16px;">IDS (Identify, Discuss, Solve)</h2>
+                <table class="ids-table" style="width:100%; background: #23272f; color: #f3f3f3; border-radius: 12px; overflow: hidden;">
+                    <thead>
+                        <tr>
+                            <th>Topic</th>
+                            <th>Who</th>
+                            <th>Rank</th>
+                            <th>Type</th>
+                            <th>Discussed?</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="idsBody">
+                        <tr>
+                            <td contenteditable="true">Category analytics standardization</td>
+                            <td contenteditable="true">Robby</td>
+                            <td contenteditable="true"></td>
+                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
+                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Podmatch for Team Interviews</td>
+                            <td contenteditable="true">Stephen</td>
+                            <td contenteditable="true"></td>
+                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
+                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Team Offsite</td>
+                            <td contenteditable="true">Stephen</td>
+                            <td contenteditable="true"></td>
+                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
+                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">BusDev Huddles</td>
+                            <td contenteditable="true">Robby</td>
+                            <td contenteditable="true"></td>
+                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
+                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">BusDev Metrics</td>
+                            <td contenteditable="true">Robby</td>
+                            <td contenteditable="true"></td>
+                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
+                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Huddle Training Content</td>
+                            <td contenteditable="true">Robby</td>
+                            <td contenteditable="true"></td>
+                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
+                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">SMS?</td>
+                            <td contenteditable="true">Brandon</td>
+                            <td contenteditable="true"></td>
+                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
+                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Brand Growth | Outbound Help</td>
+                            <td contenteditable="true">Brandon</td>
+                            <td contenteditable="true"></td>
+                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
+                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Current Client/Prospects | ICP Check-in</td>
+                            <td contenteditable="true">Bobby</td>
+                            <td contenteditable="true"></td>
+                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
+                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td contenteditable="true">Morning Huddle</td>
+                            <td contenteditable="true">Stephen</td>
+                            <td contenteditable="true"></td>
+                            <td><select class="ids-type-select"><option value="Inform">Inform</option><option value="Discuss" selected>Discuss</option><option value="Solve">Solve</option></select></td>
+                            <td style="text-align:center;"><input type="checkbox" class="ids-discussed"></td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 24px;">
+                    <button id="addIdsRowBtn" class="add-btn">+ Add Row</button>
+                    <button id="editIdsBtn" class="edit-sprints-btn" title="Edit Rows"><i class="fas fa-pen"></i></button>
+                </div>
+            </div>
+            <!-- IDS Section END -->
 
             <div class="milestones-container">
                 <h2>Milestones & Unlocks</h2>
@@ -68,6 +432,31 @@
                         <h3>$120K MRR</h3>
                         <p>Team Retreat + Giveaway</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Move thermometer here -->
+            <div class="thermometer-container">
+                <div class="thermometer-labels">
+                    <div class="label">$75K</div>
+                    <div class="label">$90K</div>
+                    <div class="label">$100K</div>
+                    <div class="label">$110K</div>
+                    <div class="label">$120K</div>
+                </div>
+                <div class="thermometer">
+                    <div class="thermometer-progress" style="width: 42%;">
+                        <div class="progress-value" id="mrrValueContainer">
+                            <span id="mrrValue">$94K</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="thermometer-dates">
+                    <div class="date"></div>
+                    <div class="date"></div>
+                    <div class="date">April 1st</div>
+                    <div class="date">May 1st</div>
+                    <div class="date">June 1st</div>
                 </div>
             </div>
         </div>
