@@ -22,6 +22,7 @@
                     <div class="kpi-goal" id="activeClientsGoal"></div>
                     <button class="edit-kpi-btn" data-kpi="activeClients" title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="edit-goal-btn" data-kpi="activeClients" title="Edit Goal"><i class="fas fa-bullseye"></i></button>
+                    <button class="edit-comment-btn" data-kpi="activeClients" title="Add Comment"><i class="fas fa-comment"></i></button>
                 </div>
                 <div class="stat kpi-block" data-kpi="revenue">
                     <div class="stat-number" id="revenueValue"></div>
@@ -29,6 +30,7 @@
                     <div class="kpi-goal" id="revenueGoal"></div>
                     <button class="edit-kpi-btn" data-kpi="revenue" title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="edit-goal-btn" data-kpi="revenue" title="Edit Goal"><i class="fas fa-bullseye"></i></button>
+                    <button class="edit-comment-btn" data-kpi="revenue" title="Add Comment"><i class="fas fa-comment"></i></button>
                 </div>
                 <div class="stat kpi-block" data-kpi="clientsClosed">
                     <div class="stat-number" id="clientsClosedValue"></div>
@@ -36,6 +38,7 @@
                     <div class="kpi-goal" id="clientsClosedGoal"></div>
                     <button class="edit-kpi-btn" data-kpi="clientsClosed" title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="edit-goal-btn" data-kpi="clientsClosed" title="Edit Goal"><i class="fas fa-bullseye"></i></button>
+                    <button class="edit-comment-btn" data-kpi="clientsClosed" title="Add Comment"><i class="fas fa-comment"></i></button>
                 </div>
             </div>
             <!-- KPI BLOCKS END -->
@@ -230,6 +233,26 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <!-- Comment Modal -->
+    <div id="commentModal" class="modal">
+        <div class="modal-content comment-modal-content">
+            <div class="modal-header">
+                <h3 id="commentModalTitle">Add Comment</h3>
+                <span class="close" id="closeCommentModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="comment-display" id="commentDisplay"></div>
+                <textarea id="commentTextarea" class="comment-textarea" placeholder="Enter your comment here..." readonly></textarea>
+            </div>
+            <div class="modal-footer">
+                <button id="editCommentBtn" class="edit-comment-btn-modal">Edit Comment</button>
+                <button id="saveCommentBtn" class="save-comment-btn" style="display: none;">Save Comment</button>
+                <button id="cancelCommentBtn" class="cancel-comment-btn" style="display: none;">Cancel</button>
+                <button id="closeCommentBtn" class="close-comment-btn">Close</button>
+            </div>
         </div>
     </div>
 

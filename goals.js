@@ -226,6 +226,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    async function saveCommentToFirebase(kpi, comment) {
+        try {
+            console.log(`Saving comment for ${kpi}: ${comment} to Firebase`);
+            await setDoc(doc(db, "kpiComments", kpi), { comment: comment }, { merge: true });
+            console.log(`Successfully saved comment for ${kpi} to Firebase`);
+        } catch (error) {
+            console.error("Error saving comment to Firebase:", error);
+        }
+    }
+    
     async function loadKpiFromFirebase(kpi) {
         try {
             console.log(`Loading KPI ${kpi} from Firebase`);
@@ -262,6 +272,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    async function loadCommentFromFirebase(kpi) {
+        try {
+            console.log(`Loading comment for ${kpi} from Firebase`);
+            const docRef = doc(db, "kpiComments", kpi);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const comment = docSnap.data().comment;
+                console.log(`Loaded comment for ${kpi}: ${comment} from Firebase`);
+                return comment;
+            }
+            console.log(`No comment data found for ${kpi} in Firebase`);
+            return null;
+        } catch (error) {
+            console.error("Error loading comment from Firebase:", error);
+            return null;
+        }
+    }
+    
     // Load KPI values from Firebase only (no defaults)
     async function loadAllKpiData() {
         try {
@@ -280,6 +308,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     goalEl.textContent = `Goal: ${goalVal}`;
                     updateGoalStatus(key, val, goalVal);
                 }
+                
+                // Load comment value from Firebase only
+                const commentVal = await loadCommentFromFirebase(key);
+                updateCommentButtonAppearance(key, commentVal !== null && commentVal.length > 0);
             }
             console.log('KPI data loaded from Firebase');
         } catch (error) {
@@ -306,6 +338,20 @@ document.addEventListener('DOMContentLoaded', () => {
             goalEl.classList.add('goal-close');
         } else {
             goalEl.classList.add('goal-behind');
+        }
+    }
+    
+    // Function to update comment button appearance
+    function updateCommentButtonAppearance(kpi, hasComment) {
+        const commentBtn = document.querySelector(`[data-kpi="${kpi}"].edit-comment-btn`);
+        if (commentBtn) {
+            if (hasComment) {
+                commentBtn.style.color = '#9b59b6';
+                commentBtn.style.opacity = '0.6';
+            } else {
+                commentBtn.style.color = '#b0b8c1';
+                commentBtn.style.opacity = '0.12';
+            }
         }
     }
     
@@ -443,6 +489,152 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
+    });
+
+    // Comment edit button logic
+    document.querySelectorAll('.edit-comment-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const kpi = btn.getAttribute('data-kpi');
+            
+            // Get current comment value from Firebase
+            const currentComment = await loadCommentFromFirebase(kpi) || '';
+            
+            // Update modal title
+            const modalTitle = document.getElementById('commentModalTitle');
+            const kpiLabels = {
+                'activeClients': 'Active Clients',
+                'revenue': 'Revenue',
+                'clientsClosed': 'New Clients'
+            };
+            modalTitle.textContent = `${kpiLabels[kpi]} - Comment`;
+            
+            // Set display and textarea values
+            const commentDisplay = document.getElementById('commentDisplay');
+            const textarea = document.getElementById('commentTextarea');
+            
+            if (currentComment) {
+                commentDisplay.textContent = currentComment;
+                textarea.value = currentComment;
+            } else {
+                commentDisplay.textContent = '';
+                textarea.value = '';
+            }
+            
+            // Show modal
+            const commentModal = document.getElementById('commentModal');
+            commentModal.style.display = 'block';
+            
+            // Store current KPI for save function
+            commentModal.setAttribute('data-current-kpi', kpi);
+            
+            // Reset to view mode
+            setModalToViewMode();
+        });
+    });
+
+    // Comment modal functionality
+    const commentModal = document.getElementById('commentModal');
+    const closeCommentModal = document.getElementById('closeCommentModal');
+    const saveCommentBtn = document.getElementById('saveCommentBtn');
+    const cancelCommentBtn = document.getElementById('cancelCommentBtn');
+    const editCommentBtn = document.getElementById('editCommentBtn');
+    const closeCommentBtn = document.getElementById('closeCommentBtn');
+    const commentTextarea = document.getElementById('commentTextarea');
+    const commentDisplay = document.getElementById('commentDisplay');
+
+    // Modal mode functions
+    function setModalToViewMode() {
+        commentDisplay.style.display = 'block';
+        commentTextarea.style.display = 'none';
+        editCommentBtn.style.display = 'inline-block';
+        saveCommentBtn.style.display = 'none';
+        cancelCommentBtn.style.display = 'none';
+        closeCommentBtn.style.display = 'inline-block';
+    }
+
+    function setModalToEditMode() {
+        commentDisplay.style.display = 'none';
+        commentTextarea.style.display = 'block';
+        editCommentBtn.style.display = 'none';
+        saveCommentBtn.style.display = 'inline-block';
+        cancelCommentBtn.style.display = 'inline-block';
+        closeCommentBtn.style.display = 'none';
+        
+        // Focus and select textarea
+        setTimeout(() => {
+            commentTextarea.focus();
+            commentTextarea.select();
+        }, 100);
+    }
+
+    // Close modal functions
+    function closeCommentModalFunc() {
+        commentModal.style.display = 'none';
+        commentTextarea.value = '';
+        commentDisplay.textContent = '';
+        setModalToViewMode();
+    }
+
+    // Close modal when clicking X
+    closeCommentModal.onclick = closeCommentModalFunc;
+
+    // Close modal when clicking outside
+    window.onclick = (event) => {
+        if (event.target === commentModal) {
+            closeCommentModalFunc();
+        }
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    // Edit button
+    editCommentBtn.onclick = setModalToEditMode;
+
+    // Close button
+    closeCommentBtn.onclick = closeCommentModalFunc;
+
+    // Cancel button
+    cancelCommentBtn.onclick = () => {
+        // Restore original comment content
+        const currentKpi = commentModal.getAttribute('data-current-kpi');
+        loadCommentFromFirebase(currentKpi).then(comment => {
+            commentTextarea.value = comment || '';
+            commentDisplay.textContent = comment || '';
+        });
+        setModalToViewMode();
+    };
+
+    // Save button
+    saveCommentBtn.onclick = async () => {
+        const currentKpi = commentModal.getAttribute('data-current-kpi');
+        const newComment = commentTextarea.value.trim();
+        
+        await saveCommentToFirebase(currentKpi, newComment);
+        updateCommentButtonAppearance(currentKpi, newComment.length > 0);
+        
+        // Update display and switch back to view mode
+        commentDisplay.textContent = newComment;
+        setModalToViewMode();
+    };
+
+    // Keyboard shortcuts for comment modal
+    document.addEventListener('keydown', (e) => {
+        if (commentModal.style.display === 'block') {
+            if (e.key === 'Escape') {
+                if (commentTextarea.style.display === 'block') {
+                    // In edit mode, cancel edit
+                    cancelCommentBtn.click();
+                } else {
+                    // In view mode, close modal
+                    closeCommentModalFunc();
+                }
+            } else if (e.key === 'Enter' && e.ctrlKey && commentTextarea.style.display === 'block') {
+                e.preventDefault();
+                saveCommentBtn.click();
+            }
+        }
     });
 
     // --- KPI TRACKER TABLE PERSISTENCE (HEADER + BODY) ---
