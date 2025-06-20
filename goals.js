@@ -829,10 +829,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cleanedData = cleanKpiTrackerData(firebaseData);
                 console.log('After cleaning:', cleanedData);
                 
-                // Always save the cleaned data back to ensure consistency
-                await setDoc(doc(db, "kpiTracker", "data"), cleanedData, { merge: true });
+                // Sort the data by owner
+                const sortedData = {
+                    header: cleanedData.header,
+                    body: sortKpiTrackerByOwner(cleanedData.body)
+                };
+                console.log('After sorting by owner:', sortedData);
                 
-                setKpiTrackerFullData(cleanedData);
+                // Always save the cleaned and sorted data back to ensure consistency
+                await setDoc(doc(db, "kpiTracker", "data"), sortedData, { merge: true });
+                
+                setKpiTrackerFullData(sortedData);
             } else {
                 console.log('No KPI tracker data found in Firebase, creating default data...');
                 // Create default KPI tracker data
@@ -876,8 +883,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 };
-                setKpiTrackerFullData(defaultData);
-                // Save the default data to Firebase
+                
+                // Sort the default data by owner
+                const sortedDefaultData = {
+                    header: defaultData.header,
+                    body: sortKpiTrackerByOwner(defaultData.body)
+                };
+                
+                setKpiTrackerFullData(sortedDefaultData);
+                // Save the sorted default data to Firebase
                 await saveKpiTrackerToFirebase();
             }
         } catch (error) {
@@ -942,6 +956,25 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollLeftBtn.style.display = 'none';
             scrollRightBtn.style.display = 'none';
         }
+    }
+
+    // --- KPI TRACKER SORTING FUNCTIONALITY ---
+    function sortKpiTrackerByOwner(data) {
+        // Convert to array, sort, then convert back to object
+        const sortedEntries = Object.entries(data).sort(([, a], [, b]) => {
+            const ownerA = (a.cell_0 || '').toLowerCase();
+            const ownerB = (b.cell_0 || '').toLowerCase();
+            return ownerA.localeCompare(ownerB);
+        });
+        
+        // Rebuild object with new keys
+        const sortedData = {};
+        sortedEntries.forEach(([, rowData], index) => {
+            const newKey = `row_${index.toString().padStart(3, '0')}`;
+            sortedData[newKey] = rowData;
+        });
+        
+        return sortedData;
     }
 
     // --- KPI TRACKER DELETE WEEK FUNCTIONALITY ---
@@ -2189,6 +2222,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Error clearing KPI Tracker data:', error);
                 alert('Error clearing data: ' + error.message);
             }
+        }
+    };
+
+    window.sortKpiTrackerByOwner = async function() {
+        try {
+            console.log('Manual KPI Tracker sort triggered');
+            const currentData = getKpiTrackerFullData();
+            const sortedData = {
+                header: currentData.header,
+                body: sortKpiTrackerByOwner(currentData.body)
+            };
+            
+            // Save the sorted data
+            await setDoc(doc(db, "kpiTracker", "data"), sortedData, { merge: true });
+            
+            // Update the display
+            setKpiTrackerFullData(sortedData);
+            alert('KPI Tracker sorted by owner name successfully!');
+        } catch (error) {
+            console.error('Error during KPI Tracker sort:', error);
+            alert('Error sorting KPI Tracker: ' + error.message);
         }
     };
 
