@@ -478,10 +478,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Make sure stats are calculated on page load
-    await updateTable();
-    calculateRecentStats();
-    updateKpiSummaryTable();
+    // Initialize KPI functionality
+    async function initializeKPI() {
+        // Make sure stats are calculated on page load
+        await updateTable();
+        calculateRecentStats();
+        updateKpiSummaryTable();
+    }
+
+    // Call initialize function
+    initializeKPI().catch(error => {
+        console.error("Error initializing KPI:", error);
+    });
 
     // Add Chart.js loader
     if (!window.Chart) {
