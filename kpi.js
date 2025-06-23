@@ -509,8 +509,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Helper to get note text for a date
     async function getNoteTextForDate(date) {
         const kpiData = await loadKPIData();
-        const entry = kpiData.find(entry => entry.date === date);
-        return entry && entry.notes ? entry.notes : '';
+        // Find all entries for this date with notes
+        const entries = kpiData.filter(entry => entry.date === date && entry.notes && entry.notes.trim() !== '');
+        if (entries.length === 0) return '';
+        // Format as 'Owner: Note' per entry
+        return entries.map(entry => `${entry.owner}: ${entry.notes}`).join('\n');
     }
 
     // Chart.js plugin to draw a red note icon above data points with notes
