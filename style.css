@@ -3014,3 +3014,9 @@ body.ids-edit-mode .move-sprint-row-btn {
   margin-right: 0;
 }
 
+/* Glowing effect for milestone icons when reached */
+.milestone-icon.glow {
+  color: #ff9800 !important;
+  /* Removed animation, box-shadow, and text-shadow for a simple orange color */
+}
+

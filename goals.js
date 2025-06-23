@@ -131,6 +131,24 @@ document.addEventListener('DOMContentLoaded', () => {
             thermometerProgress.style.width = `${progress}%`;
         }
         if (mrrValueSpan) mrrValueSpan.textContent = formatMRR(currentMRR);
+        // --- MILESTONE GLOW LOGIC ---
+        const milestones = [
+            { value: 94000, selector: '[data-milestone="94k"] .milestone-icon', color: '#2979ff' },
+            { value: 100000, selector: '[data-milestone="100k"] .milestone-icon', color: '#2979ff' },
+            { value: 110000, selector: '[data-milestone="110k"] .milestone-icon', color: '#f39c12' },
+            { value: 115000, selector: '[data-milestone="115k"] .milestone-icon', color: '#2ecc71' },
+            { value: 120000, selector: '[data-milestone="120k"] .milestone-icon', color: '#2ecc71' }
+        ];
+        milestones.forEach((milestone, idx) => {
+            const icon = document.querySelector(milestone.selector);
+            if (!icon) return;
+            // All milestones at or below the current revenue should be orange
+            if (currentMRR >= milestone.value) {
+                icon.classList.add('glow');
+            } else {
+                icon.classList.remove('glow');
+            }
+        });
     };
     // Listen for Revenue KPI edits
     if (revenueValueEl) {
