@@ -18,6 +18,12 @@ import {
     signOut,
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import {
+    getStorage,
+    ref as storageRef,
+    uploadBytes,
+    getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -33,6 +39,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 // Available pages for access control
 const AVAILABLE_PAGES = [
@@ -67,6 +74,26 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Set up event listeners
     setupEventListeners();
+
+    // Live photo preview for Add User
+    const userPhotoInput = document.getElementById('userPhoto');
+    const userPhotoPreview = document.getElementById('userPhotoPreview');
+    if (userPhotoInput && userPhotoPreview) {
+        userPhotoInput.addEventListener('input', () => {
+            userPhotoPreview.src = userPhotoInput.value || 'https://cdn.pixabay.com/photo/2017/01/06/19/15/raccoon-1956987_1280.jpg';
+        });
+    }
+    // Live photo preview for Edit User
+    const editUserPhotoInput = document.getElementById('editUserPhoto');
+    const editUserPhotoPreview = document.getElementById('editUserPhotoPreview');
+    if (editUserPhotoInput && editUserPhotoPreview) {
+        editUserPhotoInput.addEventListener('input', () => {
+            editUserPhotoPreview.src = editUserPhotoInput.value || 'https://cdn.pixabay.com/photo/2017/01/06/19/15/raccoon-1956987_1280.jpg';
+        });
+    }
+
+    setupPhotoPreview('userPhotoFile', 'userPhotoPreview');
+    setupPhotoPreview('editUserPhotoFile', 'editUserPhotoPreview');
 });
 
 // Check if current user has admin access
@@ -262,15 +289,28 @@ function setupEventListeners() {
     });
 }
 
-// Handle add user
+// Helper: upload photo and get URL
+async function uploadUserPhoto(email, file) {
+    if (!file) return '';
+    const ext = file.name.split('.').pop();
+    const refPath = `user-photos/${email}/profile.${ext}`;
+    const ref = storageRef(storage, refPath);
+    await uploadBytes(ref, file);
+    return await getDownloadURL(ref);
+}
+
+// Add User: handle file upload
 async function handleAddUser(e) {
     e.preventDefault();
-    
     const email = document.getElementById('userEmail').value;
     const role = document.getElementById('userRole').value;
-    const pageAccess = Array.from(document.querySelectorAll('#addUserForm input[type="checkbox"]:checked'))
-        .map(cb => cb.value);
-    
+    const pageAccess = Array.from(document.querySelectorAll('#addUserForm input[type="checkbox"]:checked')).map(cb => cb.value);
+    let photoURL = '';
+    const fileInput = document.getElementById('userPhotoFile');
+    const file = fileInput ? fileInput.files[0] : null;
+    if (file) {
+        photoURL = await uploadUserPhoto(email, file);
+    }
     try {
         // Check if user already exists
         const existingUser = await getDoc(doc(db, "users", email));
@@ -278,91 +318,50 @@ async function handleAddUser(e) {
             alert('User already exists!');
             return;
         }
-        
-        // Add user to Firebase
         await setDoc(doc(db, "users", email), {
             email: email,
             role: role,
             pageAccess: pageAccess,
+            photoURL: photoURL,
             createdAt: new Date().toISOString(),
             createdBy: localStorage.getItem('userEmail')
         });
-        
-        // Close modal and refresh
         document.getElementById('addUserModal').style.display = 'none';
         document.getElementById('addUserForm').reset();
         await loadUsers();
-        
         alert('User added successfully!');
-        
     } catch (error) {
         console.error('Error adding user:', error);
         alert('Error adding user. Please try again.');
     }
 }
 
-// Edit user function (global for onclick)
-window.editUser = async function(email) {
-    try {
-        const userDoc = await getDoc(doc(db, "users", email));
-        if (!userDoc.exists()) {
-            alert('User not found!');
-            return;
-        }
-        
-        const user = userDoc.data();
-        
-        // Populate edit form
-        document.getElementById('editUserId').value = email;
-        document.getElementById('editUserEmail').value = user.email;
-        document.getElementById('editUserRole').value = user.role;
-        
-        // Populate page access checkboxes
-        const pageAccessContainer = document.getElementById('editUserPageAccess');
-        pageAccessContainer.innerHTML = '';
-        
-        AVAILABLE_PAGES.forEach(page => {
-            const label = document.createElement('label');
-            label.className = 'checkbox-item';
-            label.innerHTML = `
-                <input type="checkbox" value="${page.id}" ${(user.pageAccess || []).includes(page.id) ? 'checked' : ''}>
-                ${page.name}
-            `;
-            pageAccessContainer.appendChild(label);
-        });
-        
-        // Show modal
-        document.getElementById('editUserModal').style.display = 'block';
-        
-    } catch (error) {
-        console.error('Error loading user for edit:', error);
-        alert('Error loading user data.');
-    }
-};
-
-// Handle edit user
+// Edit User: handle file upload
 async function handleEditUser(e) {
     e.preventDefault();
-    
     const email = document.getElementById('editUserId').value;
     const role = document.getElementById('editUserRole').value;
-    const pageAccess = Array.from(document.querySelectorAll('#editUserPageAccess input[type="checkbox"]:checked'))
-        .map(cb => cb.value);
-    
+    const pageAccess = Array.from(document.querySelectorAll('#editUserPageAccess input[type="checkbox"]:checked')).map(cb => cb.value);
+    let photoURL = '';
+    const fileInput = document.getElementById('editUserPhotoFile');
+    const previewImg = document.getElementById('editUserPhotoPreview');
+    const file = fileInput ? fileInput.files[0] : null;
+    if (file) {
+        photoURL = await uploadUserPhoto(email, file);
+    } else if (previewImg) {
+        photoURL = previewImg.src;
+    }
     try {
         await updateDoc(doc(db, "users", email), {
             role: role,
             pageAccess: pageAccess,
+            photoURL: photoURL,
             updatedAt: new Date().toISOString(),
             updatedBy: localStorage.getItem('userEmail')
         });
-        
-        // Close modal and refresh
         document.getElementById('editUserModal').style.display = 'none';
         await loadUsers();
-        
         alert('User updated successfully!');
-        
     } catch (error) {
         console.error('Error updating user:', error);
         alert('Error updating user. Please try again.');
@@ -433,5 +432,54 @@ async function handleSignOut() {
         // Even if Firebase signout fails, clear localStorage and redirect
         localStorage.clear();
         window.location.href = 'index.html';
+    }
+}
+
+// Preview logic for file input
+function setupPhotoPreview(inputId, previewId) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    if (input && preview) {
+        input.addEventListener('change', () => {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => { preview.src = e.target.result; };
+                reader.readAsDataURL(file);
+            } else {
+                preview.src = 'https://cdn.pixabay.com/photo/2017/01/06/19/15/raccoon-1956987_1280.jpg';
+            }
+        });
+    }
+}
+
+// Define editUser as a global function for inline onclick
+window.editUser = async function(email) {
+    try {
+        const userDoc = await getDoc(doc(db, "users", email));
+        if (!userDoc.exists()) {
+            alert('User not found!');
+            return;
+        }
+        const user = userDoc.data();
+        document.getElementById('editUserId').value = email;
+        document.getElementById('editUserEmail').value = user.email;
+        document.getElementById('editUserRole').value = user.role;
+        // Populate page access checkboxes
+        const pageAccessContainer = document.getElementById('editUserPageAccess');
+        pageAccessContainer.innerHTML = '';
+        AVAILABLE_PAGES.forEach(page => {
+            const label = document.createElement('label');
+            label.className = 'checkbox-item';
+            label.innerHTML = `
+                <input type="checkbox" value="${page.id}" ${(user.pageAccess || []).includes(page.id) ? 'checked' : ''}>
+                ${page.name}
+            `;
+            pageAccessContainer.appendChild(label);
+        });
+        document.getElementById('editUserModal').style.display = 'block';
+    } catch (error) {
+        console.error('Error loading user for edit:', error);
+        alert('Error loading user data.');
     }
 } 

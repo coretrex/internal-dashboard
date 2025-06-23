@@ -89,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('isLoggedIn', 'true');
             localStorage.setItem('userEmail', user.email);
             localStorage.setItem('userName', user.displayName);
+            localStorage.setItem('userPhoto', user.photoURL || '');
             localStorage.setItem('userRole', userData.role);
             localStorage.setItem('userPageAccess', JSON.stringify(userData.pageAccess || []));
             window.location.href = 'goals.html';
@@ -131,6 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('userEmail', user.email);
                 localStorage.setItem('userName', user.displayName);
+                localStorage.setItem('userPhoto', user.photoURL || '');
                 localStorage.setItem('userRole', userData.role);
                 localStorage.setItem('userPageAccess', JSON.stringify(userData.pageAccess || []));
                 window.location.href = 'goals.html';
@@ -181,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('userEmail');
             localStorage.removeItem('userName');
+            localStorage.removeItem('userPhoto');
             localStorage.removeItem('userRole');
             localStorage.removeItem('userPageAccess');
             window.location.reload();
