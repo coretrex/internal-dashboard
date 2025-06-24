@@ -293,6 +293,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <option value="Robby Asbery" ${currentValues.owner === 'Robby Asbery' ? 'selected' : ''}>Robby Asbery</option>
                     <option value="Martin Seshoene" ${currentValues.owner === 'Martin Seshoene' ? 'selected' : ''}>Martin Seshoene</option>
                     <option value="Chris Maren" ${currentValues.owner === 'Chris Maren' ? 'selected' : ''}>Chris Maren</option>
+                    <option value="Meta Ads" ${currentValues.owner === 'Meta Ads' ? 'selected' : ''}>Meta Ads</option>
+                    <option value="Cold Email" ${currentValues.owner === 'Cold Email' ? 'selected' : ''}>Cold Email</option>
                 </select>
             `;
             row.cells[6].innerHTML = `<input type="text" class="editable-input" value="${currentValues.notes}">`;
@@ -430,7 +432,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const salespeople = [
             { name: 'Robby Asbery' },
             { name: 'Martin Seshoene' },
-            { name: 'Chris Maren' }
+            { name: 'Chris Maren' },
+            { name: 'Meta Ads' },
+            { name: 'Cold Email' }
         ];
         const kpiData = await loadKPIData();
         const tbody = document.getElementById('kpiSummaryBody');
@@ -702,7 +706,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const salespeople = [
             { name: 'Robby Asbery', firstName: 'Robby', aliases: ['Robby', 'Robby Asbery'], color: 'rgba(33, 150, 243, 1)', bg: 'rgba(33, 150, 243, 0.3)' },
             { name: 'Martin Seshoene', firstName: 'Martin', aliases: ['Martin Seshoene'], color: 'rgba(76, 175, 80, 1)', bg: 'rgba(76, 175, 80, 0.3)' },
-            { name: 'Chris Maren', firstName: 'Chris', aliases: ['Chris Maren'], color: 'rgba(255, 193, 7, 1)', bg: 'rgba(255, 193, 7, 0.3)' }
+            { name: 'Chris Maren', firstName: 'Chris', aliases: ['Chris Maren'], color: 'rgba(255, 193, 7, 1)', bg: 'rgba(255, 193, 7, 0.3)' },
+            { name: 'Meta Ads', firstName: 'Meta', aliases: ['Meta Ads'], color: 'rgba(156, 39, 176, 1)', bg: 'rgba(156, 39, 176, 0.3)' },
+            { name: 'Cold Email', firstName: 'Email', aliases: ['Cold Email'], color: 'rgba(255, 87, 34, 1)', bg: 'rgba(255, 87, 34, 0.3)' }
         ];
         // Get all unique dates in the range
         const allDatesSet = new Set();
