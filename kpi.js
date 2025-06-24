@@ -217,13 +217,16 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             tableBody.innerHTML = kpiData.map(entry => {
+                // Format date to MM/DD
+                const dateObj = new Date(entry.date + 'T00:00:00');
+                const formattedDate = (dateObj.getMonth() + 1).toString().padStart(2, '0') + '/' + dateObj.getDate().toString().padStart(2, '0');
                 const date = formatDate(entry.date);
                 const callsClass = entry.calls >= 50 ? 'highlight-green' : 'highlight-red';
                 const meetingsClass = entry.meetings >= 1 ? 'highlight-green' : 'highlight-red';
                 
                 return `
                     <tr>
-                        <td>${date.formatted}</td>
+                        <td>${formattedDate}</td>
                         <td>${date.day}</td>
                         <td class="${callsClass}">${entry.calls}</td>
                         <td class="${meetingsClass}">${entry.meetings}</td>
