@@ -21,12 +21,31 @@
 
         <!-- KPI Summary Table -->
         <div class="kpi-summary-container">
+            <div class="kpi-summary-controls">
+                <div class="sort-controls">
+                    <label for="dateRangeSelect" style="color: white; margin-right: 10px;">Date Range:</label>
+                    <select id="dateRangeSelect" class="sort-select">
+                        <option value="10">Last 10 Work Days</option>
+                        <option value="7">Last 7 Days</option>
+                        <option value="14">Last 14 Days</option>
+                        <option value="30">Last 30 Days</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+                <div class="custom-date-controls" id="customDateControls" style="display: none; margin-top: 10px;">
+                    <label for="customStartDate" style="color: white; margin-right: 10px;">Start Date:</label>
+                    <input type="date" id="customStartDate" class="sort-input">
+                    <label for="customEndDate" style="color: white; margin-left: 10px; margin-right: 10px;">End Date:</label>
+                    <input type="date" id="customEndDate" class="sort-input">
+                    <button id="applyCustomRange" class="sort-btn">Apply</button>
+                </div>
+            </div>
             <table class="kpi-summary-table">
                 <thead>
                     <tr>
                         <th>Name</th>
-                        <th>Meetings (Last 10)</th>
-                        <th>Conversion Rate (Last 10)</th>
+                        <th>Meetings</th>
+                        <th>Conversion Rate</th>
                     </tr>
                 </thead>
                 <tbody id="kpiSummaryBody">

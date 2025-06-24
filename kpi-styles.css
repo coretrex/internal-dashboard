@@ -305,20 +305,75 @@ h1 {
 }
 
 .kpi-summary-container {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* KPI Summary Controls Styling */
+.kpi-summary-controls {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sort-controls {
     display: flex;
-    justify-content: center;
-    margin-bottom: 30px;
-    margin-top: 30px;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.sort-select, .sort-input {
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #333;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.sort-select:focus, .sort-input:focus {
+    outline: none;
+    border-color: #2196F3;
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+    background-color: white;
+}
+
+.sort-btn {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.sort-btn:hover {
+    background-color: #1976D2;
+}
+
+.custom-date-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 10px;
 }
 
 .kpi-summary-table {
+    width: 100%;
     border-collapse: collapse;
-    background: linear-gradient(135deg, rgba(40,60,120,0.18) 0%, rgba(30,30,30,0.92) 100%);
-    border-radius: 18px;
+    margin: 0 auto;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
     overflow: hidden;
-    min-width: 420px;
-    box-shadow: 0 6px 32px rgba(33,150,243,0.10), 0 1.5px 8px rgba(0,0,0,0.18);
-    border: 1.5px solid rgba(33,150,243,0.18);
 }
 
 .kpi-summary-table th, .kpi-summary-table td {
@@ -369,8 +424,8 @@ h1 {
     text-decoration: none !important;
 }
 .kpi-summary-table td.name-cell:hover .expand-icon {
-    color: #42a5f5;
-    opacity: 1;
+    transform: scale(1.2);
+    color: #2196F3;
 }
 
 /* Modal styles for KPI graph */
@@ -486,4 +541,25 @@ h1 {
 }
 #kpiNoteModal .modal-content h2 {
     color: #fff;
+}
+
+/* Summary total row styling */
+.summary-total-row {
+    background-color: rgba(33, 150, 243, 0.1) !important;
+    border-top: 2px solid rgba(33, 150, 243, 0.3) !important;
+}
+
+.summary-total-row td {
+    font-weight: bold !important;
+    color: #fff !important;
+    background-color: rgba(33, 150, 243, 0.15) !important;
+    border-top: 2px solid rgba(33, 150, 243, 0.5) !important;
+}
+
+.summary-total-row:hover {
+    background-color: rgba(33, 150, 243, 0.2) !important;
+}
+
+.summary-total-row:hover td {
+    background-color: rgba(33, 150, 243, 0.25) !important;
 }
