@@ -490,16 +490,20 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Calculate conversion rate
             let conversionRate;
+            let conversionRateClass = '';
             if (person.name === 'Meta Ads' || person.name === 'Cold Email') {
                 conversionRate = 'N/A';
+                conversionRateClass = 'na-value';
             } else {
                 conversionRate = totalCalls === 0 ? '0%' : ((totalMeetings / totalCalls) * 100).toFixed(1) + '%';
             }
             
             // Determine cold calls display
             let coldCallsDisplay;
+            let coldCallsClass = '';
             if (person.name === 'Meta Ads' || person.name === 'Cold Email') {
                 coldCallsDisplay = 'N/A';
+                coldCallsClass = 'na-value';
             } else {
                 coldCallsDisplay = totalCalls;
             }
@@ -511,9 +515,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class='name-text'>${person.name}</span>
                         <i class='fas fa-chart-line expand-icon'></i>
                     </td>
-                    <td>${coldCallsDisplay}</td>
+                    <td class="${coldCallsClass}">${coldCallsDisplay}</td>
                     <td>${totalMeetings}</td>
-                    <td>${conversionRate}</td>
+                    <td class="${conversionRateClass}">${conversionRate}</td>
                 </tr>
             `;
         }).join('');

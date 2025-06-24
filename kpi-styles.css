@@ -563,3 +563,9 @@ h1 {
 .summary-total-row:hover td {
     background-color: rgba(33, 150, 243, 0.25) !important;
 }
+
+/* N/A text styling */
+.na-value {
+    color: rgba(255, 255, 255, 0.3) !important;
+    font-style: italic;
+}
