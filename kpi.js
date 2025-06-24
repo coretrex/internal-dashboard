@@ -428,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Function to update the KPI summary table
-    async function updateKpiSummaryTable() {
+    async function updateKpiSummaryTable(startDate = null, endDate = null) {
         const salespeople = [
             { name: 'Robby Asbery' },
             { name: 'Martin Seshoene' },
@@ -440,7 +440,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const tbody = document.getElementById('kpiSummaryBody');
         if (!tbody) return;
 
-        tbody.innerHTML = salespeople.map(person => {
+        // Calculate individual totals and overall totals
+        let totalMeetingsAll = 0;
+        let totalCallsAll = 0;
+        let totalMeetingsForConversion = 0; // Only for people who make calls
+        const individualTotals = [];
+
+        const salespeopleRows = salespeople.map(person => {
             // Filter and sort entries for this person
             let entries;
             if (person.name === 'Robby Asbery') {
@@ -452,21 +458,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     .filter(entry => entry.owner === person.name)
                     .sort((a, b) => new Date(b.date) - new Date(a.date));
             }
-            // Get last 10 work days (weekdays only)
-            const workdayEntries = [];
-            for (let i = 0, count = 0; i < entries.length && count < 10; i++) {
-                const date = new Date(entries[i].date + 'T00:00:00');
-                const day = date.getDay();
-                if (day !== 0 && day !== 6) { // 0 = Sunday, 6 = Saturday
-                    workdayEntries.push(entries[i]);
-                    count++;
+            
+            // Filter entries by date range if provided
+            if (startDate && endDate) {
+                entries = entries.filter(entry => {
+                    const entryDate = new Date(entry.date);
+                    return entryDate >= startDate && entryDate <= endDate;
+                });
+            } else {
+                // Default: Get last 10 work days (weekdays only)
+                const workdayEntries = [];
+                for (let i = 0, count = 0; i < entries.length && count < 10; i++) {
+                    const date = new Date(entries[i].date + 'T00:00:00');
+                    const day = date.getDay();
+                    if (day !== 0 && day !== 6) { // 0 = Sunday, 6 = Saturday
+                        workdayEntries.push(entries[i]);
+                        count++;
+                    }
                 }
+                entries = workdayEntries;
             }
+            
             // Calculate totals
-            const totalMeetings = workdayEntries.reduce((sum, entry) => sum + Number(entry.meetings), 0);
-            const totalCalls = workdayEntries.reduce((sum, entry) => sum + Number(entry.calls), 0);
+            const totalMeetings = entries.reduce((sum, entry) => sum + Number(entry.meetings), 0);
+            const totalCalls = entries.reduce((sum, entry) => sum + Number(entry.calls), 0);
+            
+            // Add to overall totals
+            totalMeetingsAll += totalMeetings; // Include all meetings in total
+            if (person.name !== 'Meta Ads' && person.name !== 'Cold Email') {
+                totalCallsAll += totalCalls; // Only include calls for conversion rate calculation
+                totalMeetingsForConversion += totalMeetings; // Only include meetings from people who make calls
+            }
+            
+            // Store individual totals for later use
+            individualTotals.push({ meetings: totalMeetings, calls: totalCalls });
+            
             // Calculate conversion rate
-            const conversionRate = totalCalls === 0 ? '0%' : ((totalMeetings / totalCalls) * 100).toFixed(1) + '%';
+            let conversionRate;
+            if (person.name === 'Meta Ads' || person.name === 'Cold Email') {
+                conversionRate = 'N/A';
+            } else {
+                conversionRate = totalCalls === 0 ? '0%' : ((totalMeetings / totalCalls) * 100).toFixed(1) + '%';
+            }
+            
             // Add clickable class, data-person attribute, and icon
             return `
                 <tr>
@@ -480,11 +514,125 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }).join('');
 
-        // Add click event listeners to name cells
+        // Calculate overall conversion rate
+        const overallConversionRate = totalCallsAll === 0 ? '0%' : ((totalMeetingsForConversion / totalCallsAll) * 100).toFixed(1) + '%';
+
+        // Create summary total row
+        const summaryRow = `
+            <tr class="summary-total-row">
+                <td style="font-weight: bold; border-top: 2px solid #fff;">
+                    <span style="color: #fff;">TOTAL</span>
+                </td>
+                <td style="font-weight: bold; border-top: 2px solid #fff;">${totalMeetingsAll}</td>
+                <td style="font-weight: bold; border-top: 2px solid #fff;">${overallConversionRate}</td>
+            </tr>
+        `;
+
+        // Combine individual rows with summary row
+        tbody.innerHTML = salespeopleRows + summaryRow;
+
+        // Add click event listeners to name cells (excluding summary row)
         Array.from(tbody.querySelectorAll('.name-cell')).forEach(cell => {
             cell.addEventListener('click', () => {
                 openKpiGraphModal();
             });
+        });
+    }
+
+    // Function to get date range based on selection
+    function getDateRange(rangeValue) {
+        const today = new Date();
+        const endDate = new Date(today);
+        let startDate = new Date(today);
+        
+        switch(rangeValue) {
+            case '7':
+                startDate.setDate(today.getDate() - 7);
+                break;
+            case '10':
+                // Last 10 work days
+                let workdays = 0;
+                startDate = new Date(today);
+                while (workdays < 10) {
+                    const day = startDate.getDay();
+                    if (day !== 0 && day !== 6) {
+                        workdays++;
+                    }
+                    if (workdays < 10) {
+                        startDate.setDate(startDate.getDate() - 1);
+                    }
+                }
+                break;
+            case '14':
+                startDate.setDate(today.getDate() - 14);
+                break;
+            case '30':
+                startDate.setDate(today.getDate() - 30);
+                break;
+            case 'custom':
+                return null; // Will be handled by custom date inputs
+            default:
+                startDate.setDate(today.getDate() - 10);
+        }
+        
+        return { startDate, endDate };
+    }
+
+    // Function to setup date sorting controls
+    function setupDateSortingControls() {
+        const dateRangeSelect = document.getElementById('dateRangeSelect');
+        const customDateControls = document.getElementById('customDateControls');
+        const customStartDate = document.getElementById('customStartDate');
+        const customEndDate = document.getElementById('customEndDate');
+        const applyCustomRange = document.getElementById('applyCustomRange');
+
+        // Set default dates for custom range
+        const today = new Date();
+        const tenDaysAgo = new Date();
+        tenDaysAgo.setDate(today.getDate() - 10);
+        
+        customEndDate.value = today.toISOString().slice(0, 10);
+        customStartDate.value = tenDaysAgo.toISOString().slice(0, 10);
+
+        // Handle date range selection change
+        dateRangeSelect.addEventListener('change', async function() {
+            const rangeValue = this.value;
+            
+            if (rangeValue === 'custom') {
+                customDateControls.style.display = 'flex';
+            } else {
+                customDateControls.style.display = 'none';
+                const dateRange = getDateRange(rangeValue);
+                if (dateRange) {
+                    await updateKpiSummaryTable(dateRange.startDate, dateRange.endDate);
+                }
+            }
+        });
+
+        // Handle custom date range apply
+        applyCustomRange.addEventListener('click', async function() {
+            const startDate = new Date(customStartDate.value);
+            const endDate = new Date(customEndDate.value);
+            
+            if (startDate > endDate) {
+                alert('Start date cannot be after end date');
+                return;
+            }
+            
+            await updateKpiSummaryTable(startDate, endDate);
+        });
+
+        // Handle Enter key on custom date inputs
+        customStartDate.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                applyCustomRange.click();
+            }
+        });
+        
+        customEndDate.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                applyCustomRange.click();
+            }
         });
     }
 
@@ -494,6 +642,9 @@ document.addEventListener('DOMContentLoaded', () => {
         await updateTable();
         calculateRecentStats();
         updateKpiSummaryTable();
+        
+        // Setup date sorting controls
+        setupDateSortingControls();
     }
 
     // Call initialize function
