@@ -94,7 +94,7 @@ class Navigation extends HTMLElement {
         // Define all possible pages
         const pages = [
             { id: 'goals', href: 'goals.html', icon: 'fas fa-bullseye', label: 'KPIs' },
-            { id: 'kpis', href: 'kpis.html', icon: 'fas fa-chart-bar', label: 'Call Metrics' },
+            { id: 'kpis', href: 'kpis.html', icon: 'fas fa-chart-bar', label: 'Sales Metrics' },
             { id: 'prospects', href: 'prospects.html', icon: 'fas fa-chart-line', label: 'Prospects' },
             { id: 'clients', href: 'clients.html', icon: 'fas fa-users', label: 'Clients' },
         ];
