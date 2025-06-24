@@ -53,14 +53,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const kpiRef = collection(db, 'kpi');
             const q = query(kpiRef, orderBy('date', 'desc'));
             const querySnapshot = await getDocs(q);
-            return querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                date: doc.data().date,
-                calls: Number(doc.data().calls),
-                meetings: Number(doc.data().meetings),
-                owner: doc.data().owner
-            }));
+            return querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    date: data.date,
+                    calls: Number(data.calls),
+                    meetings: Number(data.meetings),
+                    owner: data.owner,
+                    notes: data.notes || '' // Ensure notes field is included
+                };
+            });
         } catch (error) {
             console.error("Error loading KPI data:", error);
             return [];
@@ -506,17 +509,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Helper to get all note dates
     async function getAllNoteDates() {
         const kpiData = await loadKPIData();
-        return kpiData.filter(entry => entry.notes && entry.notes.trim() !== '').map(entry => entry.date);
+        const noteDates = kpiData.filter(entry => entry.notes && entry.notes.trim() !== '').map(entry => entry.date);
+        return noteDates;
     }
 
     // Helper to get note text for a date
     async function getNoteTextForDate(date) {
         const kpiData = await loadKPIData();
+        
         // Find all entries for this date with notes
         const entries = kpiData.filter(entry => entry.date === date && entry.notes && entry.notes.trim() !== '');
+        
         if (entries.length === 0) return '';
+        
         // Format as 'Owner: Note' per entry
-        return entries.map(entry => `${entry.owner}: ${entry.notes}`).join('\n');
+        const noteText = entries.map(entry => `${entry.owner}: ${entry.notes}`).join('\n');
+        return noteText;
     }
 
     // Chart.js plugin to draw a red note icon above data points with notes
@@ -568,7 +576,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 tooltip.style.display = 'block';
                                 tooltip.style.left = (e.clientX + 10) + 'px';
                                 tooltip.style.top = (e.clientY + 10) + 'px';
-                                tooltip.textContent = noteText;
+                                // Use innerHTML to properly handle line breaks
+                                tooltip.innerHTML = noteText.replace(/\n/g, '<br>');
                                 return;
                             }
                         }
@@ -577,6 +586,94 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 
                 chart.canvas.addEventListener('mousemove', chart._noteIconMouseMoveHandler);
+            }
+
+            // Add click handler for note icons if not already added
+            if (!chart._noteIconClickHandler) {
+                chart._noteIconClickHandler = async function(e) {
+                    const rect = chart.canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    // Check if click is on any note icon
+                    for (let i = 0; i < allDates.length; i++) {
+                        const date = allDates[i];
+                        if (!noteDates.includes(date)) continue;
+                        
+                        const iconX = scales.x.getPixelForValue(date);
+                        const iconY = chartArea.top + 18;
+                        
+                        // Check if click is within icon bounds (20x20 pixels)
+                        if (Math.abs(x - iconX) <= 10 && Math.abs(y - iconY) <= 10) {
+                            // Open note modal for this date
+                            const kpiData = await loadKPIData();
+                            const entriesForDate = kpiData.filter(entry => entry.date === date);
+                            
+                            const noteModal = document.getElementById('kpiNoteModal');
+                            const noteDateSpan = document.getElementById('kpiNoteDate');
+                            const noteText = document.getElementById('kpiNoteText');
+                            const saveBtn = document.getElementById('saveKpiNoteBtn');
+                            const deleteBtn = document.getElementById('deleteKpiNoteBtn');
+                            
+                            noteDateSpan.textContent = date;
+                            
+                            // Combine all notes for this date
+                            const allNotes = entriesForDate
+                                .filter(entry => entry.notes && entry.notes.trim() !== '')
+                                .map(entry => `${entry.owner}: ${entry.notes}`)
+                                .join('\n');
+                            
+                            noteText.value = allNotes;
+                            noteModal.style.display = 'block';
+                            
+                            // Show/hide delete button based on whether there are any notes
+                            deleteBtn.style.display = allNotes.trim() ? 'block' : 'none';
+                            
+                            // Save handler
+                            saveBtn.onclick = async function() {
+                                noteModal.style.display = 'none';
+                                // Hide the tooltip when modal is closed
+                                const tooltip = document.getElementById('noteTooltip');
+                                if (tooltip) {
+                                    tooltip.style.display = 'none';
+                                }
+                                alert('Note editing for multiple entries is not yet implemented. Please edit notes from the main KPI table.');
+                            };
+                            
+                            // Delete handler
+                            deleteBtn.onclick = async function() {
+                                if (confirm('Are you sure you want to delete all notes for this date?')) {
+                                    // Delete notes from all entries for this date
+                                    for (const entry of entriesForDate) {
+                                        if (entry.notes && entry.notes.trim() !== '') {
+                                            const docRef = doc(db, 'kpi', entry.id);
+                                            await updateDoc(docRef, { notes: '' });
+                                        }
+                                    }
+                                    noteModal.style.display = 'none';
+                                    // Hide the tooltip when modal is closed
+                                    const tooltip = document.getElementById('noteTooltip');
+                                    if (tooltip) {
+                                        tooltip.style.display = 'none';
+                                    }
+                                    
+                                    // Update chart to reflect deleted notes
+                                    const startDate = new Date(document.getElementById('kpiGraphStartDate').value);
+                                    const endDate = new Date(document.getElementById('kpiGraphEndDate').value);
+                                    const selectedPeople = Array.from(document.querySelectorAll('.person-filter'))
+                                        .filter(cb => cb.checked)
+                                        .map(cb => cb.value);
+                                    const dateOrderToggle = document.getElementById('dateOrderToggle');
+                                    await renderKpiChart(startDate, endDate, selectedPeople, dateOrderToggle.checked);
+                                }
+                            };
+                            
+                            return; // Exit after handling the click
+                        }
+                    }
+                };
+                
+                chart.canvas.addEventListener('click', chart._noteIconClickHandler);
             }
 
             // Draw note icons
@@ -661,6 +758,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Remove old event listener if it exists
             if (kpiChartInstance._noteIconMouseMoveHandler) {
                 kpiChartInstance.canvas.removeEventListener('mousemove', kpiChartInstance._noteIconMouseMoveHandler);
+            }
+            if (kpiChartInstance._noteIconClickHandler) {
+                kpiChartInstance.canvas.removeEventListener('click', kpiChartInstance._noteIconClickHandler);
             }
             kpiChartInstance.destroy();
         }
@@ -819,7 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Get the KPI data for this date
             const kpiData = await loadKPIData();
-            const entry = kpiData.find(entry => entry.date === date);
+            const entriesForDate = kpiData.filter(entry => entry.date === date);
             
             // Open note modal for this date
             const noteModal = document.getElementById('kpiNoteModal');
@@ -829,46 +929,48 @@ document.addEventListener('DOMContentLoaded', () => {
             const deleteBtn = document.getElementById('deleteKpiNoteBtn');
             
             noteDateSpan.textContent = date;
-            noteText.value = entry?.notes || '';
+            
+            // Combine all notes for this date
+            const allNotes = entriesForDate
+                .filter(entry => entry.notes && entry.notes.trim() !== '')
+                .map(entry => `${entry.owner}: ${entry.notes}`)
+                .join('\n');
+            
+            noteText.value = allNotes;
             noteModal.style.display = 'block';
             
-            // Show/hide delete button based on whether there's a note
-            deleteBtn.style.display = entry?.notes ? 'block' : 'none';
+            // Show/hide delete button based on whether there are any notes
+            deleteBtn.style.display = allNotes.trim() ? 'block' : 'none';
             
             // Save handler
             saveBtn.onclick = async function() {
-                // Find the entry in the KPI data
-                const entryToUpdate = kpiData.find(e => e.date === date);
-                if (entryToUpdate) {
-                    // Update the entry with the new note
-                    const docRef = doc(db, 'kpi', entryToUpdate.id);
-                    await updateDoc(docRef, { notes: noteText.value });
-                }
                 noteModal.style.display = 'none';
-                
-                // Update chart to reflect new note
-                const startDate = new Date(document.getElementById('kpiGraphStartDate').value);
-                const endDate = new Date(document.getElementById('kpiGraphEndDate').value);
-                const selectedPeople = Array.from(document.querySelectorAll('.person-filter'))
-                    .filter(cb => cb.checked)
-                    .map(cb => cb.value);
-                const dateOrderToggle = document.getElementById('dateOrderToggle');
-                await renderKpiChart(startDate, endDate, selectedPeople, dateOrderToggle.checked);
+                // Hide the tooltip when modal is closed
+                const tooltip = document.getElementById('noteTooltip');
+                if (tooltip) {
+                    tooltip.style.display = 'none';
+                }
+                alert('Note editing for multiple entries is not yet implemented. Please edit notes from the main KPI table.');
             };
             
             // Delete handler
             deleteBtn.onclick = async function() {
-                if (confirm('Are you sure you want to delete this note?')) {
-                    // Find the entry in the KPI data
-                    const entryToUpdate = kpiData.find(e => e.date === date);
-                    if (entryToUpdate) {
-                        // Update the entry to remove the note
-                        const docRef = doc(db, 'kpi', entryToUpdate.id);
-                        await updateDoc(docRef, { notes: '' });
+                if (confirm('Are you sure you want to delete all notes for this date?')) {
+                    // Delete notes from all entries for this date
+                    for (const entry of entriesForDate) {
+                        if (entry.notes && entry.notes.trim() !== '') {
+                            const docRef = doc(db, 'kpi', entry.id);
+                            await updateDoc(docRef, { notes: '' });
+                        }
                     }
                     noteModal.style.display = 'none';
+                    // Hide the tooltip when modal is closed
+                    const tooltip = document.getElementById('noteTooltip');
+                    if (tooltip) {
+                        tooltip.style.display = 'none';
+                    }
                     
-                    // Update chart to reflect deleted note
+                    // Update chart to reflect deleted notes
                     const startDate = new Date(document.getElementById('kpiGraphStartDate').value);
                     const endDate = new Date(document.getElementById('kpiGraphEndDate').value);
                     const selectedPeople = Array.from(document.querySelectorAll('.person-filter'))
@@ -886,6 +988,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeKpiNoteModalBtn) {
         closeKpiNoteModalBtn.onclick = function() {
             document.getElementById('kpiNoteModal').style.display = 'none';
+            // Hide the tooltip when modal is closed
+            const tooltip = document.getElementById('noteTooltip');
+            if (tooltip) {
+                tooltip.style.display = 'none';
+            }
         };
     }
 
@@ -898,6 +1005,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (event.target === kpiNoteModal) {
             kpiNoteModal.style.display = 'none';
+            // Hide the tooltip when modal is closed
+            const tooltip = document.getElementById('noteTooltip');
+            if (tooltip) {
+                tooltip.style.display = 'none';
+            }
         }
     };
 }); 
