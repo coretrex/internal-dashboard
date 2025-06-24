@@ -462,21 +462,16 @@ document.addEventListener('DOMContentLoaded', () => {
             // Filter entries by date range if provided
             if (startDate && endDate) {
                 entries = entries.filter(entry => {
-                    const entryDate = new Date(entry.date);
+                    const entryDate = new Date(entry.date + 'T00:00:00');
                     return entryDate >= startDate && entryDate <= endDate;
                 });
             } else {
-                // Default: Get last 10 work days (weekdays only)
-                const workdayEntries = [];
-                for (let i = 0, count = 0; i < entries.length && count < 10; i++) {
-                    const date = new Date(entries[i].date + 'T00:00:00');
-                    const day = date.getDay();
-                    if (day !== 0 && day !== 6) { // 0 = Sunday, 6 = Saturday
-                        workdayEntries.push(entries[i]);
-                        count++;
-                    }
-                }
-                entries = workdayEntries;
+                // Default: Get this work week (Monday to Friday)
+                const thisWeekRange = getThisWeekRange();
+                entries = entries.filter(entry => {
+                    const entryDate = new Date(entry.date + 'T00:00:00'); // Ensure consistent date parsing
+                    return entryDate >= thisWeekRange.startDate && entryDate <= thisWeekRange.endDate;
+                });
             }
             
             // Calculate totals
@@ -501,6 +496,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 conversionRate = totalCalls === 0 ? '0%' : ((totalMeetings / totalCalls) * 100).toFixed(1) + '%';
             }
             
+            // Determine cold calls display
+            let coldCallsDisplay;
+            if (person.name === 'Meta Ads' || person.name === 'Cold Email') {
+                coldCallsDisplay = 'N/A';
+            } else {
+                coldCallsDisplay = totalCalls;
+            }
+            
             // Add clickable class, data-person attribute, and icon
             return `
                 <tr>
@@ -508,6 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class='name-text'>${person.name}</span>
                         <i class='fas fa-chart-line expand-icon'></i>
                     </td>
+                    <td>${coldCallsDisplay}</td>
                     <td>${totalMeetings}</td>
                     <td>${conversionRate}</td>
                 </tr>
@@ -523,6 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td style="font-weight: bold; border-top: 2px solid #fff;">
                     <span style="color: #fff;">TOTAL</span>
                 </td>
+                <td style="font-weight: bold; border-top: 2px solid #fff;">${totalCallsAll}</td>
                 <td style="font-weight: bold; border-top: 2px solid #fff;">${totalMeetingsAll}</td>
                 <td style="font-weight: bold; border-top: 2px solid #fff;">${overallConversionRate}</td>
             </tr>
@@ -539,6 +544,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Function to get this work week's date range (Monday to Friday)
+    function getThisWeekRange() {
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        
+        // Calculate Monday of this week
+        const monday = new Date(today);
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days; otherwise go back (dayOfWeek - 1) days
+        monday.setDate(today.getDate() - daysToMonday);
+        monday.setHours(0, 0, 0, 0);
+        
+        // Calculate Friday of this week
+        const friday = new Date(monday);
+        friday.setDate(monday.getDate() + 4); // Monday + 4 days = Friday
+        friday.setHours(23, 59, 59, 999);
+        
+        return { startDate: monday, endDate: friday };
+    }
+
     // Function to get date range based on selection
     function getDateRange(rangeValue) {
         const today = new Date();
@@ -546,25 +570,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let startDate = new Date(today);
         
         switch(rangeValue) {
+            case 'thisWeek':
+                return getThisWeekRange();
             case '7':
                 startDate.setDate(today.getDate() - 7);
                 break;
             case '10':
-                // Last 10 work days
-                let workdays = 0;
-                startDate = new Date(today);
-                while (workdays < 10) {
-                    const day = startDate.getDay();
-                    if (day !== 0 && day !== 6) {
-                        workdays++;
-                    }
-                    if (workdays < 10) {
-                        startDate.setDate(startDate.getDate() - 1);
-                    }
-                }
-                break;
-            case '14':
-                startDate.setDate(today.getDate() - 14);
+                startDate.setDate(today.getDate() - 10);
                 break;
             case '30':
                 startDate.setDate(today.getDate() - 30);
@@ -572,7 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'custom':
                 return null; // Will be handled by custom date inputs
             default:
-                startDate.setDate(today.getDate() - 10);
+                return getThisWeekRange();
         }
         
         return { startDate, endDate };
