@@ -19,7 +19,21 @@
                 <div class="stat kpi-block" data-kpi="activeClients">
                     <div class="stat-number" id="activeClientsValue"></div>
                     <div class="stat-label kpi-label">Active Clients <span class="kpi-tooltip-wrapper"><i class="fas fa-info-circle" data-tooltip="Active clients whose exit window exceeds 30 days."></i></span></div>
-                    <div class="kpi-goal" id="activeClientsGoal"></div>
+                    
+                    <!-- Client Goal Slider -->
+                    <div class="client-goal-slider-container">
+                        <div class="client-goal-slider" id="clientGoalSlider">
+                            <div class="slider-track">
+                                <div class="slider-fill" id="clientSliderFill"></div>
+                                <div class="slider-thumb" id="clientSliderThumb"></div>
+                            </div>
+                            <div class="slider-labels">
+                                <span class="current-goal" id="currentClientGoalLabel">Goal: 30</span>
+                                <span class="current-month" id="currentClientMonthLabel">June 2024</span>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <button class="edit-kpi-btn" data-kpi="activeClients" title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="edit-goal-btn" data-kpi="activeClients" title="Edit Goal"><i class="fas fa-bullseye"></i></button>
                     <button class="edit-comment-btn" data-kpi="activeClients" title="Add Comment"><i class="fas fa-comment"></i></button>
@@ -27,7 +41,21 @@
                 <div class="stat kpi-block" data-kpi="revenue">
                     <div class="stat-number" id="revenueValue"></div>
                     <div class="stat-label kpi-label">Monthly Revenue <span class="kpi-tooltip-wrapper"><i class="fas fa-info-circle" data-tooltip="Forecasted revenue based on client retainers + expected commission."></i></span></div>
-                    <div class="kpi-goal" id="revenueGoal"></div>
+                    
+                    <!-- Revenue Goal Slider -->
+                    <div class="revenue-goal-slider-container">
+                        <div class="revenue-goal-slider" id="revenueGoalSlider">
+                            <div class="slider-track">
+                                <div class="slider-fill" id="sliderFill"></div>
+                                <div class="slider-thumb" id="sliderThumb"></div>
+                            </div>
+                            <div class="slider-labels">
+                                <span class="current-goal" id="currentGoalLabel">Goal: $100K</span>
+                                <span class="current-month" id="currentMonthLabel">June 2024</span>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <button class="edit-kpi-btn" data-kpi="revenue" title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="edit-goal-btn" data-kpi="revenue" title="Edit Goal"><i class="fas fa-bullseye"></i></button>
                     <button class="edit-comment-btn" data-kpi="revenue" title="Add Comment"><i class="fas fa-comment"></i></button>
@@ -35,7 +63,21 @@
                 <div class="stat kpi-block" data-kpi="clientsClosed">
                     <div class="stat-number" id="clientsClosedValue"></div>
                     <div class="stat-label kpi-label">New Clients <span class="kpi-tooltip-wrapper"><i class="fas fa-info-circle" data-tooltip="New clients acquired this month."></i></span></div>
-                    <div class="kpi-goal" id="clientsClosedGoal"></div>
+                    
+                    <!-- New Clients Goal Slider -->
+                    <div class="new-clients-goal-slider-container">
+                        <div class="new-clients-goal-slider" id="newClientsGoalSlider">
+                            <div class="slider-track">
+                                <div class="slider-fill" id="newClientsSliderFill"></div>
+                                <div class="slider-thumb" id="newClientsSliderThumb"></div>
+                            </div>
+                            <div class="slider-labels">
+                                <span class="current-goal" id="currentNewClientsGoalLabel">Goal: 5</span>
+                                <span class="current-month" id="currentNewClientsMonthLabel">June 2024</span>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <button class="edit-kpi-btn" data-kpi="clientsClosed" title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="edit-goal-btn" data-kpi="clientsClosed" title="Edit Goal"><i class="fas fa-bullseye"></i></button>
                     <button class="edit-comment-btn" data-kpi="clientsClosed" title="Add Comment"><i class="fas fa-comment"></i></button>
@@ -252,6 +294,63 @@
                 <button id="saveCommentBtn" class="save-comment-btn" style="display: none;">Save Comment</button>
                 <button id="cancelCommentBtn" class="cancel-comment-btn" style="display: none;">Cancel</button>
                 <button id="closeCommentBtn" class="close-comment-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Goals Modal -->
+    <div id="revenueGoalsModal" class="modal">
+        <div class="modal-content revenue-goals-modal-content">
+            <div class="modal-header">
+                <h3>Monthly Revenue Goals 2025</h3>
+                <span class="close" id="closeRevenueGoalsModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="revenue-goals-grid" id="revenueGoalsGrid">
+                    <!-- Monthly goals will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveRevenueGoalsBtn" class="save-revenue-goals-btn">Save All Goals</button>
+                <button id="closeRevenueGoalsBtn" class="close-revenue-goals-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Goals Modal -->
+    <div id="clientGoalsModal" class="modal">
+        <div class="modal-content client-goals-modal-content">
+            <div class="modal-header">
+                <h3>Monthly Client Goals 2025</h3>
+                <span class="close" id="closeClientGoalsModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="client-goals-grid" id="clientGoalsGrid">
+                    <!-- Monthly goals will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveClientGoalsBtn" class="save-client-goals-btn">Save All Goals</button>
+                <button id="closeClientGoalsBtn" class="close-client-goals-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Clients Goals Modal -->
+    <div id="newClientsGoalsModal" class="modal">
+        <div class="modal-content new-clients-goals-modal-content">
+            <div class="modal-header">
+                <h3>Monthly New Clients Goals 2025</h3>
+                <span class="close" id="closeNewClientsGoalsModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="new-clients-goals-grid" id="newClientsGoalsGrid">
+                    <!-- Monthly goals will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveNewClientsGoalsBtn" class="save-new-clients-goals-btn">Save All Goals</button>
+                <button id="closeNewClientsGoalsBtn" class="close-new-clients-goals-btn">Close</button>
             </div>
         </div>
     </div>
