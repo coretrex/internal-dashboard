@@ -655,6 +655,733 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- REVENUE GOAL SLIDER FUNCTIONALITY ---
+    console.log('=== REVENUE GOAL SLIDER INITIALIZATION ===');
+    
+    // Monthly revenue goals data structure
+    let monthlyRevenueGoals = {};
+    let monthlyRevenueActuals = {};
+    let currentMonth = new Date().getMonth(); // 0-11
+    let currentYear = new Date().getFullYear();
+    
+    // Default monthly goals for 2024
+    const defaultMonthlyGoals = {
+        0: 85000,   // January
+        1: 88000,   // February
+        2: 92000,   // March
+        3: 95000,   // April
+        4: 98000,   // May
+        5: 100000,  // June
+        6: 105000,  // July
+        7: 110000,  // August
+        8: 115000,  // September
+        9: 118000,  // October
+        10: 120000, // November
+        11: 125000  // December
+    };
+    
+    // Default monthly actuals for 2024
+    const defaultMonthlyActuals = {
+        0: 82000,   // January
+        1: 85000,   // February
+        2: 89000,   // March
+        3: 92000,   // April
+        4: 95000,   // May
+        5: 94000,   // June (current)
+        6: 0,       // July
+        7: 0,       // August
+        8: 0,       // September
+        9: 0,       // October
+        10: 0,      // November
+        11: 0       // December
+    };
+    
+    // Firebase functions for monthly revenue goals and actuals
+    async function saveMonthlyRevenueData() {
+        try {
+            console.log('Saving monthly revenue data to Firebase:', { goals: monthlyRevenueGoals, actuals: monthlyRevenueActuals });
+            await setDoc(doc(db, "monthlyRevenueData", "data"), { 
+                goals: monthlyRevenueGoals,
+                actuals: monthlyRevenueActuals,
+                lastUpdated: new Date().toISOString()
+            }, { merge: true });
+            console.log('Monthly revenue data saved successfully to Firebase');
+        } catch (error) {
+            console.error("Error saving monthly revenue data to Firebase:", error);
+        }
+    }
+    
+    async function loadMonthlyRevenueData() {
+        try {
+            console.log('Loading monthly revenue data from Firebase...');
+            const docRef = doc(db, "monthlyRevenueData", "data");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                console.log('Monthly revenue data found in Firebase, applying...');
+                monthlyRevenueGoals = data.goals || { ...defaultMonthlyGoals };
+                monthlyRevenueActuals = data.actuals || { ...defaultMonthlyActuals };
+            } else {
+                console.log('No monthly revenue data found in Firebase, using defaults...');
+                monthlyRevenueGoals = { ...defaultMonthlyGoals };
+                monthlyRevenueActuals = { ...defaultMonthlyActuals };
+                // Save default data to Firebase
+                await saveMonthlyRevenueData();
+            }
+        } catch (error) {
+            console.error("Error loading monthly revenue data from Firebase:", error);
+            monthlyRevenueGoals = { ...defaultMonthlyGoals };
+            monthlyRevenueActuals = { ...defaultMonthlyActuals };
+        }
+        updateRevenueGoalSlider();
+    }
+    
+    // Update revenue goal slider
+    function updateRevenueGoalSlider() {
+        const currentGoal = monthlyRevenueGoals[currentMonth] || defaultMonthlyGoals[currentMonth];
+        const currentActual = monthlyRevenueActuals[currentMonth] || defaultMonthlyActuals[currentMonth];
+        const progress = Math.min((currentActual / currentGoal) * 100, 100);
+        
+        // Update slider fill and thumb
+        const sliderFill = document.getElementById('sliderFill');
+        const sliderThumb = document.getElementById('sliderThumb');
+        const currentGoalLabel = document.getElementById('currentGoalLabel');
+        const currentMonthLabel = document.getElementById('currentMonthLabel');
+        
+        if (sliderFill) sliderFill.style.width = `${progress}%`;
+        if (sliderThumb) sliderThumb.style.left = `${progress}%`;
+        if (currentGoalLabel) currentGoalLabel.textContent = `Goal: ${formatMRR(currentGoal)}`;
+        if (currentMonthLabel) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            currentMonthLabel.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+        }
+        
+        // Update slider colors based on progress
+        if (sliderFill) {
+            if (progress >= 100) {
+                sliderFill.style.background = 'linear-gradient(90deg, #4CAF50, #8BC34A)';
+            } else if (progress >= 80) {
+                sliderFill.style.background = 'linear-gradient(90deg, #FF9800, #FFC107)';
+            } else {
+                sliderFill.style.background = 'linear-gradient(90deg, #F44336, #FF5722)';
+            }
+        }
+    }
+    
+    // Initialize revenue goal slider
+    function initializeRevenueGoalSlider() {
+        console.log('Initializing revenue goal slider...');
+        
+        // Load monthly goals
+        loadMonthlyRevenueData();
+        
+        // Add click event to slider to open modal
+        const revenueGoalSlider = document.getElementById('revenueGoalSlider');
+        if (revenueGoalSlider) {
+            revenueGoalSlider.addEventListener('click', () => {
+                openRevenueGoalsModal();
+            });
+        }
+        
+        // Set up modal functionality
+        setupRevenueGoalsModal();
+    }
+    
+    // Revenue Goals Modal functionality
+    function setupRevenueGoalsModal() {
+        const revenueGoalsModal = document.getElementById('revenueGoalsModal');
+        const closeRevenueGoalsModal = document.getElementById('closeRevenueGoalsModal');
+        const closeRevenueGoalsBtn = document.getElementById('closeRevenueGoalsBtn');
+        const saveRevenueGoalsBtn = document.getElementById('saveRevenueGoalsBtn');
+        
+        // Close modal functions
+        function closeRevenueGoalsModalFunc() {
+            revenueGoalsModal.style.display = 'none';
+        }
+        
+        // Close modal when clicking X
+        if (closeRevenueGoalsModal) {
+            closeRevenueGoalsModal.onclick = closeRevenueGoalsModalFunc;
+        }
+        
+        // Close modal when clicking close button
+        if (closeRevenueGoalsBtn) {
+            closeRevenueGoalsBtn.onclick = closeRevenueGoalsModalFunc;
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = (event) => {
+            if (event.target === revenueGoalsModal) {
+                closeRevenueGoalsModalFunc();
+            }
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+            if (event.target === commentModal) {
+                closeCommentModalFunc();
+            }
+        };
+        
+        // Save button functionality
+        if (saveRevenueGoalsBtn) {
+            saveRevenueGoalsBtn.addEventListener('click', async () => {
+                console.log('Saving all revenue goals and actuals...');
+                
+                // Collect all goal and actual values from inputs - SPECIFIC TO REVENUE MODAL
+                const goalInputs = document.querySelectorAll('#revenueGoalsGrid .goal-input');
+                const actualInputs = document.querySelectorAll('#revenueGoalsGrid .actual-input');
+                
+                goalInputs.forEach(input => {
+                    const monthIndex = parseInt(input.getAttribute('data-month'));
+                    let value = input.value.trim();
+                    
+                    // Parse the value properly, handling K suffix
+                    if (typeof value === 'string') {
+                        value = value.replace(/[$,\s]/g, '');
+                        if (value.toUpperCase().endsWith('K')) {
+                            value = value.slice(0, -1);
+                            value = Math.round(parseFloat(value) * 1000);
+                        } else {
+                            value = parseFloat(value) || 0;
+                        }
+                    } else {
+                        value = parseFloat(value) || 0;
+                    }
+                    
+                    monthlyRevenueGoals[monthIndex] = value;
+                });
+                
+                actualInputs.forEach(input => {
+                    const monthIndex = parseInt(input.getAttribute('data-month'));
+                    let value = input.value.trim();
+                    
+                    // Parse the value properly, handling K suffix
+                    if (typeof value === 'string') {
+                        value = value.replace(/[$,\s]/g, '');
+                        if (value.toUpperCase().endsWith('K')) {
+                            value = value.slice(0, -1);
+                            value = Math.round(parseFloat(value) * 1000);
+                        } else {
+                            value = parseFloat(value) || 0;
+                        }
+                    } else {
+                        value = parseFloat(value) || 0;
+                    }
+                    
+                    monthlyRevenueActuals[monthIndex] = value;
+                });
+                
+                // Save to Firebase
+                await saveMonthlyRevenueData();
+                
+                // Update slider
+                updateRevenueGoalSlider();
+                
+                // Visual feedback
+                const originalText = saveRevenueGoalsBtn.textContent;
+                saveRevenueGoalsBtn.textContent = 'Saved!';
+                saveRevenueGoalsBtn.style.background = '#27ae60';
+                setTimeout(() => {
+                    saveRevenueGoalsBtn.textContent = originalText;
+                    saveRevenueGoalsBtn.style.background = '#4285f4';
+                }, 2000);
+            });
+        }
+    }
+    
+    // Open revenue goals modal
+    function openRevenueGoalsModal() {
+        console.log('Opening revenue goals modal...');
+        console.log('Current revenue goals data:', monthlyRevenueGoals);
+        console.log('Current revenue actuals data:', monthlyRevenueActuals);
+        
+        const revenueGoalsModal = document.getElementById('revenueGoalsModal');
+        const revenueGoalsGrid = document.getElementById('revenueGoalsGrid');
+        
+        if (!revenueGoalsModal || !revenueGoalsGrid) return;
+        
+        // Populate the grid with monthly goals
+        revenueGoalsGrid.innerHTML = '';
+        
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+        
+        for (let i = 0; i < 12; i++) {
+            const goal = monthlyRevenueGoals[i] || defaultMonthlyGoals[i];
+            const actual = monthlyRevenueActuals[i] || defaultMonthlyActuals[i];
+            const isCurrentMonth = i === currentMonth;
+            const isPastMonth = i < currentMonth;
+            const isFutureMonth = i > currentMonth;
+            
+            // Determine card class
+            let cardClass = 'monthly-goal-card';
+            if (isCurrentMonth) cardClass += ' current-month';
+            else if (isPastMonth) cardClass += ' completed';
+            else if (isFutureMonth) cardClass += ' future';
+            
+            // Determine status
+            let status = '';
+            if (isCurrentMonth) {
+                const progress = Math.min((actual / goal) * 100, 100);
+                if (progress >= 100) {
+                    status = '✅ Goal Met!';
+                } else if (progress >= 80) {
+                    status = '🟡 On Track';
+                } else {
+                    status = '🔴 Behind';
+                }
+            } else if (isPastMonth) {
+                status = '✅ Completed';
+            } else {
+                status = '⏳ Upcoming';
+            }
+            
+            const card = document.createElement('div');
+            card.className = cardClass;
+            card.innerHTML = `
+                <div class="month-header">${monthNames[i]}</div>
+                <div class="input-row">
+                    <div class="goal-label">Goal</div>
+                    <input type="text" class="goal-input" value="${formatMRR(goal)}" data-month="${i}" data-type="goal">
+                </div>
+                <div class="input-row">
+                    <div class="actual-label">Actual</div>
+                    <input type="text" class="actual-input" value="${formatMRR(actual)}" data-month="${i}" data-type="actual">
+                </div>
+                <div class="goal-status">${status}</div>
+            `;
+            
+            revenueGoalsGrid.appendChild(card);
+        }
+        
+        // Show modal
+        revenueGoalsModal.style.display = 'block';
+    }
+    
+    // Update revenue goals summary
+    function updateRevenueGoalsSummary() {
+        const currentMonthSummary = document.getElementById('currentMonthSummary');
+        const currentGoalSummary = document.getElementById('currentGoalSummary');
+        const currentActualSummary = document.getElementById('currentActualSummary');
+        const ytdGoalSummary = document.getElementById('ytdGoalSummary');
+        const ytdActualSummary = document.getElementById('ytdActualSummary');
+        
+        if (currentMonthSummary) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            currentMonthSummary.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+        }
+        
+        if (currentGoalSummary) {
+            const currentGoal = monthlyRevenueGoals[currentMonth] || defaultMonthlyGoals[currentMonth];
+            currentGoalSummary.textContent = formatMRR(currentGoal);
+        }
+        
+        if (currentActualSummary) {
+            const currentActual = monthlyRevenueActuals[currentMonth] || defaultMonthlyActuals[currentMonth];
+            currentActualSummary.textContent = formatMRR(currentActual);
+        }
+        
+        if (ytdGoalSummary) {
+            let ytdGoalTotal = 0;
+            for (let i = 0; i <= currentMonth; i++) {
+                ytdGoalTotal += monthlyRevenueGoals[i] || defaultMonthlyGoals[i];
+            }
+            ytdGoalSummary.textContent = formatMRR(ytdGoalTotal);
+        }
+        
+        if (ytdActualSummary) {
+            let ytdActualTotal = 0;
+            for (let i = 0; i <= currentMonth; i++) {
+                ytdActualTotal += monthlyRevenueActuals[i] || defaultMonthlyActuals[i];
+            }
+            ytdActualSummary.textContent = formatMRR(ytdActualTotal);
+        }
+    }
+    
+    // Listen for revenue changes to update slider
+    if (revenueValueEl) {
+        const revenueObserver = new MutationObserver(() => {
+            updateRevenueGoalSlider();
+        });
+        revenueObserver.observe(revenueValueEl, { childList: true, characterData: true, subtree: true });
+    }
+
+    // --- CLIENT GOAL SLIDER FUNCTIONALITY ---
+    console.log('=== CLIENT GOAL SLIDER INITIALIZATION ===');
+    
+    // Monthly client goals data structure
+    let monthlyClientGoals = {};
+    let monthlyClientActuals = {};
+    
+    // Default monthly client goals for 2025
+    const defaultMonthlyClientGoals = {
+        0: 25,   // January
+        1: 26,   // February
+        2: 27,   // March
+        3: 28,   // April
+        4: 29,   // May
+        5: 30,   // June
+        6: 31,   // July
+        7: 32,   // August
+        8: 33,   // September
+        9: 34,   // October
+        10: 35,  // November
+        11: 36   // December
+    };
+    
+    // Default monthly client actuals for 2025
+    const defaultMonthlyClientActuals = {
+        0: 23,   // January
+        1: 24,   // February
+        2: 25,   // March
+        3: 26,   // April
+        4: 27,   // May
+        5: 25,   // June (current)
+        6: 0,    // July
+        7: 0,    // August
+        8: 0,    // September
+        9: 0,    // October
+        10: 0,   // November
+        11: 0    // December
+    };
+
+    // --- NEW CLIENTS GOAL SLIDER FUNCTIONALITY ---
+    console.log('=== NEW CLIENTS GOAL SLIDER INITIALIZATION ===');
+    
+    // Monthly new clients goals data structure
+    let monthlyNewClientsGoals = {};
+    let monthlyNewClientsActuals = {};
+    
+    // Default monthly new clients goals for 2025
+    const defaultMonthlyNewClientsGoals = {
+        0: 5,    // January
+        1: 6,    // February
+        2: 7,    // March
+        3: 8,    // April
+        4: 9,    // May
+        5: 10,   // June
+        6: 11,   // July
+        7: 12,   // August
+        8: 13,   // September
+        9: 14,   // October
+        10: 15,  // November
+        11: 16   // December
+    };
+    
+    // Default monthly new clients actuals for 2025
+    const defaultMonthlyNewClientsActuals = {
+        0: 4,    // January
+        1: 5,    // February
+        2: 6,    // March
+        3: 7,    // April
+        4: 8,    // May
+        5: 6,    // June (current)
+        6: 0,    // July
+        7: 0,    // August
+        8: 0,    // September
+        9: 0,    // October
+        10: 0,   // November
+        11: 0    // December
+    };
+    
+    // Firebase functions for monthly client goals and actuals
+    async function saveMonthlyClientData() {
+        try {
+            console.log('Saving monthly client data to Firebase:', { goals: monthlyClientGoals, actuals: monthlyClientActuals });
+            await setDoc(doc(db, "monthlyClientData", "data"), { 
+                goals: monthlyClientGoals,
+                actuals: monthlyClientActuals,
+                lastUpdated: new Date().toISOString()
+            }, { merge: true });
+            console.log('Monthly client data saved successfully to Firebase');
+        } catch (error) {
+            console.error("Error saving monthly client data to Firebase:", error);
+        }
+    }
+    
+    async function loadMonthlyClientData() {
+        try {
+            console.log('Loading monthly client data from Firebase...');
+            const docRef = doc(db, "monthlyClientData", "data");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                console.log('Monthly client data found in Firebase, applying...');
+                monthlyClientGoals = data.goals || { ...defaultMonthlyClientGoals };
+                monthlyClientActuals = data.actuals || { ...defaultMonthlyClientActuals };
+            } else {
+                console.log('No monthly client data found in Firebase, using defaults...');
+                monthlyClientGoals = { ...defaultMonthlyClientGoals };
+                monthlyClientActuals = { ...defaultMonthlyClientActuals };
+                // Save default data to Firebase
+                await saveMonthlyClientData();
+            }
+        } catch (error) {
+            console.error("Error loading monthly client data from Firebase:", error);
+            monthlyClientGoals = { ...defaultMonthlyClientGoals };
+            monthlyClientActuals = { ...defaultMonthlyClientActuals };
+        }
+        updateClientGoalSlider();
+    }
+    
+    // Update client goal slider
+    function updateClientGoalSlider() {
+        const currentGoal = monthlyClientGoals[currentMonth] || defaultMonthlyClientGoals[currentMonth];
+        const currentActual = monthlyClientActuals[currentMonth] || defaultMonthlyClientActuals[currentMonth];
+        const progress = Math.min((currentActual / currentGoal) * 100, 100);
+        
+        // Update slider fill and thumb
+        const sliderFill = document.getElementById('clientSliderFill');
+        const sliderThumb = document.getElementById('clientSliderThumb');
+        const currentGoalLabel = document.getElementById('currentClientGoalLabel');
+        const currentMonthLabel = document.getElementById('currentClientMonthLabel');
+        
+        if (sliderFill) sliderFill.style.width = `${progress}%`;
+        if (sliderThumb) sliderThumb.style.left = `${progress}%`;
+        if (currentGoalLabel) currentGoalLabel.textContent = `Goal: ${currentGoal}`;
+        if (currentMonthLabel) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            currentMonthLabel.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+        }
+        
+        // Update slider colors based on progress
+        if (sliderFill) {
+            if (progress >= 100) {
+                sliderFill.style.background = 'linear-gradient(90deg, #4CAF50, #8BC34A)';
+            } else if (progress >= 80) {
+                sliderFill.style.background = 'linear-gradient(90deg, #FF9800, #FFC107)';
+            } else {
+                sliderFill.style.background = 'linear-gradient(90deg, #F44336, #FF5722)';
+            }
+        }
+    }
+    
+    // Initialize client goal slider
+    function initializeClientGoalSlider() {
+        console.log('Initializing client goal slider...');
+        
+        // Load monthly goals
+        loadMonthlyClientData();
+        
+        // Add click event to slider to open modal
+        const clientGoalSlider = document.getElementById('clientGoalSlider');
+        if (clientGoalSlider) {
+            clientGoalSlider.addEventListener('click', () => {
+                openClientGoalsModal();
+            });
+        }
+        
+        // Set up modal functionality
+        setupClientGoalsModal();
+    }
+    
+    // Client Goals Modal functionality
+    function setupClientGoalsModal() {
+        const clientGoalsModal = document.getElementById('clientGoalsModal');
+        const closeClientGoalsModal = document.getElementById('closeClientGoalsModal');
+        const closeClientGoalsBtn = document.getElementById('closeClientGoalsBtn');
+        const saveClientGoalsBtn = document.getElementById('saveClientGoalsBtn');
+        
+        // Close modal functions
+        function closeClientGoalsModalFunc() {
+            clientGoalsModal.style.display = 'none';
+        }
+        
+        // Close modal when clicking X
+        if (closeClientGoalsModal) {
+            closeClientGoalsModal.onclick = closeClientGoalsModalFunc;
+        }
+        
+        // Close modal when clicking close button
+        if (closeClientGoalsBtn) {
+            closeClientGoalsBtn.onclick = closeClientGoalsModalFunc;
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = (event) => {
+            if (event.target === clientGoalsModal) {
+                closeClientGoalsModalFunc();
+            }
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+            if (event.target === commentModal) {
+                closeCommentModalFunc();
+            }
+            if (event.target === revenueGoalsModal) {
+                closeRevenueGoalsModalFunc();
+            }
+        };
+        
+        // Save button functionality
+        if (saveClientGoalsBtn) {
+            saveClientGoalsBtn.addEventListener('click', async () => {
+                console.log('Saving all client goals and actuals...');
+                
+                // Collect all goal and actual values from inputs
+                const goalInputs = document.querySelectorAll('#clientGoalsGrid .goal-input');
+                const actualInputs = document.querySelectorAll('#clientGoalsGrid .actual-input');
+                
+                goalInputs.forEach(input => {
+                    const monthIndex = parseInt(input.getAttribute('data-month'));
+                    let value = input.value.trim();
+                    
+                    // Parse the value properly
+                    value = parseInt(value.replace(/[,\s]/g, '')) || 0;
+                    
+                    monthlyClientGoals[monthIndex] = value;
+                });
+                
+                actualInputs.forEach(input => {
+                    const monthIndex = parseInt(input.getAttribute('data-month'));
+                    let value = input.value.trim();
+                    
+                    // Parse the value properly
+                    value = parseInt(value.replace(/[,\s]/g, '')) || 0;
+                    
+                    monthlyClientActuals[monthIndex] = value;
+                });
+                
+                // Save to Firebase
+                await saveMonthlyClientData();
+                
+                // Update slider
+                updateClientGoalSlider();
+                
+                // Visual feedback
+                const originalText = saveClientGoalsBtn.textContent;
+                saveClientGoalsBtn.textContent = 'Saved!';
+                saveClientGoalsBtn.style.background = '#27ae60';
+                setTimeout(() => {
+                    saveClientGoalsBtn.textContent = originalText;
+                    saveClientGoalsBtn.style.background = '#4285f4';
+                }, 2000);
+            });
+        }
+    }
+    
+    // Open client goals modal
+    function openClientGoalsModal() {
+        console.log('Opening client goals modal...');
+        console.log('Current client goals data:', monthlyClientGoals);
+        console.log('Current client actuals data:', monthlyClientActuals);
+        
+        const clientGoalsModal = document.getElementById('clientGoalsModal');
+        const clientGoalsGrid = document.getElementById('clientGoalsGrid');
+        
+        if (!clientGoalsModal || !clientGoalsGrid) return;
+        
+        // Populate the grid with monthly goals
+        clientGoalsGrid.innerHTML = '';
+        
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+        
+        for (let i = 0; i < 12; i++) {
+            const goal = monthlyClientGoals[i] || defaultMonthlyClientGoals[i];
+            const actual = monthlyClientActuals[i] || defaultMonthlyClientActuals[i];
+            const isCurrentMonth = i === currentMonth;
+            const isPastMonth = i < currentMonth;
+            const isFutureMonth = i > currentMonth;
+            
+            // Determine card class
+            let cardClass = 'monthly-goal-card';
+            if (isCurrentMonth) cardClass += ' current-month';
+            else if (isPastMonth) cardClass += ' completed';
+            else if (isFutureMonth) cardClass += ' future';
+            
+            // Determine status
+            let status = '';
+            if (isCurrentMonth) {
+                const progress = Math.min((actual / goal) * 100, 100);
+                if (progress >= 100) {
+                    status = '✅ Goal Met!';
+                } else if (progress >= 80) {
+                    status = '🟡 On Track';
+                } else {
+                    status = '🔴 Behind';
+                }
+            } else if (isPastMonth) {
+                status = '✅ Completed';
+            } else {
+                status = '⏳ Upcoming';
+            }
+            
+            const card = document.createElement('div');
+            card.className = cardClass;
+            card.innerHTML = `
+                <div class="month-header">${monthNames[i]}</div>
+                <div class="input-row">
+                    <div class="goal-label">Goal</div>
+                    <input type="text" class="goal-input" value="${goal}" data-month="${i}" data-type="goal">
+                </div>
+                <div class="input-row">
+                    <div class="actual-label">Actual</div>
+                    <input type="text" class="actual-input" value="${actual}" data-month="${i}" data-type="actual">
+                </div>
+                <div class="goal-status">${status}</div>
+            `;
+            
+            clientGoalsGrid.appendChild(card);
+        }
+        
+        // Show modal
+        clientGoalsModal.style.display = 'block';
+    }
+    
+    // Update client goals summary
+    function updateClientGoalsSummary() {
+        const currentMonthSummary = document.getElementById('currentClientMonthSummary');
+        const currentGoalSummary = document.getElementById('currentClientGoalSummary');
+        const currentActualSummary = document.getElementById('currentClientActualSummary');
+        const ytdGoalSummary = document.getElementById('clientYtdGoalSummary');
+        const ytdActualSummary = document.getElementById('clientYtdActualSummary');
+        
+        if (currentMonthSummary) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            currentMonthSummary.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+        }
+        
+        if (currentGoalSummary) {
+            const currentGoal = monthlyClientGoals[currentMonth] || defaultMonthlyClientGoals[currentMonth];
+            currentGoalSummary.textContent = currentGoal;
+        }
+        
+        if (currentActualSummary) {
+            const currentActual = monthlyClientActuals[currentMonth] || defaultMonthlyClientActuals[currentMonth];
+            currentActualSummary.textContent = currentActual;
+        }
+        
+        if (ytdGoalSummary) {
+            let ytdGoalTotal = 0;
+            for (let i = 0; i <= currentMonth; i++) {
+                ytdGoalTotal += monthlyClientGoals[i] || defaultMonthlyClientGoals[i];
+            }
+            ytdGoalSummary.textContent = ytdGoalTotal;
+        }
+        
+        if (ytdActualSummary) {
+            let ytdActualTotal = 0;
+            for (let i = 0; i <= currentMonth; i++) {
+                ytdActualTotal += monthlyClientActuals[i] || defaultMonthlyClientActuals[i];
+            }
+            ytdActualSummary.textContent = ytdActualTotal;
+        }
+    }
+    
+    // Listen for client changes to update slider
+    const activeClientsValueEl = document.getElementById('activeClientsValue');
+    if (activeClientsValueEl) {
+        const clientObserver = new MutationObserver(() => {
+            updateClientGoalSlider();
+        });
+        clientObserver.observe(activeClientsValueEl, { childList: true, characterData: true, subtree: true });
+    }
+
     // --- KPI TRACKER TABLE PERSISTENCE (HEADER + BODY) ---
     const KPI_TRACKER_KEY = 'kpiTrackerData';
     const kpiTrackerTable = document.getElementById('kpiTrackerTable');
@@ -2362,6 +3089,15 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Initializing Monthly Sprints...');
             initializeSprints();
             
+            console.log('Initializing Revenue Goal Slider...');
+            initializeRevenueGoalSlider();
+            
+            console.log('Initializing Client Goal Slider...');
+            initializeClientGoalSlider();
+            
+            console.log('Initializing New Clients Goal Slider...');
+            initializeNewClientsGoalSlider();
+            
             console.log('=== PAGE INITIALIZATION COMPLETE ===');
         } catch (error) {
             console.error('=== PAGE INITIALIZATION ERROR ===');
@@ -2469,4 +3205,484 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     };
+
+    // Add debugging functions for Revenue Goal Slider
+    window.debugRevenueGoals = async function() {
+        console.log('=== REVENUE GOALS DEBUG INFO ===');
+        console.log('Current month:', currentMonth);
+        console.log('Current year:', currentYear);
+        console.log('Monthly revenue goals:', monthlyRevenueGoals);
+        console.log('Current revenue:', getMRR());
+        
+        // Check Firebase data
+        try {
+            const docRef = doc(db, "monthlyRevenueGoals", "data");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                console.log('Firebase monthly revenue goals data:', data);
+            } else {
+                console.log('No monthly revenue goals data in Firebase');
+            }
+        } catch (error) {
+            console.error('Error checking monthly revenue goals Firebase:', error);
+        }
+    };
+
+    window.resetRevenueGoals = async function() {
+        if (confirm('This will reset all monthly revenue goals to defaults. Continue?')) {
+            try {
+                monthlyRevenueGoals = { ...defaultMonthlyGoals };
+                await saveMonthlyRevenueGoals();
+                updateRevenueGoalSlider();
+                alert('Monthly revenue goals reset to defaults.');
+            } catch (error) {
+                console.error('Error resetting revenue goals:', error);
+                alert('Error resetting goals: ' + error.message);
+            }
+        }
+    };
+
+    window.clearRevenueGoals = async function() {
+        if (confirm('This will clear ALL monthly revenue goals data. This cannot be undone. Continue?')) {
+            try {
+                await setDoc(doc(db, "monthlyRevenueGoals", "data"), { 
+                    goals: {},
+                    lastUpdated: new Date().toISOString()
+                });
+                
+                monthlyRevenueGoals = {};
+                updateRevenueGoalSlider();
+                alert('All monthly revenue goals data cleared.');
+                location.reload();
+            } catch (error) {
+                console.error('Error clearing monthly revenue goals data:', error);
+                alert('Error clearing data: ' + error.message);
+            }
+        }
+    };
+
+    // Add debugging functions for Client Goal Slider
+    window.debugClientGoals = async function() {
+        console.log('=== CLIENT GOALS DEBUG INFO ===');
+        console.log('Current month:', currentMonth);
+        console.log('Current year:', currentYear);
+        console.log('Monthly client goals:', monthlyClientGoals);
+        console.log('Current clients:', document.getElementById('activeClientsValue')?.textContent);
+        
+        // Check Firebase data
+        try {
+            const docRef = doc(db, "monthlyClientGoals", "data");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                console.log('Firebase monthly client goals data:', data);
+            } else {
+                console.log('No monthly client goals data in Firebase');
+            }
+        } catch (error) {
+            console.error('Error checking monthly client goals Firebase:', error);
+        }
+    };
+
+    window.resetClientGoals = async function() {
+        if (confirm('This will reset all monthly client goals to defaults. Continue?')) {
+            try {
+                monthlyClientGoals = { ...defaultMonthlyClientGoals };
+                await saveMonthlyClientGoals();
+                updateClientGoalSlider();
+                alert('Monthly client goals reset to defaults.');
+            } catch (error) {
+                console.error('Error resetting client goals:', error);
+                alert('Error resetting goals: ' + error.message);
+            }
+        }
+    };
+
+    window.clearClientGoals = async function() {
+        if (confirm('This will clear ALL monthly client goals data. This cannot be undone. Continue?')) {
+            try {
+                await setDoc(doc(db, "monthlyClientGoals", "data"), { 
+                    goals: {},
+                    lastUpdated: new Date().toISOString()
+                });
+                
+                monthlyClientGoals = {};
+                updateClientGoalSlider();
+                alert('All monthly client goals data cleared.');
+                location.reload();
+            } catch (error) {
+                console.error('Error clearing monthly client goals data:', error);
+                alert('Error clearing data: ' + error.message);
+            }
+        }
+    };
+
+    // Add debugging functions for New Clients Goal Slider
+    window.debugNewClientsGoals = async function() {
+        console.log('=== NEW CLIENTS GOALS DEBUG INFO ===');
+        console.log('Current month:', currentMonth);
+        console.log('Current year:', currentYear);
+        console.log('Monthly new clients goals:', monthlyNewClientsGoals);
+        console.log('Current new clients:', document.getElementById('clientsClosedValue')?.textContent);
+        
+        // Check Firebase data
+        try {
+            const docRef = doc(db, "monthlyNewClientsData", "data");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                console.log('Firebase monthly new clients data:', data);
+            } else {
+                console.log('No monthly new clients data in Firebase');
+            }
+        } catch (error) {
+            console.error('Error checking monthly new clients Firebase:', error);
+        }
+    };
+
+    window.resetNewClientsGoals = async function() {
+        if (confirm('This will reset all monthly new clients goals to defaults. Continue?')) {
+            try {
+                monthlyNewClientsGoals = { ...defaultMonthlyNewClientsGoals };
+                monthlyNewClientsActuals = { ...defaultMonthlyNewClientsActuals };
+                await saveMonthlyNewClientsData();
+                updateNewClientsGoalSlider();
+                alert('Monthly new clients goals reset to defaults.');
+            } catch (error) {
+                console.error('Error resetting new clients goals:', error);
+                alert('Error resetting goals: ' + error.message);
+            }
+        }
+    };
+
+    window.clearNewClientsGoals = async function() {
+        if (confirm('This will clear ALL monthly new clients goals data. This cannot be undone. Continue?')) {
+            try {
+                await setDoc(doc(db, "monthlyNewClientsData", "data"), { 
+                    goals: {},
+                    actuals: {},
+                    lastUpdated: new Date().toISOString()
+                });
+                
+                monthlyNewClientsGoals = {};
+                monthlyNewClientsActuals = {};
+                updateNewClientsGoalSlider();
+                alert('All monthly new clients goals data cleared.');
+                location.reload();
+            } catch (error) {
+                console.error('Error clearing monthly new clients goals data:', error);
+                alert('Error clearing data: ' + error.message);
+            }
+        }
+    };
+
+    // Firebase functions for monthly new clients goals and actuals
+    async function saveMonthlyNewClientsData() {
+        try {
+            console.log('Saving monthly new clients data to Firebase:', { goals: monthlyNewClientsGoals, actuals: monthlyNewClientsActuals });
+            await setDoc(doc(db, "monthlyNewClientsData", "data"), { 
+                goals: monthlyNewClientsGoals,
+                actuals: monthlyNewClientsActuals,
+                lastUpdated: new Date().toISOString()
+            }, { merge: true });
+            console.log('Monthly new clients data saved successfully to Firebase');
+        } catch (error) {
+            console.error("Error saving monthly new clients data to Firebase:", error);
+        }
+    }
+    
+    async function loadMonthlyNewClientsData() {
+        try {
+            console.log('Loading monthly new clients data from Firebase...');
+            const docRef = doc(db, "monthlyNewClientsData", "data");
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                console.log('Monthly new clients data found in Firebase, applying...');
+                monthlyNewClientsGoals = data.goals || { ...defaultMonthlyNewClientsGoals };
+                monthlyNewClientsActuals = data.actuals || { ...defaultMonthlyNewClientsActuals };
+            } else {
+                console.log('No monthly new clients data found in Firebase, using defaults...');
+                monthlyNewClientsGoals = { ...defaultMonthlyNewClientsGoals };
+                monthlyNewClientsActuals = { ...defaultMonthlyNewClientsActuals };
+                // Save default data to Firebase
+                await saveMonthlyNewClientsData();
+            }
+        } catch (error) {
+            console.error("Error loading monthly new clients data from Firebase:", error);
+            monthlyNewClientsGoals = { ...defaultMonthlyNewClientsGoals };
+            monthlyNewClientsActuals = { ...defaultMonthlyNewClientsActuals };
+        }
+        updateNewClientsGoalSlider();
+    }
+
+    // Update new clients goal slider
+    function updateNewClientsGoalSlider() {
+        const currentGoal = monthlyNewClientsGoals[currentMonth] || defaultMonthlyNewClientsGoals[currentMonth];
+        const currentActual = monthlyNewClientsActuals[currentMonth] || defaultMonthlyNewClientsActuals[currentMonth];
+        const progress = Math.min((currentActual / currentGoal) * 100, 100);
+        
+        // Update slider fill and thumb
+        const sliderFill = document.getElementById('newClientsSliderFill');
+        const sliderThumb = document.getElementById('newClientsSliderThumb');
+        const currentGoalLabel = document.getElementById('currentNewClientsGoalLabel');
+        const currentMonthLabel = document.getElementById('currentNewClientsMonthLabel');
+        
+        if (sliderFill) sliderFill.style.width = `${progress}%`;
+        if (sliderThumb) sliderThumb.style.left = `${progress}%`;
+        if (currentGoalLabel) currentGoalLabel.textContent = `Goal: ${currentGoal}`;
+        if (currentMonthLabel) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                               'July', 'August', 'September', 'October', 'November', 'December'];
+            currentMonthLabel.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+        }
+        
+        // Update slider colors based on progress
+        if (sliderFill) {
+            if (progress >= 100) {
+                sliderFill.style.background = 'linear-gradient(90deg, #4CAF50, #8BC34A)';
+            } else if (progress >= 80) {
+                sliderFill.style.background = 'linear-gradient(90deg, #FF9800, #FFC107)';
+            } else {
+                sliderFill.style.background = 'linear-gradient(90deg, #F44336, #FF5722)';
+            }
+        }
+    }
+    
+    // Initialize new clients goal slider
+    function initializeNewClientsGoalSlider() {
+        console.log('Initializing new clients goal slider...');
+        
+        // Load monthly goals
+        loadMonthlyNewClientsData();
+        
+        // Add click event to slider to open modal
+        const newClientsGoalSlider = document.getElementById('newClientsGoalSlider');
+        if (newClientsGoalSlider) {
+            newClientsGoalSlider.addEventListener('click', () => {
+                openNewClientsGoalsModal();
+            });
+        }
+        
+        // Set up modal functionality
+        setupNewClientsGoalsModal();
+    }
+    
+    // New Clients Goals Modal functionality
+    function setupNewClientsGoalsModal() {
+        const newClientsGoalsModal = document.getElementById('newClientsGoalsModal');
+        const closeNewClientsGoalsModal = document.getElementById('closeNewClientsGoalsModal');
+        const closeNewClientsGoalsBtn = document.getElementById('closeNewClientsGoalsBtn');
+        const saveNewClientsGoalsBtn = document.getElementById('saveNewClientsGoalsBtn');
+        
+        // Close modal functions
+        function closeNewClientsGoalsModalFunc() {
+            newClientsGoalsModal.style.display = 'none';
+        }
+        
+        // Close modal when clicking X
+        if (closeNewClientsGoalsModal) {
+            closeNewClientsGoalsModal.onclick = closeNewClientsGoalsModalFunc;
+        }
+        
+        // Close modal when clicking close button
+        if (closeNewClientsGoalsBtn) {
+            closeNewClientsGoalsBtn.onclick = closeNewClientsGoalsModalFunc;
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = (event) => {
+            if (event.target === newClientsGoalsModal) {
+                closeNewClientsGoalsModalFunc();
+            }
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+            if (event.target === commentModal) {
+                closeCommentModalFunc();
+            }
+            if (event.target === revenueGoalsModal) {
+                closeRevenueGoalsModalFunc();
+            }
+            if (event.target === clientGoalsModal) {
+                closeClientGoalsModalFunc();
+            }
+        };
+        
+        // Save button functionality
+        if (saveNewClientsGoalsBtn) {
+            saveNewClientsGoalsBtn.addEventListener('click', async () => {
+                console.log('Saving all new clients goals and actuals...');
+                
+                // Collect all goal and actual values from inputs
+                const goalInputs = document.querySelectorAll('#newClientsGoalsGrid .goal-input');
+                const actualInputs = document.querySelectorAll('#newClientsGoalsGrid .actual-input');
+                
+                goalInputs.forEach(input => {
+                    const monthIndex = parseInt(input.getAttribute('data-month'));
+                    let value = input.value.trim();
+                    
+                    // Parse the value properly
+                    value = parseInt(value.replace(/[,\s]/g, '')) || 0;
+                    
+                    monthlyNewClientsGoals[monthIndex] = value;
+                });
+                
+                actualInputs.forEach(input => {
+                    const monthIndex = parseInt(input.getAttribute('data-month'));
+                    let value = input.value.trim();
+                    
+                    // Parse the value properly
+                    value = parseInt(value.replace(/[,\s]/g, '')) || 0;
+                    
+                    monthlyNewClientsActuals[monthIndex] = value;
+                });
+                
+                // Save to Firebase
+                await saveMonthlyNewClientsData();
+                
+                // Update slider
+                updateNewClientsGoalSlider();
+                
+                // Visual feedback
+                const originalText = saveNewClientsGoalsBtn.textContent;
+                saveNewClientsGoalsBtn.textContent = 'Saved!';
+                saveNewClientsGoalsBtn.style.background = '#27ae60';
+                setTimeout(() => {
+                    saveNewClientsGoalsBtn.textContent = originalText;
+                    saveNewClientsGoalsBtn.style.background = '#4285f4';
+                }, 2000);
+            });
+        }
+    }
+    
+    // Open new clients goals modal
+    function openNewClientsGoalsModal() {
+        console.log('Opening new clients goals modal...');
+        console.log('Current new clients goals data:', monthlyNewClientsGoals);
+        console.log('Current new clients actuals data:', monthlyNewClientsActuals);
+        
+        const newClientsGoalsModal = document.getElementById('newClientsGoalsModal');
+        const newClientsGoalsGrid = document.getElementById('newClientsGoalsGrid');
+        
+        if (!newClientsGoalsModal || !newClientsGoalsGrid) return;
+        
+        // Populate the grid with monthly goals
+        newClientsGoalsGrid.innerHTML = '';
+        
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+        
+        for (let i = 0; i < 12; i++) {
+            const goal = monthlyNewClientsGoals[i] || defaultMonthlyNewClientsGoals[i];
+            const actual = monthlyNewClientsActuals[i] || defaultMonthlyNewClientsActuals[i];
+            const isCurrentMonth = i === currentMonth;
+            const isPastMonth = i < currentMonth;
+            const isFutureMonth = i > currentMonth;
+            
+            // Determine card class
+            let cardClass = 'monthly-goal-card';
+            if (isCurrentMonth) cardClass += ' current-month';
+            else if (isPastMonth) cardClass += ' completed';
+            else if (isFutureMonth) cardClass += ' future';
+            
+            // Determine status
+            let status = '';
+            if (isCurrentMonth) {
+                const progress = Math.min((actual / goal) * 100, 100);
+                if (progress >= 100) {
+                    status = '✅ Goal Met!';
+                } else if (progress >= 80) {
+                    status = '🟡 On Track';
+                } else {
+                    status = '🔴 Behind';
+                }
+            } else if (isPastMonth) {
+                status = '✅ Completed';
+            } else {
+                status = '⏳ Upcoming';
+            }
+            
+            const card = document.createElement('div');
+            card.className = cardClass;
+            card.innerHTML = `
+                <div class="month-header">${monthNames[i]}</div>
+                <div class="input-row">
+                    <div class="goal-label">Goal</div>
+                    <input type="text" class="goal-input" value="${goal}" data-month="${i}" data-type="goal">
+                </div>
+                <div class="input-row">
+                    <div class="actual-label">Actual</div>
+                    <input type="text" class="actual-input" value="${actual}" data-month="${i}" data-type="actual">
+                </div>
+                <div class="goal-status">${status}</div>
+            `;
+            
+            newClientsGoalsGrid.appendChild(card);
+        }
+        
+        // Update summary
+        updateNewClientsGoalsSummary();
+        
+        // Show modal
+        newClientsGoalsModal.style.display = 'block';
+    }
+    
+    // Update new clients goals summary
+    function updateNewClientsGoalsSummary() {
+        const currentMonthSummary = document.getElementById('currentNewClientsMonthSummary');
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+        
+        if (currentMonthSummary) {
+            currentMonthSummary.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+        }
+        
+        // Calculate current month stats
+        const currentGoal = monthlyNewClientsGoals[currentMonth] || defaultMonthlyNewClientsGoals[currentMonth];
+        const currentActual = monthlyNewClientsActuals[currentMonth] || defaultMonthlyNewClientsActuals[currentMonth];
+        const currentProgress = Math.min((currentActual / currentGoal) * 100, 100);
+        
+        // Calculate YTD stats
+        let ytdGoalTotal = 0;
+        let ytdActualTotal = 0;
+        
+        for (let i = 0; i <= currentMonth; i++) {
+            ytdGoalTotal += monthlyNewClientsGoals[i] || defaultMonthlyNewClientsGoals[i];
+            ytdActualTotal += monthlyNewClientsActuals[i] || defaultMonthlyNewClientsActuals[i];
+        }
+        
+        const ytdProgress = Math.min((ytdActualTotal / ytdGoalTotal) * 100, 100);
+        
+        // Update summary elements if they exist
+        const summaryElements = document.querySelectorAll('#newClientsGoalsGrid .summary-item');
+        summaryElements.forEach(element => {
+            const label = element.querySelector('.summary-label');
+            const value = element.querySelector('.summary-value');
+            
+            if (label && value) {
+                switch (label.textContent) {
+                    case 'Current Month Goal:':
+                        value.textContent = currentGoal;
+                        break;
+                    case 'Current Month Actual:':
+                        value.textContent = currentActual;
+                        break;
+                    case 'Current Month Progress:':
+                        value.textContent = `${currentProgress.toFixed(1)}%`;
+                        break;
+                    case 'YTD Goal:':
+                        value.textContent = ytdGoalTotal;
+                        break;
+                    case 'YTD Actual:':
+                        value.textContent = ytdActualTotal;
+                        break;
+                    case 'YTD Progress:':
+                        value.textContent = `${ytdProgress.toFixed(1)}%`;
+                        break;
+                }
+            }
+        });
+    }
 }); 
