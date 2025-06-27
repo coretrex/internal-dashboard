@@ -227,8 +227,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const callsClass = entry.calls >= 50 ? 'highlight-green' : 'highlight-red';
                 const meetingsClass = entry.meetings >= 1 ? 'highlight-green' : 'highlight-red';
                 
+                // Escape the owner name for HTML attributes
+                const escapedOwner = entry.owner.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                
                 return `
-                    <tr>
+                    <tr data-original-date="${entry.date}" data-owner="${entry.owner}">
                         <td>${formattedDate}</td>
                         <td>${date.day}</td>
                         <td class="${callsClass}">${entry.calls}</td>
@@ -237,10 +240,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${entry.owner || 'N/A'}</td>
                         <td>${entry.notes || ''}</td>
                         <td>
-                            <button onclick="editEntry('${entry.date}', '${entry.owner}')" class="action-btn-small">
+                            <button onclick="editEntry('${entry.date}', '${escapedOwner}')" class="action-btn-small">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button onclick="deleteEntry('${entry.date}', '${entry.owner}')" class="action-btn-small delete">
+                            <button onclick="deleteEntry('${entry.date}', '${escapedOwner}')" class="action-btn-small delete">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </td>
@@ -264,21 +267,25 @@ document.addEventListener('DOMContentLoaded', () => {
             let entry = null;
             let row = null;
             
-            // Find the matching row in the table
+            // Find the matching row in the table using data attributes
             const rows = document.querySelectorAll('#kpiTableBody tr');
             rows.forEach(r => {
-                const rowDate = r.cells[0].textContent;
-                const rowOwner = r.cells[5].textContent;
+                const rowDate = r.getAttribute('data-original-date');
+                const rowOwner = r.getAttribute('data-owner');
+                
                 if (rowDate === date && rowOwner === owner) {
                     row = r;
                 }
             });
             
-            if (!row) return;
+            if (!row) {
+                console.error('Row not found for date:', date, 'owner:', owner);
+                return;
+            }
             
             // Get current values
             const currentValues = {
-                date: row.cells[0].textContent,
+                date: date, // Use the original date format
                 calls: row.cells[2].textContent,
                 meetings: row.cells[3].textContent,
                 owner: row.cells[5].textContent,
@@ -286,6 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             
             // Replace cells with input fields
+            row.cells[0].innerHTML = `<input type="date" class="editable-input" value="${currentValues.date}">`;
             row.cells[2].innerHTML = `<input type="number" class="editable-input" value="${currentValues.calls}" min="0">`;
             row.cells[3].innerHTML = `<input type="number" class="editable-input" value="${currentValues.meetings}" min="0">`;
             row.cells[5].innerHTML = `
@@ -302,11 +310,17 @@ document.addEventListener('DOMContentLoaded', () => {
             // Replace edit/delete buttons with save/cancel buttons
             const actionCell = row.cells[7];
             const originalButtons = actionCell.innerHTML;
+            
+            // Escape values for the onclick attributes
+            const escapedDate = date.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const escapedOwner = owner.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const escapedOriginalButtons = originalButtons.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            
             actionCell.innerHTML = `
-                <button onclick="saveEdit('${date}', '${owner}', this)" class="action-btn-small">
+                <button onclick="saveEdit('${escapedDate}', '${escapedOwner}', this)" class="action-btn-small">
                     <i class="fas fa-save"></i>
                 </button>
-                <button onclick="cancelEdit('${date}', '${owner}', '${originalButtons}')" class="action-btn-small">
+                <button onclick="cancelEdit('${escapedDate}', '${escapedOwner}', '${escapedOriginalButtons}')" class="action-btn-small">
                     <i class="fas fa-times"></i>
                 </button>
             `;
@@ -320,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.saveEdit = async function(date, owner, button) {
         const row = button.closest('tr');
         const newValues = {
-            date: date,
+            date: row.cells[0].querySelector('input').value,
             calls: parseInt(row.cells[2].querySelector('input').value) || 0,
             meetings: parseInt(row.cells[3].querySelector('input').value) || 0,
             owner: row.cells[5].querySelector('select').value,
@@ -332,12 +346,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const q = query(kpiRef);
             const querySnapshot = await getDocs(q);
             
-            querySnapshot.docs.forEach(async (doc) => {
+            // Find the document to update
+            let docToUpdate = null;
+            querySnapshot.docs.forEach(doc => {
                 const data = doc.data();
                 if (data.date === date && data.owner === owner) {
-                    await updateDoc(doc.ref, newValues);
+                    docToUpdate = doc;
                 }
             });
+            
+            if (docToUpdate) {
+                // If the date changed, we need to delete the old entry and create a new one
+                if (newValues.date !== date) {
+                    await deleteDoc(docToUpdate.ref);
+                    await addDoc(collection(db, 'kpi'), newValues);
+                } else {
+                    // Just update the existing document
+                    await updateDoc(docToUpdate.ref, newValues);
+                }
+            }
             
             // Update table to reflect changes
             await updateTable();
