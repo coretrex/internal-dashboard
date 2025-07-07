@@ -739,25 +739,39 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Update revenue goal slider
     function updateRevenueGoalSlider() {
-        const currentGoal = monthlyRevenueGoals[currentMonth] || defaultMonthlyGoals[currentMonth];
-        const currentActual = monthlyRevenueActuals[currentMonth] || defaultMonthlyActuals[currentMonth];
-        const progress = Math.min((currentActual / currentGoal) * 100, 100);
-        
+        // Get the current value from the large number above the slider
+        const revenueValueEl = document.getElementById('revenueValue');
+        let currentValue = 0;
+        if (revenueValueEl) {
+            let val = revenueValueEl.textContent.trim();
+            val = val.replace(/[$,\s]/g, '');
+            if (val.toUpperCase().endsWith('K')) {
+                val = val.slice(0, -1);
+                currentValue = Math.round(parseFloat(val) * 1000);
+            } else {
+                currentValue = parseFloat(val) || 0;
+            }
+        }
+        // Get the goal value from the label below the slider
+        const currentGoalLabel = document.getElementById('currentGoalLabel');
+        let goalValue = 0;
+        if (currentGoalLabel) {
+            let goalText = currentGoalLabel.textContent.trim();
+            let match = goalText.match(/Goal:\s*\$?([\d,.]+)(K)?/i);
+            if (match) {
+                let num = match[1].replace(/[,]/g, '');
+                goalValue = parseFloat(num) || 0;
+                if (match[2]) goalValue *= 1000;
+            }
+        }
+        // Fallback to 1 to avoid division by zero
+        if (!goalValue) goalValue = 1;
+        const progress = Math.min((currentValue / goalValue) * 100, 100);
         // Update slider fill and thumb
         const sliderFill = document.getElementById('sliderFill');
         const sliderThumb = document.getElementById('sliderThumb');
-        const currentGoalLabel = document.getElementById('currentGoalLabel');
-        const currentMonthLabel = document.getElementById('currentMonthLabel');
-        
         if (sliderFill) sliderFill.style.width = `${progress}%`;
         if (sliderThumb) sliderThumb.style.left = `${progress}%`;
-        if (currentGoalLabel) currentGoalLabel.textContent = `Goal: ${formatMRR(currentGoal)}`;
-        if (currentMonthLabel) {
-            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                               'July', 'August', 'September', 'October', 'November', 'December'];
-            currentMonthLabel.textContent = `${monthNames[currentMonth]} ${currentYear}`;
-        }
-        
         // Update slider colors based on progress
         if (sliderFill) {
             if (progress >= 100) {
@@ -767,6 +781,15 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 sliderFill.style.background = 'linear-gradient(90deg, #F44336, #FF5722)';
             }
+        }
+        // Restore goal label if missing
+        if (currentGoalLabel && !currentGoalLabel.textContent.trim()) {
+            // Try to get the goal from Firebase or fallback
+            let goal = 0;
+            if (typeof monthlyRevenueGoals !== 'undefined' && typeof currentMonth !== 'undefined') {
+                goal = monthlyRevenueGoals[currentMonth] || defaultMonthlyGoals[currentMonth];
+            }
+            currentGoalLabel.textContent = `Goal: ${formatMRR(goal)}`;
         }
     }
     
@@ -1129,25 +1152,33 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Update client goal slider
     function updateClientGoalSlider() {
-        const currentGoal = monthlyClientGoals[currentMonth] || defaultMonthlyClientGoals[currentMonth];
-        const currentActual = monthlyClientActuals[currentMonth] || defaultMonthlyClientActuals[currentMonth];
-        const progress = Math.min((currentActual / currentGoal) * 100, 100);
-        
+        // Get the current value from the large number above the slider
+        const activeClientsValueEl = document.getElementById('activeClientsValue');
+        let currentValue = 0;
+        if (activeClientsValueEl) {
+            let val = activeClientsValueEl.textContent.trim();
+            val = val.replace(/[,\s]/g, '');
+            currentValue = parseFloat(val) || 0;
+        }
+        // Get the goal value from the label below the slider
+        const currentGoalLabel = document.getElementById('currentClientGoalLabel');
+        let goalValue = 0;
+        if (currentGoalLabel) {
+            let goalText = currentGoalLabel.textContent.trim();
+            let match = goalText.match(/Goal:\s*([\d,.]+)/i);
+            if (match) {
+                let num = match[1].replace(/[,]/g, '');
+                goalValue = parseFloat(num) || 0;
+            }
+        }
+        // Fallback to 1 to avoid division by zero
+        if (!goalValue) goalValue = 1;
+        const progress = Math.min((currentValue / goalValue) * 100, 100);
         // Update slider fill and thumb
         const sliderFill = document.getElementById('clientSliderFill');
         const sliderThumb = document.getElementById('clientSliderThumb');
-        const currentGoalLabel = document.getElementById('currentClientGoalLabel');
-        const currentMonthLabel = document.getElementById('currentClientMonthLabel');
-        
         if (sliderFill) sliderFill.style.width = `${progress}%`;
         if (sliderThumb) sliderThumb.style.left = `${progress}%`;
-        if (currentGoalLabel) currentGoalLabel.textContent = `Goal: ${currentGoal}`;
-        if (currentMonthLabel) {
-            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                               'July', 'August', 'September', 'October', 'November', 'December'];
-            currentMonthLabel.textContent = `${monthNames[currentMonth]} ${currentYear}`;
-        }
-        
         // Update slider colors based on progress
         if (sliderFill) {
             if (progress >= 100) {
@@ -1157,6 +1188,14 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 sliderFill.style.background = 'linear-gradient(90deg, #F44336, #FF5722)';
             }
+        }
+        // Restore goal label if missing
+        if (currentGoalLabel && !currentGoalLabel.textContent.trim()) {
+            let goal = 0;
+            if (typeof monthlyClientGoals !== 'undefined' && typeof currentMonth !== 'undefined') {
+                goal = monthlyClientGoals[currentMonth] || defaultMonthlyClientGoals[currentMonth];
+            }
+            currentGoalLabel.textContent = `Goal: ${goal}`;
         }
     }
     
@@ -3420,25 +3459,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update new clients goal slider
     function updateNewClientsGoalSlider() {
-        const currentGoal = monthlyNewClientsGoals[currentMonth] || defaultMonthlyNewClientsGoals[currentMonth];
-        const currentActual = monthlyNewClientsActuals[currentMonth] || defaultMonthlyNewClientsActuals[currentMonth];
-        const progress = Math.min((currentActual / currentGoal) * 100, 100);
-        
+        // Get the current value from the large number above the slider
+        const clientsClosedValueEl = document.getElementById('clientsClosedValue');
+        let currentValue = 0;
+        if (clientsClosedValueEl) {
+            let val = clientsClosedValueEl.textContent.trim();
+            val = val.replace(/[, a0\s]/g, '');
+            currentValue = parseFloat(val) || 0;
+        }
+        // Get the goal value from the label below the slider, or fallback to monthly goal
+        const currentGoalLabel = document.getElementById('currentNewClientsGoalLabel');
+        let goalValue = 0;
+        let fallbackGoal = 0;
+        if (typeof monthlyNewClientsGoals !== 'undefined' && typeof currentMonth !== 'undefined') {
+            fallbackGoal = monthlyNewClientsGoals[currentMonth] || defaultMonthlyNewClientsGoals[currentMonth];
+        }
+        if (currentGoalLabel) {
+            let goalText = currentGoalLabel.textContent.trim();
+            let match = goalText.match(/Goal:\s*([\d,.]+)/i);
+            if (match) {
+                let num = match[1].replace(/[,]/g, '');
+                goalValue = parseFloat(num) || 0;
+            }
+        }
+        if (!goalValue) goalValue = fallbackGoal || 1;
+        const progress = Math.min((currentValue / goalValue) * 100, 100);
         // Update slider fill and thumb
         const sliderFill = document.getElementById('newClientsSliderFill');
         const sliderThumb = document.getElementById('newClientsSliderThumb');
-        const currentGoalLabel = document.getElementById('currentNewClientsGoalLabel');
-        const currentMonthLabel = document.getElementById('currentNewClientsMonthLabel');
-        
         if (sliderFill) sliderFill.style.width = `${progress}%`;
         if (sliderThumb) sliderThumb.style.left = `${progress}%`;
-        if (currentGoalLabel) currentGoalLabel.textContent = `Goal: ${currentGoal}`;
-        if (currentMonthLabel) {
-            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                               'July', 'August', 'September', 'October', 'November', 'December'];
-            currentMonthLabel.textContent = `${monthNames[currentMonth]} ${currentYear}`;
-        }
-        
         // Update slider colors based on progress
         if (sliderFill) {
             if (progress >= 100) {
@@ -3448,6 +3498,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 sliderFill.style.background = 'linear-gradient(90deg, #F44336, #FF5722)';
             }
+        }
+        // Restore goal label if missing
+        if (currentGoalLabel && !currentGoalLabel.textContent.trim()) {
+            currentGoalLabel.textContent = `Goal: ${fallbackGoal}`;
         }
     }
     
