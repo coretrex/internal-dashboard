@@ -569,6 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveCommentBtn.style.display = 'none';
         cancelCommentBtn.style.display = 'none';
         closeCommentBtn.style.display = 'inline-block';
+        commentTextarea.setAttribute('readonly', true); // Ensure textarea is readonly in view mode
     }
 
     function setModalToEditMode() {
@@ -578,7 +579,7 @@ document.addEventListener('DOMContentLoaded', () => {
         saveCommentBtn.style.display = 'inline-block';
         cancelCommentBtn.style.display = 'inline-block';
         closeCommentBtn.style.display = 'none';
-        
+        commentTextarea.removeAttribute('readonly'); // Allow editing in edit mode
         // Focus and select textarea
         setTimeout(() => {
             commentTextarea.focus();
