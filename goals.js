@@ -2189,6 +2189,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Remove the row from DOM
                         row.remove();
                         
+                        // Get current data after DOM removal
+                        const currentData = getSprintsData();
+                        console.log('Current data after DOM removal:', currentData);
+                        
                         // Immediately save to Firebase
                         saveSprintsToFirebase().then(() => {
                             console.log('Sprint deleted and saved successfully');
@@ -2219,16 +2223,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const sprints = {};
         if (!sprintsBody) return sprints;
         
+        console.log('Getting sprints data from DOM, rows count:', sprintsBody.children.length);
+        
         Array.from(sprintsBody.children).forEach((row, index) => {
             const sprintKey = `sprint_${index.toString().padStart(3, '0')}`;
+            const owner = row.children[0]?.textContent.trim() || '';
+            const sprint = row.children[1]?.textContent.trim() || '';
+            const due = row.children[2]?.textContent.trim() || '';
+            const status = row.children[3]?.querySelector('select')?.value || 'On Track';
+            
             sprints[sprintKey] = {
                 id: sprintKey,
-                owner: row.children[0]?.textContent.trim() || '',
-                sprint: row.children[1]?.textContent.trim() || '',
-                due: row.children[2]?.textContent.trim() || '',
-                status: row.children[3]?.querySelector('select')?.value || 'On Track'
+                owner: owner,
+                sprint: sprint,
+                due: due,
+                status: status
             };
+            
+            console.log(`Row ${index}:`, { owner, sprint, due, status });
         });
+        
+        console.log('Final sprints data to save:', sprints);
         return sprints;
     }
     
@@ -2266,8 +2281,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else if (typeof data === 'object' && !Array.isArray(data)) {
             // Handle new numbered key format (preserves order)
-            const sortedKeys = Object.keys(data).sort();
-            sortedKeys.forEach(key => {
+            const keys = Object.keys(data).sort((a, b) => {
+                // Extract numbers from keys like "sprint_000", "sprint_001", etc.
+                const numA = parseInt(a.replace('sprint_', ''));
+                const numB = parseInt(b.replace('sprint_', ''));
+                return numA - numB;
+            });
+            
+            keys.forEach(key => {
                 const sprint = data[key];
                 const tr = document.createElement('tr');
                 for (let i = 0; i < 3; i++) {
@@ -2331,17 +2352,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const firebaseData = docSnap.data().sprints;
                 console.log('Firebase data received:', firebaseData);
                 
-                // More aggressive cleanup - completely rebuild the data structure
-                const cleanedData = aggressivelyCleanSprintsData(firebaseData);
-                console.log('After aggressive cleaning:', cleanedData);
-                
-                // Always save the cleaned data back to ensure consistency
-                await setDoc(doc(db, "monthlySprints", "data"), { 
-                    sprints: cleanedData,
-                    lastUpdated: new Date().toISOString()
-                }, { merge: true });
-                
-                setSprintsData(cleanedData);
+                // Don't clean the data - use it as-is to prevent duplication
+                setSprintsData(firebaseData);
             } else {
                 console.log('No Monthly Sprints data found in Firebase, starting with empty table...');
                 setSprintsData({});
@@ -2356,7 +2368,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data || typeof data !== 'object') return {};
         
         const cleaned = {};
-        const seen = new Set();
         let counter = 0;
         
         // Handle both array and object formats
@@ -2385,12 +2396,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 status = data.status || data.Status || 'On Track';
             }
             
-            // Create a unique identifier
-            const uniqueId = `${owner.trim()}-${sprint.trim()}-${due.trim()}`;
-            
-            // Only add if we haven't seen this exact sprint before and it has content
-            if (!seen.has(uniqueId) && (owner.trim() || sprint.trim() || due.trim())) {
-                seen.add(uniqueId);
+            // Only add if it has at least some content (not completely empty)
+            if (owner.trim() || sprint.trim() || due.trim()) {
                 const newKey = `sprint_${counter.toString().padStart(3, '0')}`;
                 cleaned[newKey] = {
                     id: newKey,
@@ -2401,14 +2408,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 counter++;
             } else {
-                console.log('Removing duplicate or empty sprint:', uniqueId);
+                console.log('Removing completely empty sprint');
             }
         });
         
         // Sort by owner name
         const sortedData = sortSprintsByOwner(cleaned);
         
-        console.log('Aggressively cleaned and sorted sprints data:', sortedData);
+        console.log('Cleaned and sorted sprints data:', sortedData);
         return sortedData;
     }
 
@@ -2447,63 +2454,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Add debugging functions for Monthly Sprints
-    window.debugSprints = async function() {
-        console.log('=== MONTHLY SPRINTS DEBUG INFO ===');
-        console.log('Is saving:', isSavingSprints);
-        console.log('Event listeners attached:', sprintsEventListenersAttached);
-        console.log('Current table rows:', sprintsBody ? sprintsBody.children.length : 'No body');
-        
-        // Check Firebase data
-        try {
-            const docRef = doc(db, "monthlySprints", "data");
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                console.log('Firebase Monthly Sprints data:', data);
-                console.log('Sprints keys count:', Object.keys(data.sprints || {}).length);
-            } else {
-                console.log('No Monthly Sprints data in Firebase');
-            }
-        } catch (error) {
-            console.error('Error checking Monthly Sprints Firebase:', error);
-        }
-    };
-
-    window.cleanupSprints = async function() {
-        if (confirm('This will clean up any duplicate Monthly Sprints data. Continue?')) {
-            try {
-                console.log('Monthly Sprints cleanup triggered');
-                await loadSprintsFromFirebase(); // This will reload and clean the data
-                alert('Monthly Sprints cleanup completed. Check the console for details.');
-            } catch (error) {
-                console.error('Error during Monthly Sprints cleanup:', error);
-                alert('Error during cleanup: ' + error.message);
-            }
-        }
-    };
-
-    window.clearSprints = async function() {
-        if (confirm('This will clear ALL Monthly Sprints data. This cannot be undone. Continue?')) {
-            try {
-                await setDoc(doc(db, "monthlySprints", "data"), { 
-                    sprints: {},
-                    lastUpdated: new Date().toISOString()
-                });
-                
-                if (sprintsBody) {
-                    sprintsBody.innerHTML = '';
-                }
-                
-                alert('Monthly Sprints data cleared.');
-                location.reload();
-            } catch (error) {
-                console.error('Error clearing Monthly Sprints data:', error);
-                alert('Error clearing data: ' + error.message);
-            }
-        }
-    };
-
     window.sortSprintsByOwner = async function() {
         try {
             console.log('Manual sort triggered');
@@ -2525,32 +2475,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Add sort button to the page
-    setTimeout(() => {
-        const sprintsContainer = document.querySelector('.monthly-sprints-container');
-        if (sprintsContainer) {
-            const buttonContainer = sprintsContainer.querySelector('div');
-            if (buttonContainer) {
-                // Sort button
-                const sortBtn = document.createElement('button');
-                sortBtn.textContent = '📊 Sort by Owner';
-                sortBtn.style.cssText = `
-                    background: #3498db;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    padding: 8px 12px;
-                    margin-left: 10px;
-                    cursor: pointer;
-                    font-size: 0.9rem;
-                `;
-                sortBtn.title = 'Sort sprints by owner name';
-                sortBtn.onclick = window.sortSprintsByOwner;
-                
-                buttonContainer.appendChild(sortBtn);
-            }
+    window.forceSaveSprints = async function() {
+        try {
+            console.log('Force save triggered');
+            const currentData = getSprintsData();
+            console.log('Force saving data:', currentData);
+            
+            await setDoc(doc(db, "monthlySprints", "data"), { 
+                sprints: currentData,
+                lastUpdated: new Date().toISOString()
+            }, { merge: true });
+            
+            alert('Sprints force saved successfully!');
+        } catch (error) {
+            console.error('Error during force save:', error);
+            alert('Error force saving sprints: ' + error.message);
         }
-    }, 1000);
+    };
 
     // --- TO-DO SECTION LOGIC (FIREBASE) ---
     const TODOS_KEY = 'goalsTodos';
