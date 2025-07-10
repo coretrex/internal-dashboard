@@ -2122,18 +2122,8 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSprintStatusColors();
         renderSprintsRowButtons();
         
-        // Save and sort after adding new row
-        saveSprintsToFirebase().then(() => {
-            // Auto-sort after saving
-            const currentData = getSprintsData();
-            const sortedData = sortSprintsByOwner(currentData);
-            setSprintsData(sortedData);
-            // Save the sorted data
-            setDoc(doc(db, "monthlySprints", "data"), { 
-                sprints: sortedData,
-                lastUpdated: new Date().toISOString()
-            }, { merge: true });
-        });
+        // Save immediately after adding new row
+        debouncedSaveSprints();
     }
 
     function renderSprintsRowButtons() {
@@ -2352,8 +2342,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const firebaseData = docSnap.data().sprints;
                 console.log('Firebase data received:', firebaseData);
                 
-                // Don't clean the data - use it as-is to prevent duplication
-                setSprintsData(firebaseData);
+                // Clean the data to remove duplicates
+                const cleanedData = aggressivelyCleanSprintsData(firebaseData);
+                console.log('After cleaning:', cleanedData);
+                
+                // Sort the data by owner
+                const sortedData = sortSprintsByOwner(cleanedData);
+                console.log('After sorting by owner:', sortedData);
+                
+                // Always save the cleaned and sorted data back to ensure consistency
+                await setDoc(doc(db, "monthlySprints", "data"), { 
+                    sprints: sortedData,
+                    lastUpdated: new Date().toISOString()
+                }, { merge: true });
+                
+                setSprintsData(sortedData);
             } else {
                 console.log('No Monthly Sprints data found in Firebase, starting with empty table...');
                 setSprintsData({});
@@ -2368,6 +2371,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!data || typeof data !== 'object') return {};
         
         const cleaned = {};
+        const seen = new Set();
         let counter = 0;
         
         // Handle both array and object formats
@@ -2396,8 +2400,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 status = data.status || data.Status || 'On Track';
             }
             
-            // Only add if it has at least some content (not completely empty)
-            if (owner.trim() || sprint.trim() || due.trim()) {
+            // Create a unique identifier for this sprint
+            const uniqueId = `${owner.trim()}-${sprint.trim()}-${due.trim()}`;
+            
+            // Only add if we haven't seen this exact sprint before and it has content
+            if (!seen.has(uniqueId) && (owner.trim() || sprint.trim() || due.trim())) {
+                seen.add(uniqueId);
                 const newKey = `sprint_${counter.toString().padStart(3, '0')}`;
                 cleaned[newKey] = {
                     id: newKey,
@@ -2408,15 +2416,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 counter++;
             } else {
-                console.log('Removing completely empty sprint');
+                console.log('Removing duplicate or empty sprint:', uniqueId);
             }
         });
         
-        // Sort by owner name
-        const sortedData = sortSprintsByOwner(cleaned);
-        
-        console.log('Cleaned and sorted sprints data:', sortedData);
-        return sortedData;
+        console.log('Cleaned sprints data:', cleaned);
+        return cleaned;
     }
 
     function sortSprintsByOwner(data) {
@@ -2490,6 +2495,19 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error during force save:', error);
             alert('Error force saving sprints: ' + error.message);
+        }
+    };
+
+    window.cleanupSprintsData = async function() {
+        if (confirm('This will clean up any duplicate Monthly Sprints data. Continue?')) {
+            try {
+                console.log('Manual sprints cleanup triggered');
+                await loadSprintsFromFirebase(); // This will trigger the cleanup
+                alert('Monthly Sprints cleanup completed. Check the console for details.');
+            } catch (error) {
+                console.error('Error during sprints cleanup:', error);
+                alert('Error during cleanup: ' + error.message);
+            }
         }
     };
 
