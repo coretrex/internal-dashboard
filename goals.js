@@ -13,6 +13,9 @@ import {
     onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+// Import presence system
+import { presenceUI } from './presence-ui.js';
+
 console.log('=== GOALS.JS LOADING ===');
 console.log('Firebase imports loaded');
 
@@ -377,6 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.edit-kpi-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
+            
             const kpi = btn.getAttribute('data-kpi');
             const valueEl = document.getElementById(kpi + 'Value');
             if (!valueEl) return;
@@ -528,6 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.edit-comment-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
+            
             const kpi = btn.getAttribute('data-kpi');
             
             // Get current comment value from Firebase
@@ -2045,6 +2050,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (editSprintsBtn) {
             editSprintsBtn.addEventListener('click', function() {
                 console.log('Edit mode toggled for sprints');
+                console.log('Presence system has edit access:', presenceUI.hasEditAccess());
+                
+                // Check if user has edit access
+                if (!presenceUI.hasEditAccess()) {
+                    console.log('No edit access, preventing sprints edit mode toggle');
+                    presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
+                    return;
+                }
+                
                 document.body.classList.toggle('sprints-edit-mode');
                 renderSprintsRowButtons();
             });
@@ -2054,6 +2068,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (addSprintRowBtn) {
             addSprintRowBtn.addEventListener('click', function() {
                 console.log('Adding new sprint row');
+                console.log('Presence system has edit access:', presenceUI.hasEditAccess());
+                
+                // Check if user has edit access
+                if (!presenceUI.hasEditAccess()) {
+                    console.log('No edit access, preventing sprint row addition');
+                    presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
+                    return;
+                }
+                
                 addSprintRow();
             });
         }
@@ -2062,6 +2085,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (saveSprintsBtn) {
             saveSprintsBtn.addEventListener('click', async () => {
                 console.log('Save button clicked for Monthly Sprints');
+                console.log('Presence system has edit access:', presenceUI.hasEditAccess());
+                
+                // Check if user has edit access
+                if (!presenceUI.hasEditAccess()) {
+                    console.log('No edit access, preventing sprints save');
+                    presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
+                    return;
+                }
+                
                 try {
                     await saveSprintsToFirebase();
                     const originalText = saveSprintsBtn.textContent;
@@ -2670,7 +2702,19 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Add row button
         if (addIdsRowBtn) {
-            addIdsRowBtn.addEventListener('click', addIdsRow);
+            addIdsRowBtn.addEventListener('click', () => {
+                console.log('IDS: Add row button clicked');
+                console.log('Presence system has edit access:', presenceUI.hasEditAccess());
+                
+                // Check if user has edit access
+                if (!presenceUI.hasEditAccess()) {
+                    console.log('No edit access, preventing IDS row addition');
+                    presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
+                    return;
+                }
+                
+                addIdsRow();
+            });
             console.log('IDS: Add row button listener added');
         }
 
@@ -2678,6 +2722,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (saveIdsBtn) {
             saveIdsBtn.addEventListener('click', async () => {
                 console.log('IDS: Save button clicked');
+                console.log('Presence system has edit access:', presenceUI.hasEditAccess());
+                
+                // Check if user has edit access
+                if (!presenceUI.hasEditAccess()) {
+                    console.log('No edit access, preventing IDS save');
+                    presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
+                    return;
+                }
+                
                 const success = await saveIdsData();
                 if (success) {
                     saveIdsBtn.textContent = 'Saved!';
@@ -2695,6 +2748,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (editIdsBtn) {
             editIdsBtn.addEventListener('click', () => {
                 console.log('IDS: Edit button clicked');
+                console.log('Presence system has edit access:', presenceUI.hasEditAccess());
+                
+                // Check if user has edit access
+                if (!presenceUI.hasEditAccess()) {
+                    console.log('No edit access, preventing IDS edit mode toggle');
+                    presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
+                    return;
+                }
+                
                 document.body.classList.toggle('ids-edit-mode');
                 renderIdsTable(); // Re-render to show/hide delete buttons
             });
@@ -2983,6 +3045,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Delete row function
     async function deleteIdsRow(itemId) {
         console.log('IDS: Deleting row:', itemId);
+        console.log('Presence system has edit access:', presenceUI.hasEditAccess());
+        
+        // Check if user has edit access
+        if (!presenceUI.hasEditAccess()) {
+            console.log('No edit access, preventing IDS row deletion');
+            presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
+            return;
+        }
         
         if (confirm('Are you sure you want to delete this IDS item?')) {
             try {
@@ -3127,11 +3197,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Initialize the page with Firebase data
-    initializePage().catch(error => {
-        console.error('Failed to initialize page:', error);
-        alert('Failed to initialize page. Please try refreshing.');
-    });
+    // Initialize presence system FIRST, then initialize page
+    async function initializeEverything() {
+        try {
+            console.log('=== INITIALIZING EVERYTHING ===');
+            
+            // Initialize presence system first
+            console.log('Initializing presence system...');
+            await presenceUI.initialize();
+            
+            // Then initialize the page
+            console.log('Initializing page...');
+            await initializePage();
+            
+            console.log('=== EVERYTHING INITIALIZED SUCCESSFULLY ===');
+        } catch (error) {
+            console.error('Failed to initialize:', error);
+            alert('Failed to initialize. Please try refreshing.');
+        }
+    }
+
+    // Start initialization
+    initializeEverything();
 
     // Add debugging functions for KPI Tracker
     window.debugKpiTracker = async function() {

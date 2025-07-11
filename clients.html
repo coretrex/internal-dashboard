@@ -93,9 +93,36 @@
         </div>
     </div>
     <!-- Navigation -->
+    <!-- Immediate blocking overlay to prevent interactions before presence system loads -->
+    <div id="immediate-blocking-overlay" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.02);
+        pointer-events: auto;
+        z-index: 9999;
+        cursor: wait;
+    "></div>
+    
+    <div id="immediate-loading-message" style="
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        z-index: 10000;
+    ">Initializing edit lock system...</div>
+
     <nav-menu></nav-menu>
     <script src="navigation.js"></script>
     <script type="module" src="clients.js"></script>
+    <script type="module" src="presence-ui.js"></script>
     <div class="floating-timer">
         <button id="timerBtn" class="timer-btn">
             <i class="fas fa-play"></i> Start Timer

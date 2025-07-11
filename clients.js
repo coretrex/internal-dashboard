@@ -10,6 +10,9 @@ import {
     updateDoc 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+// Import presence system
+import { presenceUI } from './presence-ui.js';
+
 // Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo",
@@ -315,7 +318,29 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Initializing clients page...');
     console.log('Firebase app:', app);
     console.log('Firestore database:', db);
-    loadClients();
+    
+    // Initialize presence system FIRST, then load data
+    async function initializeEverything() {
+        try {
+            console.log('=== INITIALIZING CLIENTS PAGE ===');
+            
+            // Initialize presence system first
+            console.log('Initializing presence system...');
+            await presenceUI.initialize();
+            
+            // Then load clients
+            console.log('Loading clients...');
+            await loadClients();
+            
+            console.log('=== CLIENTS PAGE INITIALIZED SUCCESSFULLY ===');
+        } catch (error) {
+            console.error('Failed to initialize clients page:', error);
+            alert('Failed to initialize. Please try refreshing.');
+        }
+    }
+
+    // Start initialization
+    initializeEverything();
     
     // Create and insert toggle button before input section
     const inputSection = document.querySelector('.input-section');

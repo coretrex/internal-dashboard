@@ -12,6 +12,9 @@ import {
     arrayRemove 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+// Import presence system
+import { presenceUI } from './presence-ui.js';
+
 // Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo",
@@ -689,7 +692,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    loadProspects();
+    // Initialize presence system FIRST, then load data
+    async function initializeEverything() {
+        try {
+            console.log('=== INITIALIZING PROSPECTS PAGE ===');
+            
+            // Initialize presence system first
+            console.log('Initializing presence system...');
+            await presenceUI.initialize();
+            
+            // Then load prospects
+            console.log('Loading prospects...');
+            await loadProspects();
+            
+            console.log('=== PROSPECTS PAGE INITIALIZED SUCCESSFULLY ===');
+        } catch (error) {
+            console.error('Failed to initialize prospects page:', error);
+            alert('Failed to initialize. Please try refreshing.');
+        }
+    }
+
+    // Start initialization
+    initializeEverything();
     
     // Add this new code
     const toggleAddProspectBtn = document.querySelector('.toggle-add-prospect');

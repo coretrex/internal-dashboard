@@ -25,6 +25,9 @@ import {
     getDownloadURL
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
+// Import presence system
+import { presenceUI } from './presence-ui.js';
+
 // Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo",
@@ -72,8 +75,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize admin panel
     initializeAdminPanel();
     
-    // Set up event listeners
-    setupEventListeners();
+    // Initialize presence system FIRST, then set up event listeners
+    async function initializeEverything() {
+        try {
+            console.log('=== INITIALIZING ADMIN PAGE ===');
+            
+            // Initialize presence system first
+            console.log('Initializing presence system...');
+            await presenceUI.initialize();
+            
+            // Then set up event listeners
+            console.log('Setting up event listeners...');
+            setupEventListeners();
+            
+            console.log('=== ADMIN PAGE INITIALIZED SUCCESSFULLY ===');
+        } catch (error) {
+            console.error('Failed to initialize admin page:', error);
+            alert('Failed to initialize. Please try refreshing.');
+        }
+    }
+
+    // Start initialization
+    initializeEverything();
 
     // Live photo preview for Add User
     const userPhotoInput = document.getElementById('userPhoto');
@@ -302,6 +325,7 @@ async function uploadUserPhoto(email, file) {
 // Add User: handle file upload
 async function handleAddUser(e) {
     e.preventDefault();
+    
     const email = document.getElementById('userEmail').value;
     const role = document.getElementById('userRole').value;
     const pageAccess = Array.from(document.querySelectorAll('#addUserForm input[type="checkbox"]:checked')).map(cb => cb.value);
@@ -339,6 +363,7 @@ async function handleAddUser(e) {
 // Edit User: handle file upload
 async function handleEditUser(e) {
     e.preventDefault();
+    
     const email = document.getElementById('editUserId').value;
     const role = document.getElementById('editUserRole').value;
     const pageAccess = Array.from(document.querySelectorAll('#editUserPageAccess input[type="checkbox"]:checked')).map(cb => cb.value);
