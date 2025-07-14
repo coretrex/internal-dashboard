@@ -2132,6 +2132,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function addSprintRow() {
         const tr = document.createElement('tr');
+        // Generate a unique ID for the new sprint
+        const sprintId = `sprint_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        tr.setAttribute('data-sprint-id', sprintId);
+        
         for (let i = 0; i < 3; i++) {
             const td = document.createElement('td');
             td.contentEditable = 'true';
@@ -2248,7 +2252,10 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Getting sprints data from DOM, rows count:', sprintsBody.children.length);
         
         Array.from(sprintsBody.children).forEach((row, index) => {
-            const sprintKey = `sprint_${index.toString().padStart(3, '0')}`;
+            // Get the original ID from the row's data attribute, or generate a new one
+            const originalId = row.getAttribute('data-sprint-id');
+            const sprintKey = originalId || `sprint_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`;
+            
             const owner = row.children[0]?.textContent.trim() || '';
             const sprint = row.children[1]?.textContent.trim() || '';
             const due = row.children[2]?.textContent.trim() || '';
@@ -2262,7 +2269,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 status: status
             };
             
-            console.log(`Row ${index}:`, { owner, sprint, due, status });
+            console.log(`Row ${index}:`, { owner, sprint, due, status, id: sprintKey });
         });
         
         console.log('Final sprints data to save:', sprints);
@@ -2277,8 +2284,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (Array.isArray(data)) {
             // Handle old array format
-            data.forEach(arr => {
+            data.forEach((arr, index) => {
                 const tr = document.createElement('tr');
+                // Generate a unique ID for old format data
+                const sprintId = `sprint_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`;
+                tr.setAttribute('data-sprint-id', sprintId);
+                
                 for (let i = 0; i < 3; i++) {
                     const td = document.createElement('td');
                     td.contentEditable = 'true';
@@ -2302,17 +2313,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 sprintsBody.appendChild(tr);
             });
         } else if (typeof data === 'object' && !Array.isArray(data)) {
-            // Handle new numbered key format (preserves order)
-            const keys = Object.keys(data).sort((a, b) => {
-                // Extract numbers from keys like "sprint_000", "sprint_001", etc.
-                const numA = parseInt(a.replace('sprint_', ''));
-                const numB = parseInt(b.replace('sprint_', ''));
-                return numA - numB;
-            });
+            // Handle object format with preserved keys
+            const keys = Object.keys(data);
             
             keys.forEach(key => {
                 const sprint = data[key];
                 const tr = document.createElement('tr');
+                // Set the original ID from the data
+                tr.setAttribute('data-sprint-id', key);
+                
                 for (let i = 0; i < 3; i++) {
                     const td = document.createElement('td');
                     td.contentEditable = 'true';
@@ -2404,12 +2413,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const cleaned = {};
         const seen = new Set();
-        let counter = 0;
         
         // Handle both array and object formats
         let items = [];
         if (Array.isArray(data)) {
-            items = data.map((item, index) => ({ key: `sprint_${index.toString().padStart(3, '0')}`, data: item }));
+            items = data.map((item, index) => ({ key: `sprint_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`, data: item }));
         } else {
             items = Object.entries(data).map(([key, value]) => ({ key, data: value }));
         }
@@ -2438,15 +2446,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // Only add if we haven't seen this exact sprint before and it has content
             if (!seen.has(uniqueId) && (owner.trim() || sprint.trim() || due.trim())) {
                 seen.add(uniqueId);
-                const newKey = `sprint_${counter.toString().padStart(3, '0')}`;
-                cleaned[newKey] = {
-                    id: newKey,
+                // Preserve the original key if it exists, otherwise use the provided key
+                const finalKey = data.id || key;
+                cleaned[finalKey] = {
+                    id: finalKey,
                     owner: owner.trim(),
                     sprint: sprint.trim(),
                     due: due.trim(),
                     status: status
                 };
-                counter++;
             } else {
                 console.log('Removing duplicate or empty sprint:', uniqueId);
             }
@@ -2464,13 +2472,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return ownerA.localeCompare(ownerB);
         });
         
-        // Rebuild object with new keys
+        // Rebuild object preserving original keys
         const sortedData = {};
-        sortedEntries.forEach(([, sprint], index) => {
-            const newKey = `sprint_${index.toString().padStart(3, '0')}`;
-            sortedData[newKey] = {
+        sortedEntries.forEach(([originalKey, sprint]) => {
+            sortedData[originalKey] = {
                 ...sprint,
-                id: newKey
+                id: originalKey
             };
         });
         
