@@ -2008,7 +2008,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- MONTHLY SPRINTS SECTION ---
+    // --- MONTHLY SPRINTS SECTION - COMPLETELY REWRITTEN ---
     console.log('=== MONTHLY SPRINTS SECTION INITIALIZATION ===');
     
     const sprintsBody = document.getElementById('monthlySprintsBody');
@@ -2018,11 +2018,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log('Monthly Sprints elements found:', { sprintsBody, addSprintRowBtn, editSprintsBtn, saveSprintsBtn });
 
-    // State management
-    let sprintsData = {};
-    let isSavingSprints = false;
-    let saveSprintsTimeout = null;
-    let sprintsEventListenersAttached = false;
+    // Simple array to store sprints
+    let sprints = [];
 
     // Initialize sprints functionality
     function initializeSprints() {
@@ -2032,14 +2029,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         console.log('Initializing sprints functionality...');
-        
-        // Attach event listeners only once
-        if (!sprintsEventListenersAttached) {
-            attachSprintsEventListeners();
-            sprintsEventListenersAttached = true;
-        }
-
-        // Load data
+        attachSprintsEventListeners();
         loadSprintsFromFirebase();
     }
 
@@ -2049,16 +2039,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Edit mode toggle
         if (editSprintsBtn) {
             editSprintsBtn.addEventListener('click', function() {
-                console.log('Edit mode toggled for sprints');
-                console.log('Presence system has edit access:', presenceUI.hasEditAccess());
-                
-                // Check if user has edit access
                 if (!presenceUI.hasEditAccess()) {
-                    console.log('No edit access, preventing sprints edit mode toggle');
                     presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
                     return;
                 }
-                
                 document.body.classList.toggle('sprints-edit-mode');
                 renderSprintsRowButtons();
             });
@@ -2067,16 +2051,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add row button
         if (addSprintRowBtn) {
             addSprintRowBtn.addEventListener('click', function() {
-                console.log('Adding new sprint row');
-                console.log('Presence system has edit access:', presenceUI.hasEditAccess());
-                
-                // Check if user has edit access
                 if (!presenceUI.hasEditAccess()) {
-                    console.log('No edit access, preventing sprint row addition');
                     presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
                     return;
                 }
-                
                 addSprintRow();
             });
         }
@@ -2084,12 +2062,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Save button
         if (saveSprintsBtn) {
             saveSprintsBtn.addEventListener('click', async () => {
-                console.log('Save button clicked for Monthly Sprints');
-                console.log('Presence system has edit access:', presenceUI.hasEditAccess());
-                
-                // Check if user has edit access
                 if (!presenceUI.hasEditAccess()) {
-                    console.log('No edit access, preventing sprints save');
                     presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
                     return;
                 }
@@ -2118,58 +2091,36 @@ document.addEventListener('DOMContentLoaded', () => {
         // Table event listeners
         sprintsBody.addEventListener('input', function(e) {
             if (e.target.matches('[contenteditable]') || e.target.classList.contains('sprint-status')) {
-                debouncedSaveSprints();
+                saveSprintsFromDOM();
             }
         }, true);
         
         sprintsBody.addEventListener('change', function(e) {
             if (e.target.classList.contains('sprint-status')) {
                 updateSprintStatusColors();
-                debouncedSaveSprints();
+                saveSprintsFromDOM();
             }
         }, true);
     }
 
     function addSprintRow() {
-        const tr = document.createElement('tr');
-        // Generate a unique ID for the new sprint
-        const sprintId = `sprint_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        tr.setAttribute('data-sprint-id', sprintId);
+        const newSprint = {
+            id: `sprint_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            owner: '',
+            sprint: '',
+            due: '',
+            status: 'On Track'
+        };
         
-        for (let i = 0; i < 3; i++) {
-            const td = document.createElement('td');
-            td.contentEditable = 'true';
-            tr.appendChild(td);
-        }
-        const td = document.createElement('td');
-        const select = document.createElement('select');
-        select.className = 'sprint-status';
-        ['Complete','On Track','Off Track'].forEach(opt => {
-            const o = document.createElement('option');
-            o.value = opt;
-            o.textContent = opt;
-            select.appendChild(o);
-        });
-        td.appendChild(select);
-        tr.appendChild(td);
-        // Empty cell for row controls
-        tr.appendChild(document.createElement('td'));
-        sprintsBody.appendChild(tr);
-        updateSprintStatusColors();
-        renderSprintsRowButtons();
-        
-        // Save immediately after adding new row
-        debouncedSaveSprints();
+        sprints.push(newSprint);
+        renderSprints();
+        saveSprintsToFirebase();
     }
 
     function renderSprintsRowButtons() {
-        if (!sprintsBody) {
-            console.log('Sprints body not found');
-            return;
-        }
+        if (!sprintsBody) return;
         
-        console.log('Rendering sprint row buttons, edit mode:', document.body.classList.contains('sprints-edit-mode'));
-        Array.from(sprintsBody.rows).forEach((row, idx, arr) => {
+        Array.from(sprintsBody.rows).forEach((row, idx) => {
             let cell = row.cells[row.cells.length - 1];
             if (!cell) return;
             
@@ -2182,9 +2133,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 upBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
                 upBtn.onclick = function() {
                     if (idx > 0) {
-                        sprintsBody.insertBefore(row, arr[idx - 1]);
-                        debouncedSaveSprints();
-                        renderSprintsRowButtons();
+                        const temp = sprints[idx];
+                        sprints[idx] = sprints[idx - 1];
+                        sprints[idx - 1] = temp;
+                        renderSprints();
+                        saveSprintsToFirebase();
                     }
                 };
                 cell.appendChild(upBtn);
@@ -2195,10 +2148,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 downBtn.title = 'Move down';
                 downBtn.innerHTML = '<i class="fas fa-arrow-down"></i>';
                 downBtn.onclick = function() {
-                    if (idx < arr.length - 1) {
-                        sprintsBody.insertBefore(arr[idx + 1], row);
-                        debouncedSaveSprints();
-                        renderSprintsRowButtons();
+                    if (idx < sprints.length - 1) {
+                        const temp = sprints[idx];
+                        sprints[idx] = sprints[idx + 1];
+                        sprints[idx + 1] = temp;
+                        renderSprints();
+                        saveSprintsToFirebase();
                     }
                 };
                 cell.appendChild(downBtn);
@@ -2210,24 +2165,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 delBtn.textContent = '×';
                 delBtn.onclick = function() {
                     if (confirm('Are you sure you want to delete this sprint?')) {
-                        console.log('Deleting sprint row:', idx);
-                        
-                        // Remove the row from DOM
-                        row.remove();
-                        
-                        // Get current data after DOM removal
-                        const currentData = getSprintsData();
-                        console.log('Current data after DOM removal:', currentData);
-                        
-                        // Immediately save to Firebase
-                        saveSprintsToFirebase().then(() => {
-                            console.log('Sprint deleted and saved successfully');
-                            // Re-render buttons to update indices
-                            renderSprintsRowButtons();
-                        }).catch(error => {
-                            console.error('Error saving after delete:', error);
-                            alert('Error saving changes. Please try again.');
-                        });
+                        console.log('Deleting sprint at index:', idx);
+                        sprints.splice(idx, 1);
+                        renderSprints();
+                        saveSprintsToFirebase();
                     }
                 };
                 cell.appendChild(delBtn);
@@ -2235,253 +2176,110 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function debouncedSaveSprints() {
-        console.log('Debounced save triggered for sprints');
-        if (saveSprintsTimeout) {
-            clearTimeout(saveSprintsTimeout);
-        }
-        saveSprintsTimeout = setTimeout(() => {
-            saveSprintsToFirebase();
-        }, 500);
-    }
-
-    function getSprintsData() {
-        const sprints = {};
-        if (!sprintsBody) return sprints;
+    function saveSprintsFromDOM() {
+        if (!sprintsBody) return;
         
-        console.log('Getting sprints data from DOM, rows count:', sprintsBody.children.length);
+        const rows = sprintsBody.querySelectorAll('tr');
+        sprints = [];
         
-        Array.from(sprintsBody.children).forEach((row, index) => {
-            // Get the original ID from the row's data attribute, or generate a new one
-            const originalId = row.getAttribute('data-sprint-id');
-            const sprintKey = originalId || `sprint_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`;
-            
+        rows.forEach((row, index) => {
+            const sprintId = row.getAttribute('data-sprint-id');
             const owner = row.children[0]?.textContent.trim() || '';
             const sprint = row.children[1]?.textContent.trim() || '';
             const due = row.children[2]?.textContent.trim() || '';
             const status = row.children[3]?.querySelector('select')?.value || 'On Track';
             
-            sprints[sprintKey] = {
-                id: sprintKey,
+            sprints.push({
+                id: sprintId,
                 owner: owner,
                 sprint: sprint,
                 due: due,
                 status: status
-            };
-            
-            console.log(`Row ${index}:`, { owner, sprint, due, status, id: sprintKey });
+            });
         });
         
-        console.log('Final sprints data to save:', sprints);
-        return sprints;
+        console.log('Sprints updated from DOM:', sprints);
     }
     
-    function setSprintsData(data) {
+    function renderSprints() {
         if (!sprintsBody) return;
         
-        console.log('Setting sprints data:', data);
+        console.log('Rendering sprints:', sprints);
         sprintsBody.innerHTML = '';
         
-        if (Array.isArray(data)) {
-            // Handle old array format
-            data.forEach((arr, index) => {
-                const tr = document.createElement('tr');
-                // Generate a unique ID for old format data
-                const sprintId = `sprint_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`;
-                tr.setAttribute('data-sprint-id', sprintId);
-                
-                for (let i = 0; i < 3; i++) {
-                    const td = document.createElement('td');
-                    td.contentEditable = 'true';
-                    td.textContent = arr[i] || '';
-                    tr.appendChild(td);
-                }
-                const td = document.createElement('td');
-                const select = document.createElement('select');
-                select.className = 'sprint-status';
-                ['Complete','On Track','Off Track'].forEach(opt => {
-                    const o = document.createElement('option');
-                    o.value = opt;
-                    o.textContent = opt;
-                    if (arr[3] === opt) o.selected = true;
-                    select.appendChild(o);
-                });
-                td.appendChild(select);
-                tr.appendChild(td);
-                // Empty cell for row controls
-                tr.appendChild(document.createElement('td'));
-                sprintsBody.appendChild(tr);
-            });
-        } else if (typeof data === 'object' && !Array.isArray(data)) {
-            // Handle object format with preserved keys
-            const keys = Object.keys(data);
+        sprints.forEach(sprint => {
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-sprint-id', sprint.id);
             
-            keys.forEach(key => {
-                const sprint = data[key];
-                const tr = document.createElement('tr');
-                // Set the original ID from the data
-                tr.setAttribute('data-sprint-id', key);
-                
-                for (let i = 0; i < 3; i++) {
-                    const td = document.createElement('td');
-                    td.contentEditable = 'true';
-                    td.textContent = sprint[['owner', 'sprint', 'due'][i]] || '';
-                    tr.appendChild(td);
-                }
+            for (let i = 0; i < 3; i++) {
                 const td = document.createElement('td');
-                const select = document.createElement('select');
-                select.className = 'sprint-status';
-                ['Complete','On Track','Off Track'].forEach(opt => {
-                    const o = document.createElement('option');
-                    o.value = opt;
-                    o.textContent = opt;
-                    if (sprint.status === opt) o.selected = true;
-                    select.appendChild(o);
-                });
-                td.appendChild(select);
+                td.contentEditable = 'true';
+                td.textContent = sprint[['owner', 'sprint', 'due'][i]] || '';
                 tr.appendChild(td);
-                // Empty cell for row controls
-                tr.appendChild(document.createElement('td'));
-                sprintsBody.appendChild(tr);
+            }
+            const td = document.createElement('td');
+            const select = document.createElement('select');
+            select.className = 'sprint-status';
+            ['Complete','On Track','Off Track'].forEach(opt => {
+                const o = document.createElement('option');
+                o.value = opt;
+                o.textContent = opt;
+                if (sprint.status === opt) o.selected = true;
+                select.appendChild(o);
             });
-        }
+            td.appendChild(select);
+            tr.appendChild(td);
+            // Empty cell for row controls
+            tr.appendChild(document.createElement('td'));
+            sprintsBody.appendChild(tr);
+        });
         
         updateSprintStatusColors();
         renderSprintsRowButtons();
     }
     
     async function saveSprintsToFirebase() {
-        if (isSavingSprints) {
-            console.log('Save already in progress, skipping...');
-            return;
-        }
-        
         try {
-            isSavingSprints = true;
-            const sprintsData = getSprintsData();
-            console.log('Saving Monthly Sprints data to Firebase:', sprintsData);
-            
+            console.log('Saving sprints to Firebase:', sprints);
             await setDoc(doc(db, "monthlySprints", "data"), { 
-                sprints: sprintsData,
+                sprints: sprints,
                 lastUpdated: new Date().toISOString()
             }, { merge: true });
-            console.log('Monthly Sprints data saved successfully to Firebase');
+            console.log('Sprints saved successfully to Firebase');
         } catch (error) {
             console.error("Error saving sprints to Firebase:", error);
-        } finally {
-            isSavingSprints = false;
         }
     }
     
     async function loadSprintsFromFirebase() {
         try {
-            console.log('Loading Monthly Sprints data from Firebase...');
+            console.log('Loading sprints from Firebase...');
             const docRef = doc(db, "monthlySprints", "data");
             const docSnap = await getDoc(docRef);
             if (docSnap.exists() && docSnap.data().sprints) {
-                console.log('Monthly Sprints data found in Firebase, applying...');
                 const firebaseData = docSnap.data().sprints;
                 console.log('Firebase data received:', firebaseData);
                 
-                // Clean the data to remove duplicates
-                const cleanedData = aggressivelyCleanSprintsData(firebaseData);
-                console.log('After cleaning:', cleanedData);
+                // Handle both array and object formats
+                if (Array.isArray(firebaseData)) {
+                    sprints = firebaseData;
+                } else {
+                    // Convert object format to array
+                    sprints = Object.values(firebaseData);
+                }
                 
-                // Sort the data by owner
-                const sortedData = sortSprintsByOwner(cleanedData);
-                console.log('After sorting by owner:', sortedData);
-                
-                // Always save the cleaned and sorted data back to ensure consistency
-                await setDoc(doc(db, "monthlySprints", "data"), { 
-                    sprints: sortedData,
-                    lastUpdated: new Date().toISOString()
-                }, { merge: true });
-                
-                setSprintsData(sortedData);
+                console.log('Processed sprints:', sprints);
+                renderSprints();
             } else {
-                console.log('No Monthly Sprints data found in Firebase, starting with empty table...');
-                setSprintsData({});
+                console.log('No sprints data found in Firebase, starting with empty array');
+                sprints = [];
+                renderSprints();
             }
         } catch (error) {
             console.error("Error loading sprints from Firebase:", error);
-            setSprintsData({});
+            sprints = [];
+            renderSprints();
         }
-    }
-
-    function aggressivelyCleanSprintsData(data) {
-        if (!data || typeof data !== 'object') return {};
-        
-        const cleaned = {};
-        const seen = new Set();
-        
-        // Handle both array and object formats
-        let items = [];
-        if (Array.isArray(data)) {
-            items = data.map((item, index) => ({ key: `sprint_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`, data: item }));
-        } else {
-            items = Object.entries(data).map(([key, value]) => ({ key, data: value }));
-        }
-        
-        items.forEach(({ key, data }) => {
-            if (!data || typeof data !== 'object') return;
-            
-            // Extract sprint data regardless of format
-            let owner = '', sprint = '', due = '', status = 'On Track';
-            
-            if (Array.isArray(data)) {
-                owner = data[0] || '';
-                sprint = data[1] || '';
-                due = data[2] || '';
-                status = data[3] || 'On Track';
-            } else {
-                owner = data.owner || data.Owner || '';
-                sprint = data.sprint || data.Sprint || '';
-                due = data.due || data.Due || '';
-                status = data.status || data.Status || 'On Track';
-            }
-            
-            // Create a unique identifier for this sprint
-            const uniqueId = `${owner.trim()}-${sprint.trim()}-${due.trim()}`;
-            
-            // Only add if we haven't seen this exact sprint before and it has content
-            if (!seen.has(uniqueId) && (owner.trim() || sprint.trim() || due.trim())) {
-                seen.add(uniqueId);
-                // Preserve the original key if it exists, otherwise use the provided key
-                const finalKey = data.id || key;
-                cleaned[finalKey] = {
-                    id: finalKey,
-                    owner: owner.trim(),
-                    sprint: sprint.trim(),
-                    due: due.trim(),
-                    status: status
-                };
-            } else {
-                console.log('Removing duplicate or empty sprint:', uniqueId);
-            }
-        });
-        
-        console.log('Cleaned sprints data:', cleaned);
-        return cleaned;
-    }
-
-    function sortSprintsByOwner(data) {
-        // Convert to array, sort, then convert back to object
-        const sortedEntries = Object.entries(data).sort(([, a], [, b]) => {
-            const ownerA = (a.owner || '').toLowerCase();
-            const ownerB = (b.owner || '').toLowerCase();
-            return ownerA.localeCompare(ownerB);
-        });
-        
-        // Rebuild object preserving original keys
-        const sortedData = {};
-        sortedEntries.forEach(([originalKey, sprint]) => {
-            sortedData[originalKey] = {
-                ...sprint,
-                id: originalKey
-            };
-        });
-        
-        return sortedData;
     }
 
     // --- MONTHLY SPRINTS STATUS COLOR CODING ---
