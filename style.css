@@ -1933,6 +1933,7 @@ tr.completed button:disabled {
 }
 .monthly-sprints-table th:nth-child(2), .monthly-sprints-table td:nth-child(2) {
   text-align: left;
+  padding-left: 16px;
 }
 
 #addSprintRowBtn {
