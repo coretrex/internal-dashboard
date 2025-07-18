@@ -7,9 +7,9 @@ class PresenceUI {
     constructor() {
         this.notificationContainer = null;
         this.presenceBanner = null;
-        this.lockModal = null;
+        // this.lockModal = null; // Remove lock modal
         this.isInitialized = false;
-        
+        this.viewOnlyNotice = null;
         // Immediately block all interactions until we're ready
         this.blockAllInteractions();
     }
@@ -23,7 +23,7 @@ class PresenceUI {
         // Create UI elements first
         this.createNotificationContainer();
         this.createPresenceBanner();
-        this.createLockModal();
+        // this.createLockModal(); // Remove lock modal
 
         // Set up event listeners immediately
         this.setupEventListeners();
@@ -33,6 +33,9 @@ class PresenceUI {
 
         // Wait for presence manager to initialize
         await presenceManager.initialize();
+
+        // Automatically acquire edit lock if no one has it (use safe Firestore check)
+        await presenceManager.requestEditLock();
 
         // Register callbacks
         presenceManager.onPresenceUpdate((users) => {
@@ -97,155 +100,11 @@ class PresenceUI {
         this.createGlobalEditButton();
     }
 
-    // Create lock modal
-    createLockModal() {
-        this.lockModal = document.createElement('div');
-        this.lockModal.id = 'lock-modal';
-        this.lockModal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            pointer-events: auto;
-        `;
-
-        this.lockModal.innerHTML = `
-            <div style="
-                background: #23272f;
-                color: white;
-                padding: 24px;
-                border-radius: 12px;
-                max-width: 400px;
-                text-align: center;
-                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            ">
-                <div style="margin-bottom: 16px;">
-                    <i class="fas fa-lock" style="font-size: 2rem; color: #f39c12; margin-bottom: 12px;"></i>
-                    <h3 style="margin: 0 0 8px 0; font-size: 1.2rem;">Edit Lock Active</h3>
-                    <p id="lock-message" style="margin: 0; color: #b0b8c1; line-height: 1.4;">
-                        This dashboard is currently being edited by another user.
-                    </p>
-                </div>
-                <div style="display: flex; gap: 12px; justify-content: center;">
-                    <button id="take-over-lock-btn" onclick="console.log('Take Over clicked via onclick'); presenceUI && presenceUI.handleTakeOver()" style="
-                        background: #2ecc71;
-                        color: white;
-                        border: none;
-                        padding: 10px 20px;
-                        border-radius: 6px;
-                        cursor: pointer;
-                        font-weight: 500;
-                    ">
-                        <i class="fas fa-unlock"></i> Take Over
-                    </button>
-                    <button id="cancel-lock-btn" onclick="console.log('Cancel clicked via onclick'); presenceUI && presenceUI.hideLockModal()" style="
-                        background: #6c757d;
-                        color: white;
-                        border: none;
-                        padding: 10px 20px;
-                        border-radius: 6px;
-                        cursor: pointer;
-                        font-weight: 500;
-                    ">
-                        Cancel
-                    </button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(this.lockModal);
-    }
-
-    // Set up modal-specific event listeners
-    setupModalEventListeners() {
-        console.log('PresenceUI: Setting up modal event listeners...');
-        
-        // Take over lock button
-        const takeOverBtn = document.getElementById('take-over-lock-btn');
-        console.log('PresenceUI: Looking for take-over button, found:', takeOverBtn);
-        if (takeOverBtn) {
-            console.log('PresenceUI: Found take-over button, adding event listener');
-            // Remove any existing event listeners first
-            takeOverBtn.replaceWith(takeOverBtn.cloneNode(true));
-            const newTakeOverBtn = document.getElementById('take-over-lock-btn');
-            console.log('PresenceUI: New take-over button after cloning:', newTakeOverBtn);
-            
-            newTakeOverBtn.addEventListener('click', async (e) => {
-                console.log('PresenceUI: Take-over button clicked - event received!');
-                console.log('PresenceUI: Event target:', e.target);
-                console.log('PresenceUI: Event type:', e.type);
-                e.preventDefault();
-                e.stopPropagation();
-                
-                try {
-                    console.log('PresenceUI: Calling forceTakeOverLock...');
-                    console.log('PresenceUI: presenceManager available:', !!presenceManager);
-                    console.log('PresenceUI: forceTakeOverLock method available:', !!presenceManager.forceTakeOverLock);
-                    const result = await presenceManager.forceTakeOverLock();
-                    console.log('PresenceUI: forceTakeOverLock result:', result);
-                    
-                    if (result && result.success) {
-                        this.hideLockModal();
-                        this.showNotification('Edit access acquired!', 'success');
-                    } else {
-                        this.showNotification('Failed to take over edit access', 'error');
-                    }
-                } catch (error) {
-                    console.error('PresenceUI: Error in take-over button click handler:', error);
-                    this.showNotification('Error taking over edit access', 'error');
-                }
-            });
-        } else {
-            console.warn('PresenceUI: Take-over button not found');
-        }
-
-        // Cancel lock button
-        const cancelBtn = document.getElementById('cancel-lock-btn');
-        if (cancelBtn) {
-            console.log('PresenceUI: Found cancel button, adding event listener');
-            // Remove any existing event listeners first
-            cancelBtn.replaceWith(cancelBtn.cloneNode(true));
-            const newCancelBtn = document.getElementById('cancel-lock-btn');
-            
-            newCancelBtn.addEventListener('click', (e) => {
-                console.log('PresenceUI: Cancel button clicked');
-                e.preventDefault();
-                e.stopPropagation();
-                this.hideLockModal();
-            });
-            
-            // Also add a mousedown listener as backup
-            newCancelBtn.addEventListener('mousedown', (e) => {
-                console.log('PresenceUI: Cancel button mousedown');
-                e.preventDefault();
-                e.stopPropagation();
-                this.hideLockModal();
-            });
-        } else {
-            console.warn('PresenceUI: Cancel button not found');
-        }
-    }
-
     // Set up event listeners
     setupEventListeners() {
         console.log('PresenceUI: Setting up event listeners...');
         
-        // Set up modal event listeners
-        this.setupModalEventListeners();
-
-        // Close modal when clicking outside
-        this.lockModal.addEventListener('click', (e) => {
-            if (e.target === this.lockModal) {
-                console.log('PresenceUI: Modal background clicked, hiding modal');
-                this.hideLockModal();
-            }
-        });
+        // No lock modal event listeners
         
         // Global click handler to prevent interactions when editing is disabled
         document.addEventListener('click', (event) => {
@@ -283,7 +142,19 @@ class PresenceUI {
     // Update presence banner
     updatePresenceBanner(users) {
         const activeUsers = users.filter(user => user.isActive);
-        
+        const isOnlyUser = activeUsers.length === 0;
+        const hasEditAccess = this.hasEditAccess();
+
+        // If the user is the only one present and has edit access, refresh for latest content
+        if (isOnlyUser && hasEditAccess) {
+            if (!this._refreshedForSoloEditAccess) {
+                this._refreshedForSoloEditAccess = true;
+                window.location.reload();
+            }
+        } else {
+            this._refreshedForSoloEditAccess = false;
+        }
+
         if (activeUsers.length === 0) {
             this.presenceBanner.style.display = 'none';
             document.body.classList.remove('presence-banner-visible');
@@ -324,62 +195,40 @@ class PresenceUI {
 
     // Update lock status
     updateLockStatus(lock) {
-        if (!lock) {
-            // No lock, hide any lock-related UI and enable editing
-            this.hideLockModal();
-            this.enableAllEditing();
-            return;
+        // Track previous lock state
+        if (this._previousHadEditAccess === undefined) {
+            this._previousHadEditAccess = this.hasEditAccess();
+        }
+        const hadEditAccess = this._previousHadEditAccess;
+        const hasEditAccessNow = lock && lock.lockedBy === presenceManager.userName;
+
+        // Show or hide the view-only notice based on edit access
+        if (this.hasEditAccess()) {
+            this.hideViewOnlyNotice();
+        } else {
+            this.showViewOnlyNotice();
         }
 
-        if (lock.lockedBy === presenceManager.userName) {
-            // We have the lock, show success notification and enable editing
+        if (!lock) {
+            // No lock, enable editing
+            this.enableAllEditing();
+            this._previousHadEditAccess = this.hasEditAccess();
+            return;
+        }
+        if (hasEditAccessNow) {
+            // If we just gained edit access, refresh the page for latest data
+            if (!hadEditAccess) {
+                window.location.reload();
+                // Note: after reload, _previousHadEditAccess will reset
+            }
             this.showNotification('You have edit access', 'success');
             this.enableAllEditing();
         } else {
             // Someone else has the lock, disable editing
             this.disableAllEditing();
-            const lockMessage = document.getElementById('lock-message');
-            if (lockMessage) {
-                lockMessage.textContent = `This dashboard is currently being edited by ${lock.lockedBy}. You can take over if needed.`;
-            }
-            this.showLockModal();
+            // No lock modal, just show view-only notice
         }
-    }
-
-    // Show lock modal
-    showLockModal() {
-        console.log('PresenceUI: Showing lock modal');
-        this.lockModal.style.display = 'flex';
-        // Re-setup event listeners for the modal buttons
-        this.setupModalEventListeners();
-    }
-
-    // Handle take over button click (for onclick handler)
-    async handleTakeOver() {
-        console.log('PresenceUI: handleTakeOver called');
-        try {
-            console.log('PresenceUI: Calling forceTakeOverLock...');
-            console.log('PresenceUI: presenceManager available:', !!presenceManager);
-            console.log('PresenceUI: forceTakeOverLock method available:', !!presenceManager.forceTakeOverLock);
-            const result = await presenceManager.forceTakeOverLock();
-            console.log('PresenceUI: forceTakeOverLock result:', result);
-            
-            if (result && result.success) {
-                this.hideLockModal();
-                this.showNotification('Edit access acquired!', 'success');
-            } else {
-                this.showNotification('Failed to take over edit access', 'error');
-            }
-        } catch (error) {
-            console.error('PresenceUI: Error in handleTakeOver:', error);
-            this.showNotification('Error taking over edit access', 'error');
-        }
-    }
-
-    // Hide lock modal
-    hideLockModal() {
-        console.log('PresenceUI: Hiding lock modal');
-        this.lockModal.style.display = 'none';
+        this._previousHadEditAccess = hasEditAccessNow;
     }
 
     // Show notification
@@ -426,7 +275,7 @@ class PresenceUI {
             z-index: 10002;
             pointer-events: auto;
         `;
-        
+        // Only show status, no button to request or take over
         this.updateGlobalEditButton();
         document.body.appendChild(this.globalEditButton);
     }
@@ -438,7 +287,6 @@ class PresenceUI {
             // Clone the button content and move it to the banner
             const buttonContent = this.globalEditButton.innerHTML;
             bannerContainer.innerHTML = buttonContent;
-            
             // Hide the original button
             this.globalEditButton.style.display = 'none';
         }
@@ -455,10 +303,8 @@ class PresenceUI {
     // Update global edit button based on current state
     updateGlobalEditButton() {
         if (!this.globalEditButton) return;
-        
         const hasAccess = this.hasEditAccess();
         const currentLock = presenceManager.getCurrentLock();
-        
         if (hasAccess) {
             this.globalEditButton.innerHTML = `
                 <div style="
@@ -478,47 +324,43 @@ class PresenceUI {
                 </div>
             `;
         } else if (currentLock) {
+            const lockedBy = currentLock.lockedBy || 'Another User';
             this.globalEditButton.innerHTML = `
-                <button onclick="presenceUI.requestEditAccess()" style="
-                    background: #f39c12;
+                <div style="
+                    background: #e74c3c;
                     color: white;
-                    border: none;
                     padding: 8px 16px;
                     border-radius: 20px;
                     font-size: 0.9rem;
                     font-weight: 500;
-                    cursor: pointer;
-                    box-shadow: 0 2px 8px rgba(243, 156, 18, 0.3);
+                    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
                     display: flex;
                     align-items: center;
                     gap: 8px;
                 ">
                     <i class="fas fa-lock"></i>
-                    Request Edit Access
-                </button>
+                    Edit Locked by ${lockedBy}
+                </div>
             `;
         } else {
             this.globalEditButton.innerHTML = `
-                <button onclick="presenceUI.requestEditAccess()" style="
-                    background: #3498db;
+                <div style="
+                    background: #b0b8c1;
                     color: white;
-                    border: none;
                     padding: 8px 16px;
                     border-radius: 20px;
                     font-size: 0.9rem;
                     font-weight: 500;
-                    cursor: pointer;
-                    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+                    box-shadow: 0 2px 8px rgba(176, 184, 193, 0.3);
                     display: flex;
                     align-items: center;
                     gap: 8px;
                 ">
-                    <i class="fas fa-edit"></i>
-                    Get Edit Access
-                </button>
+                    <i class="fas fa-eye"></i>
+                    View Only
+                </div>
             `;
         }
-        
         // If banner is visible, also update the button in the banner
         if (this.presenceBanner && this.presenceBanner.style.display !== 'none') {
             this.moveEditButtonToBanner();
@@ -642,7 +484,7 @@ class PresenceUI {
             // Don't block clicks on the global edit button or presence system elements
             if (e.target.closest('#global-edit-button') || 
                 e.target.closest('#presence-banner') || 
-                e.target.closest('#lock-modal')) {
+                e.target.closest('#lock-modal')) { // This line is no longer needed
                 return;
             }
             
@@ -713,6 +555,37 @@ class PresenceUI {
         }
     }
     
+    // Add or remove the view-only notice
+    showViewOnlyNotice() {
+        if (!this.viewOnlyNotice) {
+            this.viewOnlyNotice = document.createElement('div');
+            this.viewOnlyNotice.id = 'view-only-notice';
+            this.viewOnlyNotice.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: rgba(231, 76, 60, 0.95);
+                color: white;
+                padding: 32px 48px;
+                border-radius: 16px;
+                font-size: 1.5rem;
+                font-weight: bold;
+                z-index: 10010;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+                text-align: center;
+            `;
+            this.viewOnlyNotice.textContent = 'View Only Mode: You do not have edit access. Please refresh.';
+            document.body.appendChild(this.viewOnlyNotice);
+        }
+    }
+    hideViewOnlyNotice() {
+        if (this.viewOnlyNotice && this.viewOnlyNotice.parentNode) {
+            this.viewOnlyNotice.parentNode.removeChild(this.viewOnlyNotice);
+            this.viewOnlyNotice = null;
+        }
+    }
+    
     // Get page display name
     getPageDisplayName(page) {
         const pageNames = {
@@ -736,11 +609,12 @@ class PresenceUI {
             return true;
         } else {
             // Show lock modal with the message
-            const lockMessage = document.getElementById('lock-message');
-            if (lockMessage) {
-                lockMessage.textContent = result.message;
-            }
-            this.showLockModal();
+            // const lockMessage = document.getElementById('lock-message'); // This line is no longer needed
+            // if (lockMessage) {
+            //     lockMessage.textContent = result.message;
+            // }
+            // this.showLockModal(); // This line is no longer needed
+            this.showNotification(result.message, 'error'); // Changed to showNotification
             return false;
         }
     }
@@ -755,9 +629,9 @@ class PresenceUI {
         if (this.notificationContainer && this.notificationContainer.parentNode) {
             this.notificationContainer.parentNode.removeChild(this.notificationContainer);
         }
-        if (this.lockModal && this.lockModal.parentNode) {
-            this.lockModal.parentNode.removeChild(this.lockModal);
-        }
+        // if (this.lockModal && this.lockModal.parentNode) { // This line is no longer needed
+        //     this.lockModal.parentNode.removeChild(this.lockModal);
+        // }
     }
 }
 
