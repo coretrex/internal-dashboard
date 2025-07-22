@@ -75,11 +75,25 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // PAGE GUARD
     console.log('Checking page access...');
+    // Debug: Log all relevant localStorage values
+    console.log('DEBUG: localStorage.isLoggedIn =', localStorage.getItem('isLoggedIn'));
+    console.log('DEBUG: localStorage.userRole =', localStorage.getItem('userRole'));
+    console.log('DEBUG: localStorage.userPageAccess =', localStorage.getItem('userPageAccess'));
     if (!hasPageAccess('goals')) {
-        console.error('Access denied - no permission for goals page');
-        alert('Access denied. You do not have permission to view this page.');
-        window.location.href = 'index.html';
-        return;
+        // Show a more robust error message and stop auto-redirect loop
+        const errorMsg = [
+            'Access denied. You do not have permission to view this page.',
+            'Debug info:',
+            `isLoggedIn: ${localStorage.getItem('isLoggedIn')}`,
+            `userRole: ${localStorage.getItem('userRole')}`,
+            `userPageAccess: ${localStorage.getItem('userPageAccess')}`
+        ].join('\n');
+        alert(errorMsg);
+        // Optionally, clear localStorage to force a clean login
+        // localStorage.clear();
+        // Instead of redirecting in a loop, show a message and stop
+        document.body.innerHTML = `<div style="color: white; background: #c0392b; padding: 2rem; font-size: 1.2rem; text-align: center;">${errorMsg.replace(/\n/g, '<br>')}</div>`;
+        throw new Error('Access denied: see above for debug info.');
     }
     console.log('Page access granted');
 

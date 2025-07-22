@@ -145,16 +145,6 @@ class PresenceUI {
         const isOnlyUser = activeUsers.length === 0;
         const hasEditAccess = this.hasEditAccess();
 
-        // If the user is the only one present and has edit access, refresh for latest content
-        if (isOnlyUser && hasEditAccess) {
-            if (!this._refreshedForSoloEditAccess) {
-                this._refreshedForSoloEditAccess = true;
-                window.location.reload();
-            }
-        } else {
-            this._refreshedForSoloEditAccess = false;
-        }
-
         if (activeUsers.length === 0) {
             this.presenceBanner.style.display = 'none';
             document.body.classList.remove('presence-banner-visible');
@@ -217,10 +207,6 @@ class PresenceUI {
         }
         if (hasEditAccessNow) {
             // If we just gained edit access, refresh the page for latest data
-            if (!hadEditAccess) {
-                window.location.reload();
-                // Note: after reload, _previousHadEditAccess will reset
-            }
             this.showNotification('You have edit access', 'success');
             this.enableAllEditing();
         } else {
