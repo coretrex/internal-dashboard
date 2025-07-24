@@ -3977,3 +3977,8 @@ body.presence-banner-visible #global-edit-button {
     to { opacity: 1; }
 }
 
+.kpi-tracker-table th:nth-child(3), .kpi-tracker-table td:nth-child(3) {
+  background: #3a3d44 !important;
+  color: #fff;
+}
+
