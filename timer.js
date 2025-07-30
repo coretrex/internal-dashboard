@@ -1,9 +1,14 @@
 let timerInterval;
 let isRunning = false;  // Add this to track state in memory
+let alarmAudio;  // Audio object for alarm sound
 
 function initializeTimer() {
     const timerBtn = document.getElementById('timerBtn');
     const timerDisplay = document.getElementById('timerDisplay');
+    
+    // Initialize alarm audio
+    alarmAudio = new Audio('alarm.mp3');
+    alarmAudio.volume = 0.7; // Set volume to 70%
 
     // Check if timer is already running
     const timerState = JSON.parse(localStorage.getItem('timerState') || '{}');
@@ -46,6 +51,7 @@ function initializeTimer() {
             
             if (remaining <= 0) {
                 stopTimer();
+                playAlarm();
                 alert('Timer finished!');
                 return;
             }
@@ -71,6 +77,14 @@ function initializeTimer() {
         const minutes = Math.floor(timeLeft / 60);
         const seconds = timeLeft % 60;
         timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function playAlarm() {
+        if (alarmAudio) {
+            alarmAudio.play().catch(error => {
+                console.log('Could not play alarm sound:', error);
+            });
+        }
     }
 
     timerBtn.addEventListener('click', () => {
