@@ -2818,7 +2818,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const docRef = doc(db, "kpiTracker", "data");
             
             kpiTrackerListener = onSnapshot(docRef, (docSnap) => {
-                console.log('KPI Tracker: Real-time update received');
+                console.log('KPI Tracker: Real-time update received, isSavingKpiTracker:', isSavingKpiTracker);
                 
                 // Only update if we're not currently saving
                 if (!isSavingKpiTracker) {
@@ -2839,6 +2839,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         renderDeleteWeekButtons();
                         updateScrollArrows();
                     }
+                } else {
+                    console.log('KPI Tracker: Skipping update because currently saving');
                 }
             }, (error) => {
                 console.error('KPI Tracker: Real-time listener error:', error);
@@ -2853,10 +2855,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             console.log('Sprints: Setting up real-time listener...');
             
-            const docRef = doc(db, "sprints", "data");
+            const docRef = doc(db, "monthlySprints", "data");
             
             sprintsListener = onSnapshot(docRef, (docSnap) => {
-                console.log('Sprints: Real-time update received');
+                console.log('Sprints: Real-time update received, isSavingSprints:', isSavingSprints);
                 
                 // Only update if we're not currently saving
                 if (!isSavingSprints) {
@@ -2868,6 +2870,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         renderSprints();
                         updateSprintStatusColors();
                     }
+                } else {
+                    console.log('Sprints: Skipping update because currently saving');
                 }
             }, (error) => {
                 console.error('Sprints: Real-time listener error:', error);
@@ -2882,10 +2886,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             console.log('Todos: Setting up real-time listener...');
             
-            const docRef = doc(db, "todos", "data");
+            const docRef = doc(db, "goalsTodos", "data");
             
             todosListener = onSnapshot(docRef, (docSnap) => {
-                console.log('Todos: Real-time update received');
+                console.log('Todos: Real-time update received, isSavingTodos:', isSavingTodos);
                 
                 // Only update if we're not currently saving
                 if (!isSavingTodos) {
@@ -2896,6 +2900,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         todos = firebaseData.todos || [];
                         renderTodos();
                     }
+                } else {
+                    console.log('Todos: Skipping update because currently saving');
                 }
             }, (error) => {
                 console.error('Todos: Real-time listener error:', error);
