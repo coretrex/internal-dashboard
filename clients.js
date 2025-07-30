@@ -334,8 +334,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Setup real-time listener for clients
+    function setupClientsRealtimeListener() {
+        try {
+            console.log('Clients: Setting up real-time listener...');
+            
+            const brandsCollection = collection(db, "brands");
+            
+            onSnapshot(brandsCollection, (snapshot) => {
+                console.log('Clients: Real-time update received');
+                
+                // Reload clients when changes are detected
+                loadClients();
+            }, (error) => {
+                console.error('Clients: Real-time listener error:', error);
+            });
+        } catch (error) {
+            console.error('Clients: Error setting up real-time listener:', error);
+        }
+    }
+
     // Start initialization
     initializeEverything();
+    
+    // Setup real-time listener after initialization
+    setupClientsRealtimeListener();
     
     // Create and insert toggle button before input section
     const inputSection = document.querySelector('.input-section');

@@ -37,6 +37,15 @@ console.log('Firebase initialized');
 // Global flags
 let isIdsLoading = false;
 let saveIdsTimeout = null;
+let isSavingKpiTracker = false;
+let isSavingSprints = false;
+let isSavingTodos = false;
+
+// Real-time update listeners
+let kpiTrackerListener = null;
+let sprintsListener = null;
+let todosListener = null;
+let idsListener = null;
 
 // Page guard: check login and access
 function hasPageAccess(pageId) {
@@ -2253,6 +2262,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function saveSprintsToFirebase() {
         try {
             console.log('Saving sprints to Firebase:', sprints);
+            isSavingSprints = true;
             await setDoc(doc(db, "monthlySprints", "data"), { 
                 sprints: sprints,
                 lastUpdated: new Date().toISOString()
@@ -2260,6 +2270,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Sprints saved successfully to Firebase');
         } catch (error) {
             console.error("Error saving sprints to Firebase:", error);
+        } finally {
+            isSavingSprints = false;
         }
     }
     
@@ -2368,9 +2380,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function saveTodosToFirebase() {
         try {
+            isSavingTodos = true;
             await setDoc(doc(db, "goalsTodos", "data"), { todos: todos }, { merge: true });
         } catch (error) {
             console.error("Error saving todos to Firebase:", error);
+        } finally {
+            isSavingTodos = false;
         }
     }
     
@@ -2758,7 +2773,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const idsCollection = collection(db, "idsData");
             
-            onSnapshot(idsCollection, (snapshot) => {
+            idsListener = onSnapshot(idsCollection, (snapshot) => {
                 console.log('IDS: Real-time update received');
                 
                 // Only update if we're not currently saving
@@ -2793,6 +2808,120 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('IDS: Error setting up real-time listener:', error);
         }
+    }
+
+    // Setup KPI Tracker real-time listener
+    function setupKpiTrackerRealtimeListener() {
+        try {
+            console.log('KPI Tracker: Setting up real-time listener...');
+            
+            const docRef = doc(db, "kpiTracker", "data");
+            
+            kpiTrackerListener = onSnapshot(docRef, (docSnap) => {
+                console.log('KPI Tracker: Real-time update received');
+                
+                // Only update if we're not currently saving
+                if (!isSavingKpiTracker) {
+                    if (docSnap.exists()) {
+                        const firebaseData = docSnap.data();
+                        console.log('KPI Tracker: Firebase data received:', firebaseData);
+                        
+                        // Clean up any duplicate data
+                        const cleanedData = cleanKpiTrackerData(firebaseData);
+                        
+                        // Sort the data by owner
+                        const sortedData = {
+                            header: cleanedData.header,
+                            body: sortKpiTrackerByOwner(cleanedData.body)
+                        };
+                        
+                        setKpiTrackerFullData(sortedData);
+                        renderDeleteWeekButtons();
+                        updateScrollArrows();
+                    }
+                }
+            }, (error) => {
+                console.error('KPI Tracker: Real-time listener error:', error);
+            });
+        } catch (error) {
+            console.error('KPI Tracker: Error setting up real-time listener:', error);
+        }
+    }
+
+    // Setup Sprints real-time listener
+    function setupSprintsRealtimeListener() {
+        try {
+            console.log('Sprints: Setting up real-time listener...');
+            
+            const docRef = doc(db, "sprints", "data");
+            
+            sprintsListener = onSnapshot(docRef, (docSnap) => {
+                console.log('Sprints: Real-time update received');
+                
+                // Only update if we're not currently saving
+                if (!isSavingSprints) {
+                    if (docSnap.exists()) {
+                        const firebaseData = docSnap.data();
+                        console.log('Sprints: Firebase data received:', firebaseData);
+                        
+                        sprints = firebaseData.sprints || [];
+                        renderSprints();
+                        updateSprintStatusColors();
+                    }
+                }
+            }, (error) => {
+                console.error('Sprints: Real-time listener error:', error);
+            });
+        } catch (error) {
+            console.error('Sprints: Error setting up real-time listener:', error);
+        }
+    }
+
+    // Setup Todos real-time listener
+    function setupTodosRealtimeListener() {
+        try {
+            console.log('Todos: Setting up real-time listener...');
+            
+            const docRef = doc(db, "todos", "data");
+            
+            todosListener = onSnapshot(docRef, (docSnap) => {
+                console.log('Todos: Real-time update received');
+                
+                // Only update if we're not currently saving
+                if (!isSavingTodos) {
+                    if (docSnap.exists()) {
+                        const firebaseData = docSnap.data();
+                        console.log('Todos: Firebase data received:', firebaseData);
+                        
+                        todos = firebaseData.todos || [];
+                        renderTodos();
+                    }
+                }
+            }, (error) => {
+                console.error('Todos: Real-time listener error:', error);
+            });
+        } catch (error) {
+            console.error('Todos: Error setting up real-time listener:', error);
+        }
+    }
+
+    // Setup all real-time listeners
+    function setupRealtimeListeners() {
+        console.log('Setting up real-time listeners for all sections...');
+        
+        // Setup KPI Tracker real-time listener
+        setupKpiTrackerRealtimeListener();
+        
+        // Setup Sprints real-time listener
+        setupSprintsRealtimeListener();
+        
+        // Setup Todos real-time listener
+        setupTodosRealtimeListener();
+        
+        // Setup IDS real-time listener (already exists)
+        setupIdsRealtimeListener();
+        
+        console.log('All real-time listeners setup complete');
     }
 
     // Render table function
@@ -2990,6 +3119,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log('Initializing New Clients Goal Slider...');
             initializeNewClientsGoalSlider();
+            
+            // Setup real-time listeners after all data is loaded
+            console.log('Setting up real-time listeners...');
+            setupRealtimeListeners();
             
             console.log('=== PAGE INITIALIZATION COMPLETE ===');
         } catch (error) {

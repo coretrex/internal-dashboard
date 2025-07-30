@@ -707,8 +707,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Setup real-time listener for prospects
+    function setupProspectsRealtimeListener() {
+        try {
+            console.log('Prospects: Setting up real-time listener...');
+            
+            const prospectsCollection = collection(db, "prospects");
+            
+            onSnapshot(prospectsCollection, (snapshot) => {
+                console.log('Prospects: Real-time update received');
+                
+                // Reload prospects when changes are detected
+                loadProspects();
+                updateStatistics();
+            }, (error) => {
+                console.error('Prospects: Real-time listener error:', error);
+            });
+        } catch (error) {
+            console.error('Prospects: Error setting up real-time listener:', error);
+        }
+    }
+
     // Start initialization
     initializeEverything();
+    
+    // Setup real-time listener after initialization
+    setupProspectsRealtimeListener();
     
     // Add this new code
     const toggleAddProspectBtn = document.querySelector('.toggle-add-prospect');

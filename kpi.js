@@ -1,6 +1,6 @@
 // Initialize Firebase (add this at the top of kpi.js)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 
 
@@ -57,8 +57,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Setup real-time listener for KPI data
+    function setupKpiRealtimeListener() {
+        try {
+            console.log('KPI: Setting up real-time listener...');
+            
+            const kpiCollection = collection(db, "kpi");
+            
+            onSnapshot(kpiCollection, (snapshot) => {
+                console.log('KPI: Real-time update received');
+                
+                // Reload KPI data when changes are detected
+                updateTable();
+                calculateRecentStats();
+                updateKpiSummaryTable();
+            }, (error) => {
+                console.error('KPI: Real-time listener error:', error);
+            });
+        } catch (error) {
+            console.error('KPI: Error setting up real-time listener:', error);
+        }
+    }
+
     // Start initialization
     initializeEverything();
+    
+    // Setup real-time listener after initialization
+    setupKpiRealtimeListener();
 
     // Store KPI data in localStorage
     const KPI_STORAGE_KEY = 'kpiData';
