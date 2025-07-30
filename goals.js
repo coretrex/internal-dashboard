@@ -2025,6 +2025,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             kpiTrackerBody.appendChild(tr);
         });
+        
+        // Re-render delete buttons if in edit mode (with a small delay to ensure DOM is ready)
+        setTimeout(() => {
+            // Only render delete buttons if we're actually in edit mode
+            if (document.body.classList.contains('kpi-edit-mode')) {
+                renderDeleteRowButtons();
+            }
+        }, 10);
     }
 
     // Enhanced debounced save function for KPI Tracker with visual feedback
@@ -2254,26 +2262,59 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderDeleteRowButtons() {
         if (!kpiTrackerBody) return;
         
+        // Only show delete buttons if in edit mode
+        const isEditMode = document.body.classList.contains('kpi-edit-mode');
+        
         // Remove all existing delete row buttons
         const existingButtons = kpiTrackerBody.querySelectorAll('.delete-kpi-row-btn');
         existingButtons.forEach(btn => btn.remove());
         
-        // Add delete button to each row
-        Array.from(kpiTrackerBody.children).forEach((row, rowIndex) => {
-            const firstCell = row.children[0];
-            if (!firstCell.querySelector('.delete-kpi-row-btn')) {
+        // Double-check: Only add delete buttons if in edit mode
+        if (!isEditMode) {
+            console.log('Not in edit mode, skipping delete button creation');
+            return;
+        }
+        
+        console.log('In edit mode, creating delete buttons');
+        
+        // Only add delete buttons if in edit mode
+        if (isEditMode) {
+            Array.from(kpiTrackerBody.children).forEach((row, rowIndex) => {
+                const firstCell = row.children[0];
+                
+                // Remove any existing delete buttons first
+                const existingBtn = firstCell.querySelector('.delete-kpi-row-btn');
+                if (existingBtn) {
+                    existingBtn.remove();
+                }
+                
+                // Create new delete button
                 const btn = document.createElement('button');
                 btn.className = 'delete-kpi-row-btn';
                 btn.setAttribute('data-row', rowIndex);
                 btn.title = 'Delete row';
                 btn.innerHTML = '&times;';
+                btn.style.cssText = `
+                    background: transparent;
+                    border: none;
+                    color: #e57373;
+                    font-size: 1.1em;
+                    opacity: 0.7;
+                    cursor: pointer;
+                    transition: opacity 0.2s, color 0.2s;
+                    vertical-align: middle;
+                    padding: 0 2px;
+                    margin-left: 4px;
+                `;
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     deleteKpiRow(rowIndex);
                 });
+                
+                // Add button to the cell
                 firstCell.appendChild(btn);
-            }
-        });
+            });
+        }
     }
 
     // --- MONTHLY SPRINTS SECTION - COMPLETELY REWRITTEN ---

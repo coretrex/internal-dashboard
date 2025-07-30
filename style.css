@@ -1926,6 +1926,20 @@ body.kpi-edit-mode .delete-kpi-row-btn {
 .kpi-tracker-table td {
   position: relative;
 }
+
+/* Goal column highlighting */
+.kpi-tracker-table th:nth-child(3),
+.kpi-tracker-table td:nth-child(3) {
+  background-color: #3a3f4a !important;
+}
+
+/* Tighter padding for first two columns */
+.kpi-tracker-table th:nth-child(1),
+.kpi-tracker-table td:nth-child(1),
+.kpi-tracker-table th:nth-child(2),
+.kpi-tracker-table td:nth-child(2) {
+  padding-right: 8px !important;
+}
 .kpi-tracker-table th:hover .delete-week-btn {
   opacity: 0.7;
   color: #e57373;
