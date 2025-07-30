@@ -1704,12 +1704,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return txt.trim();
         });
         
-        // Convert body to simple object with numbered keys to preserve order
+        // Convert body to object with header-based keys to preserve column alignment
         const bodyObject = {};
         Array.from(kpiTrackerBody.children).forEach((row, rowIndex) => {
             const rowData = {};
             Array.from(row.children).forEach((cell, cellIndex) => {
-                rowData[`cell_${cellIndex}`] = cell.textContent.trim();
+                // Use header text as key for better alignment preservation
+                const headerKey = header[cellIndex] || `column_${cellIndex}`;
+                rowData[headerKey] = cell.textContent.trim();
             });
             bodyObject[`row_${rowIndex.toString().padStart(3, '0')}`] = rowData;
         });
@@ -1734,7 +1736,7 @@ document.addEventListener('DOMContentLoaded', () => {
         kpiTrackerBody.innerHTML = '';
         
         if (typeof data.body === 'object' && !Array.isArray(data.body)) {
-            // Handle new numbered key format (preserves order)
+            // Handle new header-based key format (preserves column alignment)
             const sortedKeys = Object.keys(data.body).sort();
             sortedKeys.forEach(key => {
                 const rowData = data.body[key];
@@ -1743,7 +1745,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (let j = 0; j < data.header.length; j++) {
                     const td = document.createElement('td');
                     td.contentEditable = 'true';
-                    td.textContent = rowData[`cell_${j}`] || '';
+                    
+                    // Try to get data using header-based key first, then fallback to numbered key
+                    const headerKey = data.header[j] || `column_${j}`;
+                    const cellValue = rowData[headerKey] || rowData[`cell_${j}`] || '';
+                    td.textContent = cellValue;
                     
                     // Add special class for owner column (first column)
                     if (j === 0) {
@@ -1851,10 +1857,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cleanedData = cleanKpiTrackerData(firebaseData);
                 console.log('After cleaning:', cleanedData);
                 
+                // Migrate data to new header-based key format if needed
+                const migratedData = migrateKpiTrackerToHeaderKeys(cleanedData);
+                console.log('After migration:', migratedData);
+                
                 // Sort the data by owner
                 const sortedData = {
-                    header: cleanedData.header,
-                    body: sortKpiTrackerByOwner(cleanedData.body)
+                    header: migratedData.header,
+                    body: sortKpiTrackerByOwner(migratedData.body)
                 };
                 console.log('After sorting by owner:', sortedData);
                 
@@ -1922,6 +1932,36 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDeleteWeekButtons();
     }
 
+    // Migrate KPI Tracker data from numbered keys to header-based keys
+    function migrateKpiTrackerToHeaderKeys(data) {
+        if (!data || !data.header || !data.body) return data;
+        
+        const migratedBody = {};
+        
+        Object.entries(data.body).forEach(([rowKey, rowData]) => {
+            const migratedRow = {};
+            
+            // Convert numbered keys to header-based keys
+            Object.entries(rowData).forEach(([key, value]) => {
+                if (key.startsWith('cell_')) {
+                    const cellIndex = parseInt(key.replace('cell_', ''));
+                    const headerKey = data.header[cellIndex] || `column_${cellIndex}`;
+                    migratedRow[headerKey] = value;
+                } else {
+                    // Keep non-numbered keys as-is
+                    migratedRow[key] = value;
+                }
+            });
+            
+            migratedBody[rowKey] = migratedRow;
+        });
+        
+        return {
+            header: data.header,
+            body: migratedBody
+        };
+    }
+
     function cleanKpiTrackerData(data) {
         if (!data || typeof data !== 'object') return data;
         
@@ -1942,12 +1982,25 @@ document.addEventListener('DOMContentLoaded', () => {
             items.forEach(({ key, data }) => {
                 if (!data || typeof data !== 'object') return;
                 
-                // Create a unique identifier for this row
+                // Create a unique identifier for this row using header-based keys if available
                 const rowData = data.cells || data;
-                const uniqueId = `${rowData.cell_0 || ''}-${rowData.cell_1 || ''}-${rowData.cell_2 || ''}`;
+                let uniqueId;
+                if (data.header && Array.isArray(data.header)) {
+                    // Use header-based keys for unique identification
+                    const owner = rowData[data.header[0]] || rowData.cell_0 || '';
+                    const kpi = rowData[data.header[1]] || rowData.cell_1 || '';
+                    const goal = rowData[data.header[2]] || rowData.cell_2 || '';
+                    uniqueId = `${owner}-${kpi}-${goal}`;
+                } else {
+                    // Fallback to numbered keys
+                    uniqueId = `${rowData.cell_0 || ''}-${rowData.cell_1 || ''}-${rowData.cell_2 || ''}`;
+                }
                 
                 // Only add if we haven't seen this exact row before and it has content
-                if (!seen.has(uniqueId) && (rowData.cell_0 || rowData.cell_1 || rowData.cell_2)) {
+                const hasContent = (rowData.cell_0 || rowData.cell_1 || rowData.cell_2) || 
+                                 (data.header && (rowData[data.header[0]] || rowData[data.header[1]] || rowData[data.header[2]]));
+                
+                if (!seen.has(uniqueId) && hasContent) {
                     seen.add(uniqueId);
                     const newKey = `row_${counter.toString().padStart(3, '0')}`;
                     cleanedBody[newKey] = data;
@@ -1984,8 +2037,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function sortKpiTrackerByOwner(data) {
         // Convert to array, sort, then convert back to object
         const sortedEntries = Object.entries(data).sort(([, a], [, b]) => {
-            const ownerA = (a.cell_0 || '').toLowerCase();
-            const ownerB = (b.cell_0 || '').toLowerCase();
+            // Try to get owner from header-based key first, then fallback to numbered key
+            const ownerA = (a.Owner || a.cell_0 || '').toLowerCase();
+            const ownerB = (b.Owner || b.cell_0 || '').toLowerCase();
             return ownerA.localeCompare(ownerB);
         });
         
