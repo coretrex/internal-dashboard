@@ -25,8 +25,7 @@ import {
     getDownloadURL
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-// Import presence system
-import { presenceUI } from './presence-ui.js';
+
 
 // Firebase configuration
 const firebaseConfig = {
@@ -75,16 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize admin panel
     initializeAdminPanel();
     
-    // Initialize presence system FIRST, then set up event listeners
+    // Initialize admin panel
     async function initializeEverything() {
         try {
             console.log('=== INITIALIZING ADMIN PAGE ===');
             
-            // Initialize presence system first
-            console.log('Initializing presence system...');
-            await presenceUI.initialize();
-            
-            // Then set up event listeners
+            // Set up event listeners
             console.log('Setting up event listeners...');
             setupEventListeners();
             

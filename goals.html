@@ -116,7 +116,7 @@
                 <div style="margin-top: 16px; text-align: left;">
                     <button id="addWeekBtn" class="add-btn" style="font-size: 1rem;">+ Add Week</button>
                     <button id="addKpiRowBtn" class="add-btn" style="font-size: 1rem; margin-left: 10px;">+ Add Row</button>
-                    <button id="saveKpiTrackerBtn" class="add-btn" style="font-size: 1rem; margin-left: 10px; background: #2ecc71; color: white; border-color: #2ecc71;">Save Data</button>
+                    <span id="kpi-save-indicator" style="margin-left: 10px; color: #2ecc71; font-size: 0.9rem; display: none;">Auto-saving...</span>
                 </div>
             </div>
             <!-- KPI TRACKER END -->
@@ -141,7 +141,7 @@
                 <div style="margin-top: 8px;">
                     <button id="addSprintRowBtn" class="add-btn">+ Add Row</button>
                     <button id="editSprintsBtn" class="edit-sprints-btn" title="Edit Rows"><i class="fas fa-pen"></i></button>
-                    <button id="saveSprintsBtn" class="add-btn" style="margin-left: 10px; background: #2ecc71; color: white; border-color: #2ecc71;">Save Data</button>
+                    <span id="sprints-save-indicator" style="margin-left: 10px; color: #2ecc71; font-size: 0.9rem; display: none;">Auto-saving...</span>
                 </div>
             </div>
             <!-- Monthly Sprints Section END -->
@@ -204,7 +204,7 @@
                 <div style="margin-top: 24px;">
                     <button id="addIdsRowBtn" class="add-btn">+ Add Row</button>
                     <button id="editIdsBtn" class="edit-sprints-btn" title="Edit Rows"><i class="fas fa-pen"></i></button>
-                    <button id="saveIdsBtn" class="add-btn" style="margin-left: 10px; background: #2ecc71; color: white; border-color: #2ecc71;">Save Data</button>
+                    <span id="ids-save-indicator" style="margin-left: 10px; color: #2ecc71; font-size: 0.9rem; display: none;">Auto-saving...</span>
                 </div>
             </div>
             <!-- IDS Section END -->
@@ -352,36 +352,11 @@
         </div>
     </div>
 
-    <!-- Immediate blocking overlay to prevent interactions before presence system loads -->
-    <div id="immediate-blocking-overlay" style="
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.02);
-        pointer-events: auto;
-        z-index: 9999;
-        cursor: wait;
-    "></div>
-    
-    <div id="immediate-loading-message" style="
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        z-index: 10000;
-    ">Initializing edit lock system...</div>
+
 
     <!-- Navigation -->
     <nav-menu></nav-menu>
     <script src="navigation.js"></script>
     <script type="module" src="goals.js"></script>
-    <script type="module" src="presence-ui.js"></script>
 </body>
 </html> 

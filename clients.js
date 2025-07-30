@@ -10,8 +10,7 @@ import {
     updateDoc 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Import presence system
-import { presenceUI } from './presence-ui.js';
+
 
 // Firebase configuration
 const firebaseConfig = {
@@ -319,16 +318,12 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Firebase app:', app);
     console.log('Firestore database:', db);
     
-    // Initialize presence system FIRST, then load data
+    // Initialize data
     async function initializeEverything() {
         try {
             console.log('=== INITIALIZING CLIENTS PAGE ===');
             
-            // Initialize presence system first
-            console.log('Initializing presence system...');
-            await presenceUI.initialize();
-            
-            // Then load clients
+            // Load clients
             console.log('Loading clients...');
             await loadClients();
             

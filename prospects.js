@@ -12,8 +12,7 @@ import {
     arrayRemove 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Import presence system
-import { presenceUI } from './presence-ui.js';
+
 
 // Firebase configuration
 const firebaseConfig = {
@@ -692,16 +691,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Initialize presence system FIRST, then load data
+    // Initialize data
     async function initializeEverything() {
         try {
             console.log('=== INITIALIZING PROSPECTS PAGE ===');
             
-            // Initialize presence system first
-            console.log('Initializing presence system...');
-            await presenceUI.initialize();
-            
-            // Then load prospects
+            // Load prospects
             console.log('Loading prospects...');
             await loadProspects();
             

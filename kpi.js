@@ -2,8 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// Import presence system
-import { presenceUI } from './presence-ui.js';
+
 
 // Firebase configuration
 const firebaseConfig = {
@@ -40,19 +39,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Initialize presence system FIRST, then load data
+    // Initialize data
     async function initializeEverything() {
         try {
             console.log('=== INITIALIZING KPIS PAGE ===');
             
-            // Initialize presence system first
-            console.log('Initializing presence system...');
-            await presenceUI.initialize();
-            
-            // Wait a moment to ensure presence system is fully ready
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            // Then load data
+            // Load data
             console.log('Loading KPI data...');
             await updateTable();
             calculateRecentStats();
@@ -285,14 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Edit entry function
     window.editEntry = async function(date, owner) {
         console.log('Edit entry clicked for date:', date, 'owner:', owner);
-        console.log('Presence system has edit access:', presenceUI.hasEditAccess());
-        
-        // Check if user has edit access
-        if (!presenceUI.hasEditAccess()) {
-            console.log('No edit access, preventing edit');
-            presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
-            return;
-        }
         
         try {
             const kpiRef = collection(db, 'kpi');
@@ -367,14 +351,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add these new functions for save and cancel functionality
     window.saveEdit = async function(date, owner, button) {
         console.log('Save edit clicked for date:', date, 'owner:', owner);
-        console.log('Presence system has edit access:', presenceUI.hasEditAccess());
-        
-        // Check if user has edit access
-        if (!presenceUI.hasEditAccess()) {
-            console.log('No edit access, preventing save');
-            presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
-            return;
-        }
         
         const row = button.closest('tr');
         const newValues = {
@@ -427,14 +403,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Delete entry function
     window.deleteEntry = async function(date, owner) {
         console.log('Delete entry clicked for date:', date, 'owner:', owner);
-        console.log('Presence system has edit access:', presenceUI.hasEditAccess());
-        
-        // Check if user has edit access
-        if (!presenceUI.hasEditAccess()) {
-            console.log('No edit access, preventing delete');
-            presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
-            return;
-        }
         
         if (confirm('Are you sure you want to delete this entry?')) {
             try {
@@ -459,15 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle form submission
     document.getElementById('kpiForm').addEventListener('submit', async (e) => {
         console.log('Form submission attempted');
-        console.log('Presence system has edit access:', presenceUI.hasEditAccess());
-        
-        // Check if user has edit access
-        if (!presenceUI.hasEditAccess()) {
-            console.log('No edit access, preventing form submission');
-            e.preventDefault();
-            presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
-            return;
-        }
         
         e.preventDefault();
         

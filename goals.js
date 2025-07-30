@@ -13,9 +13,6 @@ import {
     onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Import presence system
-import { presenceUI } from './presence-ui.js';
-
 console.log('=== GOALS.JS LOADING ===');
 console.log('Firebase imports loaded');
 
@@ -39,6 +36,7 @@ console.log('Firebase initialized');
 
 // Global flags
 let isIdsLoading = false;
+let saveIdsTimeout = null;
 
 // Page guard: check login and access
 function hasPageAccess(pageId) {
@@ -1495,7 +1493,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function attachKpiTrackerEventListeners() {
         console.log('Attaching KPI Tracker event listeners...');
         
-        // Single event listener for all KPI Tracker changes
+        // Enhanced auto-save functionality for KPI Tracker
         if (kpiTrackerBody) {
             kpiTrackerBody.addEventListener('input', function(e) {
                 if (e.target.matches('[contenteditable]')) {
@@ -1508,6 +1506,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (e.target.matches('[contenteditable]') && e.key === 'Enter') {
                     console.log('KPI tracker Enter key detected, saving...');
                     e.target.blur(); // This will trigger the blur event
+                }
+            }, true);
+            
+            // Save on blur for contenteditable cells
+            kpiTrackerBody.addEventListener('blur', function(e) {
+                if (e.target.matches('[contenteditable]')) {
+                    console.log('KPI tracker cell blur detected, saving...');
+                    debouncedSaveKpiTracker();
                 }
             }, true);
         }
@@ -1567,42 +1573,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Save button
-        const saveKpiTrackerBtn = document.getElementById('saveKpiTrackerBtn');
-        if (saveKpiTrackerBtn) {
-            saveKpiTrackerBtn.addEventListener('click', async () => {
-                console.log('Save button clicked for KPI Tracker');
-                
-                // Test Firebase connection first
-                try {
-                    console.log('Testing Firebase connection...');
-                    const testDoc = doc(db, "test", "connection");
-                    await setDoc(testDoc, { test: "connection", timestamp: new Date().toISOString() });
-                    console.log('Firebase connection test successful');
-                    
-                    // Now save the actual data
-                    await saveKpiTrackerToFirebase();
-                    
-                    // Visual feedback
-                    const originalText = saveKpiTrackerBtn.textContent;
-                    saveKpiTrackerBtn.textContent = 'Saved!';
-                    saveKpiTrackerBtn.style.background = '#27ae60';
-                    setTimeout(() => {
-                        saveKpiTrackerBtn.textContent = originalText;
-                        saveKpiTrackerBtn.style.background = '#2ecc71';
-                    }, 2000);
-                    
-                } catch (error) {
-                    console.error('Firebase connection test failed:', error);
-                    saveKpiTrackerBtn.textContent = 'Error!';
-                    saveKpiTrackerBtn.style.background = '#e74c3c';
-                    setTimeout(() => {
-                        saveKpiTrackerBtn.textContent = 'Save Data';
-                        saveKpiTrackerBtn.style.background = '#2ecc71';
-                    }, 2000);
-                }
-            });
-        }
+        // Auto-save functionality - removed save button, now auto-saves on changes
 
         // Scroll arrows
         const scrollLeftBtn = document.getElementById('scrollLeftBtn');
@@ -1797,14 +1768,39 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDeleteWeekButtons();
     }
 
-    // Debounced save function for KPI Tracker
+    // Enhanced debounced save function for KPI Tracker with visual feedback
     function debouncedSaveKpiTracker() {
         console.log('Debounced save triggered for KPI Tracker');
         if (saveKpiTrackerTimeout) {
             clearTimeout(saveKpiTrackerTimeout);
         }
-        saveKpiTrackerTimeout = setTimeout(() => {
-            saveKpiTrackerToFirebase();
+        
+        // Show saving indicator
+        const saveIndicator = document.getElementById('kpi-save-indicator');
+        if (saveIndicator) {
+            saveIndicator.textContent = 'Saving...';
+            saveIndicator.style.display = 'inline';
+        }
+        
+        saveKpiTrackerTimeout = setTimeout(async () => {
+            try {
+                await saveKpiTrackerToFirebase();
+                // Show saved indicator
+                if (saveIndicator) {
+                    saveIndicator.textContent = 'Saved!';
+                    setTimeout(() => {
+                        saveIndicator.style.display = 'none';
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Error saving KPI Tracker data:', error);
+                if (saveIndicator) {
+                    saveIndicator.textContent = 'Error!';
+                    setTimeout(() => {
+                        saveIndicator.style.display = 'none';
+                    }, 3000);
+                }
+            }
         }, 1000);
     }
 
@@ -2053,10 +2049,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Edit mode toggle
         if (editSprintsBtn) {
             editSprintsBtn.addEventListener('click', function() {
-                if (!presenceUI.hasEditAccess()) {
-                    presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
-                    return;
-                }
                 document.body.classList.toggle('sprints-edit-mode');
                 renderSprintsRowButtons();
             });
@@ -2065,53 +2057,34 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add row button
         if (addSprintRowBtn) {
             addSprintRowBtn.addEventListener('click', function() {
-                if (!presenceUI.hasEditAccess()) {
-                    presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
-                    return;
-                }
                 addSprintRow();
             });
         }
 
-        // Save button
-        if (saveSprintsBtn) {
-            saveSprintsBtn.addEventListener('click', async () => {
-                if (!presenceUI.hasEditAccess()) {
-                    presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
-                    return;
-                }
-                
-                try {
-                    await saveSprintsToFirebase();
-                    const originalText = saveSprintsBtn.textContent;
-                    saveSprintsBtn.textContent = 'Saved!';
-                    saveSprintsBtn.style.background = '#27ae60';
-                    setTimeout(() => {
-                        saveSprintsBtn.textContent = originalText;
-                        saveSprintsBtn.style.background = '#2ecc71';
-                    }, 2000);
-                } catch (error) {
-                    console.error('Error saving sprints:', error);
-                    saveSprintsBtn.textContent = 'Error!';
-                    saveSprintsBtn.style.background = '#e74c3c';
-                    setTimeout(() => {
-                        saveSprintsBtn.textContent = 'Save Data';
-                        saveSprintsBtn.style.background = '#2ecc71';
-                    }, 2000);
-                }
-            });
-        }
+        // Auto-save functionality - removed save button, now auto-saves on changes
 
-        // Table event listeners
+        // Enhanced auto-save functionality for sprints table
         sprintsBody.addEventListener('input', function(e) {
             if (e.target.matches('[contenteditable]') || e.target.classList.contains('sprint-status')) {
-                saveSprintsFromDOM();
+                // Debounced save to prevent too many Firebase calls
+                clearTimeout(window.sprintsSaveTimeout);
+                window.sprintsSaveTimeout = setTimeout(() => {
+                    saveSprintsFromDOM();
+                }, 1000);
             }
         }, true);
         
         sprintsBody.addEventListener('change', function(e) {
             if (e.target.classList.contains('sprint-status')) {
                 updateSprintStatusColors();
+                // Immediate save for status changes
+                saveSprintsFromDOM();
+            }
+        }, true);
+        
+        // Save on blur for contenteditable cells
+        sprintsBody.addEventListener('blur', function(e) {
+            if (e.target.matches('[contenteditable]')) {
                 saveSprintsFromDOM();
             }
         }, true);
@@ -2213,6 +2186,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         console.log('Sprints updated from DOM:', sprints);
+        
+        // Show saving indicator
+        const saveIndicator = document.getElementById('sprints-save-indicator');
+        if (saveIndicator) {
+            saveIndicator.textContent = 'Saving...';
+            saveIndicator.style.display = 'inline';
+        }
+        
+        // Save with visual feedback
+        saveSprintsToFirebase().then(() => {
+            if (saveIndicator) {
+                saveIndicator.textContent = 'Saved!';
+                setTimeout(() => {
+                    saveIndicator.style.display = 'none';
+                }, 2000);
+            }
+        }).catch((error) => {
+            console.error('Error saving sprints:', error);
+            if (saveIndicator) {
+                saveIndicator.textContent = 'Error!';
+                setTimeout(() => {
+                    saveIndicator.style.display = 'none';
+                }, 3000);
+            }
+        });
     }
     
     function renderSprints() {
@@ -2523,89 +2521,83 @@ document.addEventListener('DOMContentLoaded', () => {
         if (addIdsRowBtn) {
             addIdsRowBtn.addEventListener('click', () => {
                 console.log('IDS: Add row button clicked');
-                console.log('Presence system has edit access:', presenceUI.hasEditAccess());
-                
-                // Check if user has edit access
-                if (!presenceUI.hasEditAccess()) {
-                    console.log('No edit access, preventing IDS row addition');
-                    presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
-                    return;
-                }
-                
                 addIdsRow();
             });
             console.log('IDS: Add row button listener added');
         }
 
-        // Save button
-        if (saveIdsBtn) {
-            saveIdsBtn.addEventListener('click', async () => {
-                console.log('IDS: Save button clicked');
-                console.log('Presence system has edit access:', presenceUI.hasEditAccess());
-                
-                // Check if user has edit access
-                if (!presenceUI.hasEditAccess()) {
-                    console.log('No edit access, preventing IDS save');
-                    presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
-                    return;
-                }
-                
-                const success = await saveIdsData();
-                if (success) {
-                    saveIdsBtn.textContent = 'Saved!';
-                    saveIdsBtn.style.background = '#27ae60';
-                    setTimeout(() => {
-                        saveIdsBtn.textContent = 'Save Data';
-                        saveIdsBtn.style.background = '#2ecc71';
-                    }, 2000);
-                }
-            });
-            console.log('IDS: Save button listener added');
-        }
+        // Auto-save functionality - removed save button, now auto-saves on changes
 
         // Edit mode toggle
         if (editIdsBtn) {
             editIdsBtn.addEventListener('click', () => {
                 console.log('IDS: Edit button clicked');
-                console.log('Presence system has edit access:', presenceUI.hasEditAccess());
-                
-                // Check if user has edit access
-                if (!presenceUI.hasEditAccess()) {
-                    console.log('No edit access, preventing IDS edit mode toggle');
-                    presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
-                    return;
-                }
-                
                 document.body.classList.toggle('ids-edit-mode');
                 renderIdsTable(); // Re-render to show/hide delete buttons
             });
             console.log('IDS: Edit button listener added');
         }
 
-        // Table event listeners
+        // Enhanced auto-save functionality for IDS table
         if (idsBody) {
-            idsBody.addEventListener('input', () => {
+            idsBody.addEventListener('input', (e) => {
                 console.log('IDS: Table input detected');
-                debouncedSaveIds();
+                if (e.target.matches('input, select, [contenteditable]')) {
+                    debouncedSaveIds();
+                }
             });
             
-            idsBody.addEventListener('change', () => {
+            idsBody.addEventListener('change', (e) => {
                 console.log('IDS: Table change detected');
-                debouncedSaveIds();
+                if (e.target.matches('input, select')) {
+                    debouncedSaveIds();
+                }
             });
             
-            console.log('IDS: Table event listeners added');
+            // Save on blur for contenteditable cells
+            idsBody.addEventListener('blur', (e) => {
+                if (e.target.matches('[contenteditable]')) {
+                    debouncedSaveIds();
+                }
+            }, true);
+            
+            console.log('IDS: Enhanced table event listeners added');
         }
     }
 
-    // Debounced save function
+    // Enhanced debounced save function with visual feedback
     function debouncedSaveIds() {
         console.log('Debounced save triggered for IDS');
         if (saveIdsTimeout) {
             clearTimeout(saveIdsTimeout);
         }
-        saveIdsTimeout = setTimeout(() => {
-            saveIdsData();
+        
+        // Show saving indicator
+        const saveIndicator = document.getElementById('ids-save-indicator');
+        if (saveIndicator) {
+            saveIndicator.textContent = 'Saving...';
+            saveIndicator.style.display = 'inline';
+        }
+        
+        saveIdsTimeout = setTimeout(async () => {
+            try {
+                await saveIdsData();
+                // Show saved indicator
+                if (saveIndicator) {
+                    saveIndicator.textContent = 'Saved!';
+                    setTimeout(() => {
+                        saveIndicator.style.display = 'none';
+                    }, 2000);
+                }
+            } catch (error) {
+                console.error('Error saving IDS data:', error);
+                if (saveIndicator) {
+                    saveIndicator.textContent = 'Error!';
+                    setTimeout(() => {
+                        saveIndicator.style.display = 'none';
+                    }, 3000);
+                }
+            }
         }, 1000);
     }
 
@@ -2864,14 +2856,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Delete row function
     async function deleteIdsRow(itemId) {
         console.log('IDS: Deleting row:', itemId);
-        console.log('Presence system has edit access:', presenceUI.hasEditAccess());
-        
-        // Check if user has edit access
-        if (!presenceUI.hasEditAccess()) {
-            console.log('No edit access, preventing IDS row deletion');
-            presenceUI.showNotification('Edit access is required. Please request edit access first.', 'warning');
-            return;
-        }
         
         if (confirm('Are you sure you want to delete this IDS item?')) {
             try {
@@ -3021,11 +3005,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             console.log('=== INITIALIZING EVERYTHING ===');
             
-            // Initialize presence system first
-            console.log('Initializing presence system...');
-            await presenceUI.initialize();
-            
-            // Then initialize the page
+            // Initialize the page
             console.log('Initializing page...');
             await initializePage();
             
