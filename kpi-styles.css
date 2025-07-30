@@ -569,3 +569,41 @@ h1 {
     color: rgba(255, 255, 255, 0.3) !important;
     font-style: italic;
 }
+
+/* Timer styling specific to Sales Metrics page */
+.floating-timer {
+    background: white !important;
+    color: #002247 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.timer-display {
+    font-size: 32px !important;
+    font-weight: 700 !important;
+    color: #002247 !important;
+    font-family: monospace !important;
+    text-shadow: none !important;
+    min-width: 100px !important;
+    text-align: center !important;
+}
+
+.timer-btn {
+    background-color: #002247 !important;
+    color: white !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    padding: 10px 20px !important;
+    border-radius: 6px !important;
+}
+
+.timer-btn:hover {
+    background-color: #003366 !important;
+}
+
+.timer-btn.running {
+    background-color: #dc3545 !important;
+}
+
+.timer-btn.running:hover {
+    background-color: #c82333 !important;
+}

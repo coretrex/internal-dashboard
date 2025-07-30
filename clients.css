@@ -203,20 +203,41 @@
     padding: 0.5rem 1rem;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    color: #002247;
 }
 
 .timer-btn {
-    padding: 0.5rem 1rem;
-    background: #007bff;
+    padding: 10px 20px;
+    background: #002247;
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.timer-btn:hover {
+    background: #003366;
+}
+
+.timer-btn.running {
+    background-color: #dc3545;
+}
+
+.timer-btn.running:hover {
+    background-color: #c82333;
 }
 
 .timer-display {
-    font-size: 1.1rem;
-    font-weight: bold;
+    font-size: 32px;
+    font-weight: 700;
+    color: #002247;
+    font-family: monospace;
+    text-shadow: none;
+    min-width: 100px;
+    text-align: center;
 }
 
 /* General Utilities */
