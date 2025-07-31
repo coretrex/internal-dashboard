@@ -4092,3 +4092,68 @@ body.presence-banner-visible #global-edit-button {
   margin: 4px 0;
 }
 
+/* Google Sheets Integration Styles */
+.google-sheets-container {
+    background: #23272f;
+    border-radius: 12px;
+    padding: 24px;
+    color: #f3f3f3;
+}
+
+.sheets-controls {
+    display: flex;
+    align-items: center;
+}
+
+.sheets-url-input-container {
+    background: #1a1d23;
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid #3a3f4a;
+}
+
+.sheets-embed-container {
+    background: #1a1d23;
+    border-radius: 8px;
+    overflow: hidden;
+    min-height: 400px;
+    border: 1px solid #3a3f4a;
+}
+
+.sheets-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    background: #1a1d23;
+}
+
+#sheetsEmbed {
+    transition: opacity 0.3s ease;
+}
+
+#sheetsEmbed.loading {
+    opacity: 0.6;
+}
+
+@media (max-width: 768px) {
+    .sheets-controls {
+        flex-direction: column;
+        gap: 8px;
+        align-items: stretch;
+    }
+    
+    .sheets-url-input-container .input-field {
+        margin-bottom: 8px;
+    }
+    
+    .sheets-url-input-container > div:first-child {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    #sheetsEmbed {
+        height: 400px;
+    }
+}
+

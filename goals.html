@@ -82,45 +82,58 @@
             </div>
             <!-- KPI BLOCKS END -->
             
-            <!-- KPI TRACKER START -->
-            <div class="kpi-tracker-container" style="margin-top: 48px; position: relative;">
-                <div style="display: flex; align-items: center; justify-content: flex-start; margin-bottom: 12px;">
+
+
+            <!-- KPI Tracker Section START -->
+            <div class="google-sheets-container" style="margin-top: 48px; margin-bottom: 48px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
                     <h2 style="color: white; font-size: 1.4rem; font-weight: 700;">KPI Tracker</h2>
-                </div>
-                <div style="position: relative;">
-                    <button id="scrollLeftBtn" class="kpi-scroll-arrow" style="display:none; position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 2;">&#8592;</button>
-                    <div id="kpiTableScroll" style="overflow-x: auto; max-width: 1300px;">
-                        <table class="kpi-tracker-table" id="kpiTrackerTable" style="min-width: 1200px;">
-                            <thead>
-                                <tr id="kpiTrackerHeaderRow">
-                                    <th>Owner</th>
-                                    <th>KPI</th>
-                                    <th>Goal</th>
-                                    <th>6/12</th>
-                                    <th>6/5</th>
-                                    <th>5/29</th>
-                                    <th>5/22</th>
-                                    <th>5/15</th>
-                                    <th>5/8</th>
-                                    <th>5/1</th>
-                                    <th>4/24</th>
-                                </tr>
-                            </thead>
-                            <tbody id="kpiTrackerBody">
-                                <!-- Firebase will populate this data -->
-                            </tbody>
-                        </table>
+                    <div class="sheets-controls">
+                        <button id="editSheetsUrlBtn" class="add-btn" style="font-size: 0.9rem; background: #3498db;">
+                            <i class="fas fa-edit"></i> Edit URL
+                        </button>
+                        <button id="refreshSheetsBtn" class="add-btn" style="font-size: 0.9rem; background: #27ae60; margin-left: 8px;">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button id="openInNewTabBtn" class="add-btn" style="font-size: 0.9rem; background: #9b59b6; margin-left: 8px;">
+                            <i class="fas fa-external-link-alt"></i> Open Full Screen
+                        </button>
                     </div>
-                    <button id="scrollRightBtn" class="kpi-scroll-arrow" style="display:none; position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 2;">&#8594;</button>
                 </div>
-                <div style="margin-top: 16px; text-align: left;">
-                    <button id="addWeekBtn" class="add-btn" style="font-size: 1rem;">+ Add Week</button>
-                    <button id="addKpiRowBtn" class="add-btn" style="font-size: 1rem; margin-left: 10px;">+ Add Row</button>
-                    <button id="editKpiBtn" class="add-btn" style="font-size: 1rem; margin-left: 10px; background: #3498db;">Edit</button>
-                    <span id="kpi-save-indicator" style="margin-left: 10px; color: #2ecc71; font-size: 0.9rem; display: none;">Auto-saving...</span>
+                <div class="sheets-url-input-container" id="sheetsUrlInputContainer" style="display: none; margin-bottom: 16px;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" id="sheetsUrlInput" class="input-field" placeholder="Enter Google Sheets embed URL" style="flex: 1;">
+                        <button id="saveSheetsUrlBtn" class="add-btn" style="background: #27ae60;">Save</button>
+                        <button id="cancelSheetsUrlBtn" class="add-btn" style="background: #e74c3c;">Cancel</button>
+                    </div>
+                    <div style="margin-top: 8px; font-size: 0.85rem; color: #bdc3c7;">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>URL Options:</strong><br>
+                        • <strong>Any Google Sheets URL:</strong> Just paste the regular sheet URL (e.g., https://docs.google.com/spreadsheets/d/...)<br>
+                        • <strong>Embed URL:</strong> File → Share → Publish to web → Embed → Copy URL<br>
+                        <i class="fas fa-edit"></i> 
+                        <strong>Full editing enabled:</strong> Track and update KPIs directly in the dashboard with real-time synchronization.
+                    </div>
+                </div>
+                <div class="sheets-embed-container" id="sheetsEmbedContainer">
+                    <div class="sheets-placeholder" id="sheetsPlaceholder">
+                        <div style="text-align: center; padding: 60px 20px; color: #bdc3c7;">
+                            <i class="fas fa-chart-line" style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;"></i>
+                            <h3 style="margin-bottom: 8px; color: #ecf0f1;">No KPI Tracker Connected</h3>
+                            <p style="margin-bottom: 20px;">Click "Edit URL" to add your KPI tracking Google Sheet</p>
+                            <p style="margin-bottom: 20px; font-size: 0.9rem; color: #95a5a6;">
+                                <i class="fas fa-edit"></i> 
+                                <strong>Full editing capabilities</strong> - Track and update KPIs directly in the dashboard
+                            </p>
+                            <button id="addSheetsUrlBtn" class="add-btn" style="background: #3498db;">
+                                <i class="fas fa-plus"></i> Add KPI Tracker
+                            </button>
+                        </div>
+                    </div>
+                    <iframe id="sheetsEmbed" style="display: none; width: 100%; height: 600px; border: none; border-radius: 8px; background: white;" allow="clipboard-write"></iframe>
                 </div>
             </div>
-            <!-- KPI TRACKER END -->
+            <!-- KPI Tracker Section END -->
 
             <!-- Monthly Sprints Section START -->
             <div class="monthly-sprints-container" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">

@@ -45,7 +45,6 @@ console.log('Firebase initialized');
     let isSavingTodos = false;
 
     // Real-time update listeners
-    let kpiTrackerListener = null;
     let sprintsListener = null;
     let todosListener = null;
     let idsListener = null;
@@ -1464,35 +1463,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clientObserver.observe(activeClientsValueEl, { childList: true, characterData: true, subtree: true });
     }
 
-    // --- KPI TRACKER TABLE PERSISTENCE (HEADER + BODY) ---
-    const KPI_TRACKER_KEY = 'kpiTrackerData';
-    const kpiTrackerTable = document.getElementById('kpiTrackerTable');
-    const kpiTrackerBody = document.getElementById('kpiTrackerBody');
-    const kpiTrackerHeaderRow = document.getElementById('kpiTrackerHeaderRow');
 
-    // State management for KPI Tracker
-    let isSavingKpiTracker = false;
-    let saveKpiTrackerTimeout = null;
-    let kpiTrackerEventListenersAttached = false;
-
-    // Initialize KPI Tracker functionality
-    function initializeKpiTracker() {
-        if (!kpiTrackerBody) {
-            console.log('KPI Tracker body not found, skipping initialization');
-            return;
-        }
-
-        console.log('Initializing KPI Tracker functionality...');
-        
-        // Attach event listeners only once
-        if (!kpiTrackerEventListenersAttached) {
-            attachKpiTrackerEventListeners();
-            kpiTrackerEventListenersAttached = true;
-        }
-
-        // Load data
-        loadKpiTrackerFromFirebase();
-    }
 
     function attachKpiTrackerEventListeners() {
         console.log('Attaching KPI Tracker event listeners...');
@@ -3100,36 +3071,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Setup KPI Tracker real-time listener
-    function setupKpiTrackerRealtimeListener() {
-        try {
-            console.log('KPI Tracker: Setting up real-time listener...');
-            
-            const docRef = doc(db, "kpiTracker", "data");
-            
-            kpiTrackerListener = onSnapshot(docRef, (docSnap) => {
-                console.log('KPI Tracker: Real-time update received, isSavingKpiTracker:', isSavingKpiTracker);
-                
-                // Only update if we're not currently saving
-                if (!isSavingKpiTracker) {
-                    if (docSnap.exists()) {
-                        const firebaseData = docSnap.data();
-                        console.log('KPI Tracker: Firebase data received:', firebaseData);
-                        
-                        setKpiTrackerData(firebaseData);
-                        renderDeleteWeekButtons();
-                        updateScrollArrows();
-                    }
-                } else {
-                    console.log('KPI Tracker: Skipping update because currently saving');
-                }
-            }, (error) => {
-                console.error('KPI Tracker: Real-time listener error:', error);
-            });
-        } catch (error) {
-            console.error('KPI Tracker: Error setting up real-time listener:', error);
-        }
-    }
+
 
     // Setup Sprints real-time listener
     function setupSprintsRealtimeListener() {
@@ -3195,9 +3137,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup all real-time listeners
     function setupRealtimeListeners() {
         console.log('Setting up real-time listeners for all sections...');
-        
-        // Setup KPI Tracker real-time listener
-        setupKpiTrackerRealtimeListener();
         
         // Setup Sprints real-time listener
         setupSprintsRealtimeListener();
@@ -3386,9 +3325,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Loading KPI data...');
             await loadAllKpiData();
             
-            console.log('Initializing KPI Tracker...');
-            initializeKpiTracker();
-            
             console.log('Loading Todos...');
             await loadTodosFromFirebase();
             
@@ -3406,6 +3342,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log('Initializing New Clients Goal Slider...');
             initializeNewClientsGoalSlider();
+            
+            console.log('Initializing Google Sheets Integration...');
+            initializeGoogleSheets();
             
             // Setup real-time listeners after all data is loaded
             console.log('Setting up real-time listeners...');
@@ -3439,98 +3378,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Start initialization
     initializeEverything();
 
-    // Add debugging functions for KPI Tracker
-    window.debugKpiTracker = async function() {
-        console.log('=== KPI TRACKER DEBUG INFO ===');
-        console.log('Is saving:', isSavingKpiTracker);
-        console.log('Event listeners attached:', kpiTrackerEventListenersAttached);
-        console.log('Current table rows:', kpiTrackerBody ? kpiTrackerBody.children.length : 'No body');
-        
-        // Check Firebase data
-        try {
-            const docRef = doc(db, "kpiTracker", "data");
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                console.log('Firebase KPI Tracker data:', data);
-                console.log('Body keys count:', Object.keys(data.body || {}).length);
-            } else {
-                console.log('No KPI Tracker data in Firebase');
-            }
-        } catch (error) {
-            console.error('Error checking KPI Tracker Firebase:', error);
-        }
-    };
 
-    window.cleanupKpiTracker = async function() {
-        if (confirm('This will clean up any duplicate KPI Tracker data. Continue?')) {
-            try {
-                console.log('KPI Tracker cleanup triggered');
-                await loadKpiTrackerFromFirebase(); // This will reload and clean the data
-                alert('KPI Tracker cleanup completed. Check the console for details.');
-            } catch (error) {
-                console.error('Error during KPI Tracker cleanup:', error);
-                alert('Error during cleanup: ' + error.message);
-            }
-        }
-    };
-
-    window.clearKpiTracker = async function() {
-        if (confirm('This will clear ALL KPI Tracker data. This cannot be undone. Continue?')) {
-            try {
-                await setDoc(doc(db, "kpiTracker", "data"), {
-                    header: ['Owner', 'KPI', 'Goal'],
-                    body: {},
-                    lastUpdated: new Date().toISOString()
-                });
-                
-                if (kpiTrackerBody) {
-                    kpiTrackerBody.innerHTML = '';
-                }
-                
-                alert('KPI Tracker data cleared.');
-                location.reload();
-            } catch (error) {
-                console.error('Error clearing KPI Tracker data:', error);
-                alert('Error clearing data: ' + error.message);
-            }
-        }
-    };
-
-    window.sortKpiTrackerByOwner = async function() {
-        try {
-            console.log('Manual KPI Tracker sort triggered');
-            const currentData = getKpiTrackerFullData();
-            const sortedData = {
-                header: currentData.header,
-                body: sortKpiTrackerByOwner(currentData.body)
-            };
-            
-            // Save the sorted data
-            await setDoc(doc(db, "kpiTracker", "data"), sortedData, { merge: true });
-            
-            // Update the display
-            setKpiTrackerFullData(sortedData);
-            alert('KPI Tracker sorted by owner name successfully!');
-        } catch (error) {
-            console.error('Error during KPI Tracker sort:', error);
-            alert('Error sorting KPI Tracker: ' + error.message);
-        }
-    };
-
-    // Add a function to manually trigger cleanup
-    window.cleanupKpiTrackerData = async function() {
-        if (confirm('This will clean up any duplicate KPI Tracker data. Continue?')) {
-            try {
-                console.log('Manual KPI Tracker cleanup triggered');
-                await loadKpiTrackerFromFirebase(); // This will trigger the cleanup
-                alert('KPI Tracker cleanup completed. Check the console for details.');
-            } catch (error) {
-                console.error('Error during KPI Tracker cleanup:', error);
-                alert('Error during cleanup: ' + error.message);
-            }
-        }
-    };
 
     // Add debugging functions for Revenue Goal Slider
     window.debugRevenueGoals = async function() {
@@ -4030,6 +3878,245 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    }
+    
+    // Google Sheets Integration Functions
+    function initializeGoogleSheets() {
+        console.log('Initializing Google Sheets integration...');
+        
+        // Load saved sheets URL
+        loadSheetsUrl();
+        
+        // Attach event listeners
+        attachSheetsEventListeners();
+    }
+    
+    function attachSheetsEventListeners() {
+        // Edit URL button
+        const editSheetsUrlBtn = document.getElementById('editSheetsUrlBtn');
+        const addSheetsUrlBtn = document.getElementById('addSheetsUrlBtn');
+        const saveSheetsUrlBtn = document.getElementById('saveSheetsUrlBtn');
+        const cancelSheetsUrlBtn = document.getElementById('cancelSheetsUrlBtn');
+        const refreshSheetsBtn = document.getElementById('refreshSheetsBtn');
+        const sheetsUrlInput = document.getElementById('sheetsUrlInput');
+        
+        if (editSheetsUrlBtn) {
+            editSheetsUrlBtn.addEventListener('click', showSheetsUrlInput);
+        }
+        
+        if (addSheetsUrlBtn) {
+            addSheetsUrlBtn.addEventListener('click', showSheetsUrlInput);
+        }
+        
+        if (saveSheetsUrlBtn) {
+            saveSheetsUrlBtn.addEventListener('click', saveSheetsUrl);
+        }
+        
+        if (cancelSheetsUrlBtn) {
+            cancelSheetsUrlBtn.addEventListener('click', hideSheetsUrlInput);
+        }
+        
+        if (refreshSheetsBtn) {
+            refreshSheetsBtn.addEventListener('click', refreshSheetsEmbed);
+        }
+        
+        const openInNewTabBtn = document.getElementById('openInNewTabBtn');
+        if (openInNewTabBtn) {
+            openInNewTabBtn.addEventListener('click', openSheetsInNewTab);
+        }
+        
+        if (sheetsUrlInput) {
+            sheetsUrlInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    saveSheetsUrl();
+                }
+            });
+        }
+    }
+    
+    function showSheetsUrlInput() {
+        const urlInputContainer = document.getElementById('sheetsUrlInputContainer');
+        const sheetsUrlInput = document.getElementById('sheetsUrlInput');
+        const currentUrl = localStorage.getItem('googleSheetsUrl') || '';
+        
+        if (urlInputContainer && sheetsUrlInput) {
+            sheetsUrlInput.value = currentUrl;
+            urlInputContainer.style.display = 'block';
+            sheetsUrlInput.focus();
+        }
+    }
+    
+    function hideSheetsUrlInput() {
+        const urlInputContainer = document.getElementById('sheetsUrlInputContainer');
+        if (urlInputContainer) {
+            urlInputContainer.style.display = 'none';
+        }
+    }
+    
+    async function saveSheetsUrl() {
+        const sheetsUrlInput = document.getElementById('sheetsUrlInput');
+        const url = sheetsUrlInput.value.trim();
+        
+        if (!url) {
+            showNotification('Please enter a valid Google Sheets URL', 'error');
+            return;
+        }
+        
+        // Validate URL format
+        if (!isValidSheetsUrl(url)) {
+            showNotification('Please enter a valid Google Sheets URL', 'error');
+            return;
+        }
+        
+        try {
+            // Convert to editable format
+            const editableUrl = convertToEditableUrl(url);
+            
+            // Save original URL to localStorage
+            localStorage.setItem('googleSheetsUrl', url);
+            
+            // Save to Firebase
+            await saveSheetsUrlToFirebase(url);
+            
+            // Update the embed with editable URL
+            updateSheetsEmbed(url);
+            
+            // Hide input
+            hideSheetsUrlInput();
+            
+            showNotification('Google Sheets URL saved successfully! Editing enabled.', 'success');
+            
+        } catch (error) {
+            console.error('Error saving sheets URL:', error);
+            showNotification('Error saving URL. Please try again.', 'error');
+        }
+    }
+    
+    function isValidSheetsUrl(url) {
+        // Basic validation for Google Sheets embed URLs
+        return url.includes('docs.google.com/spreadsheets') && 
+               (url.includes('/embed') || url.includes('/pubhtml') || url.includes('/edit'));
+    }
+    
+    function convertToEditableUrl(url) {
+        // Convert any Google Sheets URL to editable format
+        if (url.includes('/pubhtml')) {
+            return url.replace('/pubhtml', '/edit');
+        } else if (url.includes('/embed') && !url.includes('/edit')) {
+            return url.replace('/embed', '/edit');
+        } else if (url.includes('/spreadsheets/d/') && !url.includes('/edit') && !url.includes('/embed') && !url.includes('/pubhtml')) {
+            // If it's just the basic sheet URL, add /edit
+            return url + '/edit';
+        }
+        return url;
+    }
+    
+    async function saveSheetsUrlToFirebase(url) {
+        try {
+            const sheetsUrlRef = doc(db, 'settings', 'googleSheets');
+            await setDoc(sheetsUrlRef, {
+                url: url,
+                updatedAt: new Date().toISOString()
+            });
+        } catch (error) {
+            console.error('Error saving sheets URL to Firebase:', error);
+            throw error;
+        }
+    }
+    
+    async function loadSheetsUrl() {
+        try {
+            // First try to load from Firebase
+            const sheetsUrlRef = doc(db, 'settings', 'googleSheets');
+            const sheetsUrlDoc = await getDoc(sheetsUrlRef);
+            
+            let url = '';
+            
+            if (sheetsUrlDoc.exists()) {
+                url = sheetsUrlDoc.data().url || '';
+            } else {
+                // Fallback to localStorage
+                url = localStorage.getItem('googleSheetsUrl') || '';
+            }
+            
+            if (url) {
+                updateSheetsEmbed(url);
+            }
+            
+        } catch (error) {
+            console.error('Error loading sheets URL:', error);
+            // Fallback to localStorage
+            const url = localStorage.getItem('googleSheetsUrl') || '';
+            if (url) {
+                updateSheetsEmbed(url);
+            }
+        }
+    }
+    
+    function updateSheetsEmbed(url) {
+        const sheetsEmbed = document.getElementById('sheetsEmbed');
+        const sheetsPlaceholder = document.getElementById('sheetsPlaceholder');
+        
+        if (sheetsEmbed && sheetsPlaceholder) {
+            // Show loading state
+            sheetsEmbed.classList.add('loading');
+            
+            // Convert URL to editable format if needed
+            let editableUrl = url;
+            if (url.includes('/pubhtml')) {
+                // Convert pubhtml to edit format for editing capability
+                editableUrl = url.replace('/pubhtml', '/edit');
+            } else if (url.includes('/embed') && !url.includes('/edit')) {
+                // Convert embed to edit format for editing capability
+                editableUrl = url.replace('/embed', '/edit');
+            }
+            
+            // Update iframe src
+            sheetsEmbed.src = editableUrl;
+            
+            // Handle iframe load
+            sheetsEmbed.onload = () => {
+                sheetsEmbed.classList.remove('loading');
+                sheetsPlaceholder.style.display = 'none';
+                sheetsEmbed.style.display = 'block';
+            };
+            
+            // Handle iframe error
+            sheetsEmbed.onerror = () => {
+                sheetsEmbed.classList.remove('loading');
+                showNotification('Error loading Google Sheet. Please check the URL.', 'error');
+            };
+        }
+    }
+    
+    function refreshSheetsEmbed() {
+        const sheetsEmbed = document.getElementById('sheetsEmbed');
+        const currentUrl = localStorage.getItem('googleSheetsUrl');
+        
+        if (sheetsEmbed && currentUrl) {
+            sheetsEmbed.classList.add('loading');
+            // Convert to editable format and add timestamp to force refresh
+            let editableUrl = currentUrl;
+            if (currentUrl.includes('/pubhtml')) {
+                editableUrl = currentUrl.replace('/pubhtml', '/edit');
+            } else if (currentUrl.includes('/embed') && !currentUrl.includes('/edit')) {
+                editableUrl = currentUrl.replace('/embed', '/edit');
+            }
+            sheetsEmbed.src = editableUrl + '?t=' + Date.now();
+        } else {
+            showNotification('No Google Sheet URL configured', 'info');
+        }
+    }
+    
+    function openSheetsInNewTab() {
+        const currentUrl = localStorage.getItem('googleSheetsUrl');
+        
+        if (currentUrl) {
+            const editableUrl = convertToEditableUrl(currentUrl);
+            window.open(editableUrl, '_blank');
+        } else {
+            showNotification('No Google Sheet URL configured', 'info');
+        }
     }
     
     // TEST SCRIPT COMPLETION
