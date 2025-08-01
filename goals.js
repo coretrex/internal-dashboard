@@ -3884,239 +3884,51 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeGoogleSheets() {
         console.log('Initializing Google Sheets integration...');
         
-        // Load saved sheets URL
-        loadSheetsUrl();
-        
         // Attach event listeners
         attachSheetsEventListeners();
     }
     
     function attachSheetsEventListeners() {
-        // Edit URL button
-        const editSheetsUrlBtn = document.getElementById('editSheetsUrlBtn');
-        const addSheetsUrlBtn = document.getElementById('addSheetsUrlBtn');
-        const saveSheetsUrlBtn = document.getElementById('saveSheetsUrlBtn');
-        const cancelSheetsUrlBtn = document.getElementById('cancelSheetsUrlBtn');
+        // Refresh button
         const refreshSheetsBtn = document.getElementById('refreshSheetsBtn');
-        const sheetsUrlInput = document.getElementById('sheetsUrlInput');
-        
-        if (editSheetsUrlBtn) {
-            editSheetsUrlBtn.addEventListener('click', showSheetsUrlInput);
-        }
-        
-        if (addSheetsUrlBtn) {
-            addSheetsUrlBtn.addEventListener('click', showSheetsUrlInput);
-        }
-        
-        if (saveSheetsUrlBtn) {
-            saveSheetsUrlBtn.addEventListener('click', saveSheetsUrl);
-        }
-        
-        if (cancelSheetsUrlBtn) {
-            cancelSheetsUrlBtn.addEventListener('click', hideSheetsUrlInput);
-        }
+        const openInNewTabBtn = document.getElementById('openInNewTabBtn');
         
         if (refreshSheetsBtn) {
             refreshSheetsBtn.addEventListener('click', refreshSheetsEmbed);
         }
         
-        const openInNewTabBtn = document.getElementById('openInNewTabBtn');
         if (openInNewTabBtn) {
             openInNewTabBtn.addEventListener('click', openSheetsInNewTab);
-        }
-        
-        if (sheetsUrlInput) {
-            sheetsUrlInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    saveSheetsUrl();
-                }
-            });
-        }
-    }
-    
-    function showSheetsUrlInput() {
-        const urlInputContainer = document.getElementById('sheetsUrlInputContainer');
-        const sheetsUrlInput = document.getElementById('sheetsUrlInput');
-        const currentUrl = localStorage.getItem('googleSheetsUrl') || '';
-        
-        if (urlInputContainer && sheetsUrlInput) {
-            sheetsUrlInput.value = currentUrl;
-            urlInputContainer.style.display = 'block';
-            sheetsUrlInput.focus();
-        }
-    }
-    
-    function hideSheetsUrlInput() {
-        const urlInputContainer = document.getElementById('sheetsUrlInputContainer');
-        if (urlInputContainer) {
-            urlInputContainer.style.display = 'none';
-        }
-    }
-    
-    async function saveSheetsUrl() {
-        const sheetsUrlInput = document.getElementById('sheetsUrlInput');
-        const url = sheetsUrlInput.value.trim();
-        
-        if (!url) {
-            showNotification('Please enter a valid Google Sheets URL', 'error');
-            return;
-        }
-        
-        // Validate URL format
-        if (!isValidSheetsUrl(url)) {
-            showNotification('Please enter a valid Google Sheets URL', 'error');
-            return;
-        }
-        
-        try {
-            // Convert to editable format
-            const editableUrl = convertToEditableUrl(url);
-            
-            // Save original URL to localStorage
-            localStorage.setItem('googleSheetsUrl', url);
-            
-            // Save to Firebase
-            await saveSheetsUrlToFirebase(url);
-            
-            // Update the embed with editable URL
-            updateSheetsEmbed(url);
-            
-            // Hide input
-            hideSheetsUrlInput();
-            
-            showNotification('Google Sheets URL saved successfully! Editing enabled.', 'success');
-            
-        } catch (error) {
-            console.error('Error saving sheets URL:', error);
-            showNotification('Error saving URL. Please try again.', 'error');
-        }
-    }
-    
-    function isValidSheetsUrl(url) {
-        // Basic validation for Google Sheets embed URLs
-        return url.includes('docs.google.com/spreadsheets') && 
-               (url.includes('/embed') || url.includes('/pubhtml') || url.includes('/edit'));
-    }
-    
-    function convertToEditableUrl(url) {
-        // Convert any Google Sheets URL to editable format
-        if (url.includes('/pubhtml')) {
-            return url.replace('/pubhtml', '/edit');
-        } else if (url.includes('/embed') && !url.includes('/edit')) {
-            return url.replace('/embed', '/edit');
-        } else if (url.includes('/spreadsheets/d/') && !url.includes('/edit') && !url.includes('/embed') && !url.includes('/pubhtml')) {
-            // If it's just the basic sheet URL, add /edit
-            return url + '/edit';
-        }
-        return url;
-    }
-    
-    async function saveSheetsUrlToFirebase(url) {
-        try {
-            const sheetsUrlRef = doc(db, 'settings', 'googleSheets');
-            await setDoc(sheetsUrlRef, {
-                url: url,
-                updatedAt: new Date().toISOString()
-            });
-        } catch (error) {
-            console.error('Error saving sheets URL to Firebase:', error);
-            throw error;
-        }
-    }
-    
-    async function loadSheetsUrl() {
-        try {
-            // First try to load from Firebase
-            const sheetsUrlRef = doc(db, 'settings', 'googleSheets');
-            const sheetsUrlDoc = await getDoc(sheetsUrlRef);
-            
-            let url = '';
-            
-            if (sheetsUrlDoc.exists()) {
-                url = sheetsUrlDoc.data().url || '';
-            } else {
-                // Fallback to localStorage
-                url = localStorage.getItem('googleSheetsUrl') || '';
-            }
-            
-            if (url) {
-                updateSheetsEmbed(url);
-            }
-            
-        } catch (error) {
-            console.error('Error loading sheets URL:', error);
-            // Fallback to localStorage
-            const url = localStorage.getItem('googleSheetsUrl') || '';
-            if (url) {
-                updateSheetsEmbed(url);
-            }
-        }
-    }
-    
-    function updateSheetsEmbed(url) {
-        const sheetsEmbed = document.getElementById('sheetsEmbed');
-        const sheetsPlaceholder = document.getElementById('sheetsPlaceholder');
-        
-        if (sheetsEmbed && sheetsPlaceholder) {
-            // Show loading state
-            sheetsEmbed.classList.add('loading');
-            
-            // Convert URL to editable format if needed
-            let editableUrl = url;
-            if (url.includes('/pubhtml')) {
-                // Convert pubhtml to edit format for editing capability
-                editableUrl = url.replace('/pubhtml', '/edit');
-            } else if (url.includes('/embed') && !url.includes('/edit')) {
-                // Convert embed to edit format for editing capability
-                editableUrl = url.replace('/embed', '/edit');
-            }
-            
-            // Update iframe src
-            sheetsEmbed.src = editableUrl;
-            
-            // Handle iframe load
-            sheetsEmbed.onload = () => {
-                sheetsEmbed.classList.remove('loading');
-                sheetsPlaceholder.style.display = 'none';
-                sheetsEmbed.style.display = 'block';
-            };
-            
-            // Handle iframe error
-            sheetsEmbed.onerror = () => {
-                sheetsEmbed.classList.remove('loading');
-                showNotification('Error loading Google Sheet. Please check the URL.', 'error');
-            };
         }
     }
     
     function refreshSheetsEmbed() {
         const sheetsEmbed = document.getElementById('sheetsEmbed');
-        const currentUrl = localStorage.getItem('googleSheetsUrl');
+        const refreshBtn = document.getElementById('refreshSheetsBtn');
+        const originalText = refreshBtn.innerHTML;
         
-        if (sheetsEmbed && currentUrl) {
-            sheetsEmbed.classList.add('loading');
-            // Convert to editable format and add timestamp to force refresh
-            let editableUrl = currentUrl;
-            if (currentUrl.includes('/pubhtml')) {
-                editableUrl = currentUrl.replace('/pubhtml', '/edit');
-            } else if (currentUrl.includes('/embed') && !currentUrl.includes('/edit')) {
-                editableUrl = currentUrl.replace('/embed', '/edit');
-            }
-            sheetsEmbed.src = editableUrl + '?t=' + Date.now();
-        } else {
-            showNotification('No Google Sheet URL configured', 'info');
+        if (sheetsEmbed) {
+            // Show loading state
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+            refreshBtn.disabled = true;
+            
+            // Add timestamp to force refresh
+            const currentSrc = sheetsEmbed.src;
+            const separator = currentSrc.includes('?') ? '&' : '?';
+            sheetsEmbed.src = currentSrc + separator + 't=' + Date.now();
+            
+            // Reset button after a short delay
+            setTimeout(() => {
+                refreshBtn.innerHTML = originalText;
+                refreshBtn.disabled = false;
+                showNotification('Google Sheet refreshed successfully!', 'success');
+            }, 1000);
         }
     }
     
     function openSheetsInNewTab() {
-        const currentUrl = localStorage.getItem('googleSheetsUrl');
-        
-        if (currentUrl) {
-            const editableUrl = convertToEditableUrl(currentUrl);
-            window.open(editableUrl, '_blank');
-        } else {
-            showNotification('No Google Sheet URL configured', 'info');
-        }
+        const sheetsUrl = 'https://docs.google.com/spreadsheets/d/1HnrcogN1Ec6qo4g-yTki7KRwk5Qo-CYOJPDCuec1Gns/edit?usp=sharing';
+        window.open(sheetsUrl, '_blank');
     }
     
     // TEST SCRIPT COMPLETION
