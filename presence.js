@@ -1,7 +1,7 @@
 // Presence Management System for CoreTrex Dashboard
 // This module handles user presence tracking and edit locks across all pages
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { initializeFirebase } from './firebase-config.js';
 import { 
     getFirestore, 
     doc, 
@@ -13,19 +13,15 @@ import {
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo",
-    authDomain: "coretrex-internal-dashboard.firebaseapp.com",
-    projectId: "coretrex-internal-dashboard",
-    storageBucket: "coretrex-internal-dashboard.firebasestorage.app",
-    messagingSenderId: "16273988237",
-    appId: "1:16273988237:web:956c63742712c22185e0c4"
-};
+// Global variables for Firebase app and db
+let app, db;
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Initialize Firebase with secure config
+async function initializeFirebaseApp() {
+    const firebaseInstance = await initializeFirebase();
+    app = firebaseInstance.app;
+    db = firebaseInstance.db;
+}
 
 class PresenceManager {
     constructor() {
@@ -48,6 +44,9 @@ class PresenceManager {
     // Initialize the presence manager
     async initialize() {
         if (this.isInitialized) return;
+
+        // Initialize Firebase first
+        await initializeFirebaseApp();
 
         // Get user info from localStorage
         this.userId = localStorage.getItem('userId') || this.generateUserId();

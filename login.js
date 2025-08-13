@@ -1,5 +1,5 @@
 // Login specific code
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { initializeFirebase } from './firebase-config.js';
 import { 
     getAuth, 
     signInWithPopup, 
@@ -17,21 +17,17 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 // ... other imports
 
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo",
-    authDomain: "coretrex-internal-dashboard.firebaseapp.com",
-    projectId: "coretrex-internal-dashboard",
-    storageBucket: "coretrex-internal-dashboard.firebasestorage.app",
-    messagingSenderId: "16273988237",
-    appId: "1:16273988237:web:956c63742712c22185e0c4"
-};
+// Global variables for Firebase app and db
+let app, auth, provider, db;
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
-const db = getFirestore(app);
+// Initialize Firebase with secure config
+async function initializeFirebaseApp() {
+    const firebaseInstance = await initializeFirebase();
+    app = firebaseInstance.app;
+    db = firebaseInstance.db;
+    auth = getAuth(app);
+    provider = new GoogleAuthProvider();
+}
 
 // Helper: Provision user in Firestore
 async function provisionUser(user) {
@@ -61,7 +57,10 @@ async function provisionUser(user) {
 }
 
 // Login functionality
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize Firebase first
+    await initializeFirebaseApp();
+    
     const loginButton = document.getElementById("loginButton");
     const loginError = document.getElementById("loginError");
     const loginContainer = document.querySelector('.login-container');

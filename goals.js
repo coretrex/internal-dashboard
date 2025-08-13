@@ -2,7 +2,7 @@
 // GOALS.JS IS LOADING
 
 // Import Firebase modules
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { initializeFirebase } from './firebase-config.js';
 import { 
     getFirestore, 
     collection, 
@@ -19,23 +19,18 @@ import {
 console.log('=== GOALS.JS LOADING ===');
 console.log('Firebase imports loaded');
 
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo",
-    authDomain: "coretrex-internal-dashboard.firebaseapp.com",
-    projectId: "coretrex-internal-dashboard",
-    storageBucket: "coretrex-internal-dashboard.firebasestorage.app",
-    messagingSenderId: "16273988237",
-    appId: "1:16273988237:web:956c63742712c22185e0c4"
-};
+// Global variables for Firebase app and db
+let app, db;
+
+// Initialize Firebase with secure config
+async function initializeFirebaseApp() {
+    const firebaseInstance = await initializeFirebase();
+    app = firebaseInstance.app;
+    db = firebaseInstance.db;
+    console.log('Firebase initialized with secure config');
+}
 
 console.log('Firebase config loaded');
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-console.log('Firebase initialized');
 
     // Global flags
     let isIdsLoading = false;
@@ -82,10 +77,13 @@ function hasPageAccess(pageId) {
 }
 
 // Goals page functionality
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('=== DOM CONTENT LOADED ===');
     console.log('Page: goals.html');
     console.log('DOM fully loaded and parsed');
+    
+    // Initialize Firebase first
+    await initializeFirebaseApp();
     
     // PAGE GUARD - TEMPORARILY DISABLED FOR TESTING
     console.log('Checking page access...');

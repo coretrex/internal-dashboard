@@ -1,5 +1,5 @@
 // Import Firebase modules
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { initializeFirebase } from './firebase-config.js';
 import { 
     getFirestore, 
     collection, 
@@ -10,19 +10,15 @@ import {
     updateDoc 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo",
-    authDomain: "coretrex-internal-dashboard.firebaseapp.com",
-    projectId: "coretrex-internal-dashboard",
-    storageBucket: "coretrex-internal-dashboard.firebasestorage.app",
-    messagingSenderId: "16273988237",
-    appId: "1:16273988237:web:956c63742712c22185e0c4"
-};
+// Global variables for Firebase app and db
+let app, db;
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Initialize Firebase with secure config
+async function initializeFirebaseApp() {
+    const firebaseInstance = await initializeFirebase();
+    app = firebaseInstance.app;
+    db = firebaseInstance.db;
+}
 
 // DOM Elements
 const tasksTable = document.getElementById('tasksTable');
@@ -35,8 +31,11 @@ let isEditing = false;
 let currentEditId = null;
 
 // Remove any duplicate DOMContentLoaded listeners and combine into one
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('Initializing...');
+    
+    // Initialize Firebase first
+    await initializeFirebaseApp();
     
     // Add event listener to form submission
     const taskForm = document.querySelector('#taskForm');

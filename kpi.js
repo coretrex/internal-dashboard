@@ -1,22 +1,25 @@
 // Initialize Firebase (add this at the top of kpi.js)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { initializeFirebase } from './firebase-config.js';
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, updateDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+// Global variables for Firebase app and db
+let app, db;
 
-
-// Firebase configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo",
-    authDomain: "coretrex-internal-dashboard.firebaseapp.com",
-    projectId: "coretrex-internal-dashboard",
-    storageBucket: "coretrex-internal-dashboard.firebasestorage.app",
-    messagingSenderId: "16273988237",
-    appId: "1:16273988237:web:956c63742712c22185e0c4"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Initialize Firebase with secure config
+async function initializeFirebaseApp() {
+    try {
+        console.log('KPI: Initializing Firebase...');
+        const firebaseInstance = await initializeFirebase();
+        app = firebaseInstance.app;
+        db = firebaseInstance.db;
+        console.log('KPI: Firebase initialized successfully');
+        console.log('KPI: App instance:', app);
+        console.log('KPI: Database instance:', db);
+    } catch (error) {
+        console.error('KPI: Failed to initialize Firebase:', error);
+        throw error;
+    }
+}
 
 // Page guard: check login and access
 function hasPageAccess(pageId) {
@@ -31,7 +34,10 @@ function hasPageAccess(pageId) {
     return isLoggedIn && (userRole === 'admin' || pageAccess.includes(pageId));
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize Firebase first
+    await initializeFirebaseApp();
+    
     // PAGE GUARD
     if (!hasPageAccess('kpis')) {
         alert('Access denied. You do not have permission to view this page.');
@@ -91,22 +97,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load existing KPI data
     async function loadKPIData() {
         try {
+            console.log('KPI: Attempting to load data from Firestore...');
+            console.log('KPI: Database instance:', db);
+            
             const kpiRef = collection(db, 'kpi');
+            console.log('KPI: Collection reference created');
+            
             const q = query(kpiRef, orderBy('date', 'desc'));
+            console.log('KPI: Query created');
+            
             const querySnapshot = await getDocs(q);
-            return querySnapshot.docs.map(doc => {
-                const data = doc.data();
+            console.log('KPI: Query executed, found', querySnapshot.docs.length, 'documents');
+            
+            const data = querySnapshot.docs.map(doc => {
+                const docData = doc.data();
+                console.log('KPI: Document data:', docData);
                 return {
                     id: doc.id,
-                    date: data.date,
-                    calls: Number(data.calls),
-                    meetings: Number(data.meetings),
-                    owner: data.owner,
-                    notes: data.notes || '' // Ensure notes field is included
+                    date: docData.date,
+                    calls: Number(docData.calls),
+                    meetings: Number(docData.meetings),
+                    owner: docData.owner,
+                    notes: docData.notes || '' // Ensure notes field is included
                 };
             });
+            
+            console.log('KPI: Processed data:', data);
+            return data;
         } catch (error) {
             console.error("Error loading KPI data:", error);
+            console.error("Error details:", error.message, error.code);
             return [];
         }
     }
