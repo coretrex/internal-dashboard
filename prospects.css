@@ -97,23 +97,28 @@
     max-width: 120px;
 }
 
-.dashboard-table th:nth-child(6), /* Sales Lead */
+.dashboard-table th:nth-child(6), /* Lead Source */
 .dashboard-table td:nth-child(6) {
-    max-width: 80px;
-}
-
-.dashboard-table th:nth-child(7), /* Revenue */
-.dashboard-table td:nth-child(7) {
     max-width: 100px;
 }
 
-.dashboard-table th:nth-child(8), /* Status */
+.dashboard-table th:nth-child(7), /* Sales Lead */
+.dashboard-table td:nth-child(7) {
+    max-width: 80px;
+}
+
+.dashboard-table th:nth-child(8), /* Revenue */
 .dashboard-table td:nth-child(8) {
     max-width: 100px;
 }
 
-.dashboard-table th:nth-child(9), /* Actions */
+.dashboard-table th:nth-child(9), /* Status */
 .dashboard-table td:nth-child(9) {
+    max-width: 100px;
+}
+
+.dashboard-table th:nth-child(10), /* Actions */
+.dashboard-table td:nth-child(10) {
     max-width: 120px;
 }
 

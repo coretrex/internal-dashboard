@@ -112,6 +112,7 @@ async function addProspect() {
     const nextSteps = document.getElementById('nextSteps').value;
     const dueDate = document.getElementById('dueDate').value;
     const signatureExpected = document.getElementById('signatureExpected').value;
+    const leadSource = document.getElementById('leadSource').value;
     const salesLead = document.getElementById('salesLead').value;
     const revenue = parseFloat(document.getElementById('revenue').value) || 0;
 
@@ -126,6 +127,7 @@ async function addProspect() {
             nextSteps,
             dueDate,
             signatureExpected,
+            leadSource,
             salesLead,
             revenueValue: revenue,
             status: 'In-Progress'
@@ -136,6 +138,7 @@ async function addProspect() {
             nextSteps,
             dueDate,
             signatureExpected,
+            leadSource,
             salesLead,
             revenueValue: revenue,
             status: 'In-Progress'
@@ -171,6 +174,7 @@ function addProspectToTable(data, docId) {
         <td>${data.nextSteps}</td>
         <td class="${data.dueDate <= todayString ? 'overdue' : ''}" data-date="${data.dueDate}">${formatDateWithOrdinal(data.dueDate)}</td>
         <td data-date="${data.signatureExpected}">${formatDateWithOrdinal(data.signatureExpected)}</td>
+        <td>${data.leadSource || 'N/A'}</td>
         <td>${data.salesLead}</td>
         <td>$${data.revenueValue.toLocaleString()}</td>
         <td>
@@ -231,9 +235,10 @@ function addProspectToTable(data, docId) {
             nextSteps: cells[2].textContent,
             dueDate: cells[3].dataset.date,  // Get the original date from data attribute
             signatureExpected: cells[4].dataset.date,  // Get the original date from data attribute
-            salesLead: cells[5].textContent,
-            revenueValue: parseFloat(cells[6].textContent.replace(/[$,]/g, '')),
-            status: cells[7].querySelector('select').value
+            leadSource: cells[5].textContent,
+            salesLead: cells[6].textContent,
+            revenueValue: parseFloat(cells[7].textContent.replace(/[$,]/g, '')),
+            status: cells[8].querySelector('select').value
         };
 
         // Replace cells with input fields
@@ -243,11 +248,21 @@ function addProspectToTable(data, docId) {
         cells[4].innerHTML = `<input type="date" class="editable-input" value="${currentData.signatureExpected}">`;
         cells[5].innerHTML = `
             <select class="editable-input">
+                <option value="Meta" ${currentData.leadSource === 'Meta' ? 'selected' : ''}>Meta</option>
+                <option value="Referral" ${currentData.leadSource === 'Referral' ? 'selected' : ''}>Referral</option>
+                <option value="Email" ${currentData.leadSource === 'Email' ? 'selected' : ''}>Email</option>
+                <option value="Cold Call" ${currentData.leadSource === 'Cold Call' ? 'selected' : ''}>Cold Call</option>
+                <option value="Google" ${currentData.leadSource === 'Google' ? 'selected' : ''}>Google</option>
+                <option value="Door Knock" ${currentData.leadSource === 'Door Knock' ? 'selected' : ''}>Door Knock</option>
+            </select>
+        `;
+        cells[6].innerHTML = `
+            <select class="editable-input">
                 <option value="Robby" ${currentData.salesLead === 'Robby' ? 'selected' : ''}>Robby</option>
                 <option value="Greyson" ${currentData.salesLead === 'Greyson' ? 'selected' : ''}>Greyson</option>
             </select>
         `;
-        cells[6].innerHTML = `<input type="number" class="editable-input" value="${currentData.revenueValue}">`;
+        cells[7].innerHTML = `<input type="number" class="editable-input" value="${currentData.revenueValue}">`;
 
         // Replace edit/delete buttons with save/cancel buttons
         cells[8].innerHTML = `
@@ -264,14 +279,38 @@ function addProspectToTable(data, docId) {
                     nextSteps: cells[2].querySelector('input').value,
                     dueDate: cells[3].querySelector('input').value,
                     signatureExpected: cells[4].querySelector('input').value,
-                    salesLead: cells[5].querySelector('select').value,
-                    revenueValue: parseFloat(cells[6].querySelector('input').value) || 0,
+                    leadSource: cells[5].querySelector('select').value,
+                    salesLead: cells[6].querySelector('select').value,
+                    revenueValue: parseFloat(cells[7].querySelector('input').value) || 0,
                     status: currentData.status
                 };
 
                 await updateDoc(doc(db, "prospects", docId), updatedData);
-                addProspectToTable({ ...updatedData, status: currentData.status }, docId);
-                newRow.remove();
+                
+                // Update the row in place instead of removing and re-adding
+                const todayString = new Date().toISOString().split('T')[0];
+                
+                cells[1].textContent = updatedData.prospectName;
+                cells[2].textContent = updatedData.nextSteps;
+                cells[3].className = updatedData.dueDate <= todayString ? 'overdue' : '';
+                cells[3].dataset.date = updatedData.dueDate;
+                cells[3].textContent = formatDateWithOrdinal(updatedData.dueDate);
+                cells[4].dataset.date = updatedData.signatureExpected;
+                cells[4].textContent = formatDateWithOrdinal(updatedData.signatureExpected);
+                cells[5].textContent = updatedData.leadSource || 'N/A';
+                cells[6].textContent = updatedData.salesLead;
+                cells[7].textContent = `$${updatedData.revenueValue.toLocaleString()}`;
+                
+                // Restore the original action buttons
+                cells[9].innerHTML = `
+                    <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn activity-btn" title="Activities"><i class="fas fa-history"></i></button>
+                    <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+                `;
+                
+                // Re-attach event listeners to the restored buttons
+                                attachRowEventListeners(newRow, docId, updatedData);
+                
                 updateStatistics();
             } catch (error) {
                 console.error("Error updating prospect:", error);
@@ -282,8 +321,28 @@ function addProspectToTable(data, docId) {
         // Add cancel functionality
         const cancelBtn = cells[8].querySelector(".cancel-btn");
         cancelBtn.addEventListener("click", () => {
-            addProspectToTable(currentData, docId);
-            newRow.remove();
+            const todayString = new Date().toISOString().split('T')[0];
+            
+            cells[1].textContent = currentData.prospectName;
+            cells[2].textContent = currentData.nextSteps;
+            cells[3].className = currentData.dueDate <= todayString ? 'overdue' : '';
+            cells[3].dataset.date = currentData.dueDate;
+            cells[3].textContent = formatDateWithOrdinal(currentData.dueDate);
+            cells[4].dataset.date = currentData.signatureExpected;
+            cells[4].textContent = formatDateWithOrdinal(currentData.signatureExpected);
+            cells[5].textContent = currentData.leadSource;
+            cells[6].textContent = currentData.salesLead;
+            cells[7].textContent = `$${currentData.revenueValue.toLocaleString()}`;
+            
+            // Restore the original action buttons
+            cells[9].innerHTML = `
+                <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="action-btn activity-btn" title="Activities"><i class="fas fa-history"></i></button>
+                <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+            `;
+            
+                                      // Re-attach event listeners to the restored buttons
+             attachRowEventListeners(newRow, docId, currentData);
         });
     });
 
@@ -301,7 +360,7 @@ function addProspectToTable(data, docId) {
         const activitiesRow = document.createElement('tr');
         activitiesRow.classList.add('activities-row', 'expanded');
         activitiesRow.innerHTML = `
-            <td colspan="8" class="activities-cell">
+            <td colspan="9" class="activities-cell">
                 <div class="activities-container">
                     ${(data.activities || []).map(activity => `
                         <div class="activity-entry">
@@ -402,6 +461,235 @@ function addProspectToTable(data, docId) {
     return newRow;
 }
 
+// Helper function to attach event listeners to a row
+function attachRowEventListeners(row, docId, data) {
+    const editBtn = row.querySelector(".edit-btn");
+    const activityBtn = row.querySelector(".activity-btn");
+    const deleteBtn = row.querySelector(".delete-btn");
+
+    // Remove existing event listeners by cloning the buttons
+    if (editBtn) {
+        const newEditBtn = editBtn.cloneNode(true);
+        editBtn.parentNode.replaceChild(newEditBtn, editBtn);
+    }
+    if (activityBtn) {
+        const newActivityBtn = activityBtn.cloneNode(true);
+        activityBtn.parentNode.replaceChild(newActivityBtn, activityBtn);
+    }
+    if (deleteBtn) {
+        const newDeleteBtn = deleteBtn.cloneNode(true);
+        deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+    }
+
+    // Re-attach edit functionality
+    const newEditBtn = row.querySelector(".edit-btn");
+    newEditBtn.addEventListener("click", () => {
+        const cells = row.cells;
+        
+        const currentData = {
+            prospectName: cells[1].textContent,
+            nextSteps: cells[2].textContent,
+            dueDate: cells[3].dataset.date,
+            signatureExpected: cells[4].dataset.date,
+            leadSource: cells[5].textContent,
+            salesLead: cells[6].textContent,
+            revenueValue: parseFloat(cells[7].textContent.replace(/[$,]/g, '')),
+            status: cells[8].querySelector('select').value
+        };
+
+        cells[1].innerHTML = `<input type="text" class="editable-input" value="${currentData.prospectName}">`;
+        cells[2].innerHTML = `<input type="text" class="editable-input" value="${currentData.nextSteps}">`;
+        cells[3].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueDate}">`;
+        cells[4].innerHTML = `<input type="date" class="editable-input" value="${currentData.signatureExpected}">`;
+        cells[5].innerHTML = `
+            <select class="editable-input">
+                <option value="Meta" ${currentData.leadSource === 'Meta' ? 'selected' : ''}>Meta</option>
+                <option value="Referral" ${currentData.leadSource === 'Referral' ? 'selected' : ''}>Referral</option>
+                <option value="Email" ${currentData.leadSource === 'Email' ? 'selected' : ''}>Email</option>
+                <option value="Cold Call" ${currentData.leadSource === 'Cold Call' ? 'selected' : ''}>Cold Call</option>
+                <option value="Google" ${currentData.leadSource === 'Google' ? 'selected' : ''}>Google</option>
+                <option value="Door Knock" ${currentData.leadSource === 'Door Knock' ? 'selected' : ''}>Door Knock</option>
+            </select>
+        `;
+        cells[6].innerHTML = `
+            <select class="editable-input">
+                <option value="Robby" ${currentData.salesLead === 'Robby' ? 'selected' : ''}>Robby</option>
+                <option value="Greyson" ${currentData.salesLead === 'Greyson' ? 'selected' : ''}>Greyson</option>
+            </select>
+        `;
+        cells[7].innerHTML = `<input type="number" class="editable-input" value="${currentData.revenueValue}">`;
+
+        cells[9].innerHTML = `
+            <button class="action-btn save-btn" title="Save"><i class="fas fa-save"></i></button>
+            <button class="action-btn cancel-btn" title="Cancel"><i class="fas fa-times"></i></button>
+        `;
+
+        const saveBtn = cells[9].querySelector(".save-btn");
+        const cancelBtn = cells[9].querySelector(".cancel-btn");
+
+        saveBtn.addEventListener("click", async () => {
+            const updatedData = {
+                prospectName: cells[1].querySelector('input').value,
+                nextSteps: cells[2].querySelector('input').value,
+                dueDate: cells[3].querySelector('input').value,
+                signatureExpected: cells[4].querySelector('input').value,
+                leadSource: cells[5].querySelector('select').value,
+                salesLead: cells[6].querySelector('select').value,
+                revenueValue: parseFloat(cells[7].querySelector('input').value) || 0,
+                status: currentData.status
+            };
+
+            await updateDoc(doc(db, "prospects", docId), updatedData);
+            
+            const todayString = new Date().toISOString().split('T')[0];
+            
+            cells[1].textContent = updatedData.prospectName;
+            cells[2].textContent = updatedData.nextSteps;
+            cells[3].className = updatedData.dueDate <= todayString ? 'overdue' : '';
+            cells[3].dataset.date = updatedData.dueDate;
+            cells[3].textContent = formatDateWithOrdinal(updatedData.dueDate);
+            cells[4].dataset.date = updatedData.signatureExpected;
+            cells[4].textContent = formatDateWithOrdinal(updatedData.signatureExpected);
+            cells[5].textContent = updatedData.leadSource || 'N/A';
+            cells[6].textContent = updatedData.salesLead;
+            cells[7].textContent = `$${updatedData.revenueValue.toLocaleString()}`;
+            
+            cells[9].innerHTML = `
+                <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="action-btn activity-btn" title="Activities"><i class="fas fa-history"></i></button>
+                <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+            `;
+            
+            attachRowEventListeners(row, docId, updatedData);
+            updateStatistics();
+        });
+
+        cancelBtn.addEventListener("click", () => {
+            const todayString = new Date().toISOString().split('T')[0];
+            
+            cells[1].textContent = currentData.prospectName;
+            cells[2].textContent = currentData.nextSteps;
+            cells[3].className = currentData.dueDate <= todayString ? 'overdue' : '';
+            cells[3].dataset.date = currentData.dueDate;
+            cells[3].textContent = formatDateWithOrdinal(currentData.dueDate);
+            cells[4].dataset.date = currentData.signatureExpected;
+            cells[4].textContent = formatDateWithOrdinal(currentData.signatureExpected);
+            cells[5].textContent = currentData.leadSource;
+            cells[6].textContent = currentData.salesLead;
+            cells[7].textContent = `$${currentData.revenueValue.toLocaleString()}`;
+            
+            cells[9].innerHTML = `
+                <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="action-btn activity-btn" title="Activities"><i class="fas fa-history"></i></button>
+                <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+            `;
+            
+            attachRowEventListeners(row, docId, currentData);
+        });
+    });
+
+    // Re-attach activity functionality
+    const newActivityBtn = row.querySelector(".activity-btn");
+    newActivityBtn.addEventListener("click", () => {
+        const currentRow = row;
+        const nextRow = currentRow.nextElementSibling;
+        
+        if (nextRow && nextRow.classList.contains('activities-row')) {
+            nextRow.classList.toggle('expanded');
+            return;
+        }
+
+        const activitiesRow = document.createElement('tr');
+        activitiesRow.classList.add('activities-row', 'expanded');
+        activitiesRow.innerHTML = `
+            <td colspan="10" class="activities-cell">
+                <div class="activities-container">
+                    ${(data.activities || []).map(activity => `
+                        <div class="activity-entry">
+                            <input type="text" class="activity-input" value="${activity.text}" readonly>
+                            <input type="date" class="activity-date" value="${activity.date}" readonly>
+                            <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+                            <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `).join('')}
+                    <div class="activity-entry new-entry">
+                        <input type="text" class="activity-input" placeholder="Enter activity">
+                        <input type="date" class="activity-date">
+                        <button class="add-activity-btn">Add</button>
+                    </div>
+                </div>
+            </td>
+        `;
+
+        currentRow.parentNode.insertBefore(activitiesRow, currentRow.nextSibling);
+
+        const newActivityInput = activitiesRow.querySelector('.new-entry .activity-input');
+        const newActivityDate = activitiesRow.querySelector('.new-entry .activity-date');
+        const addActivityBtn = activitiesRow.querySelector('.add-activity-btn');
+
+        addActivityBtn.addEventListener('click', async () => {
+            const text = newActivityInput.value.trim();
+            const date = newActivityDate.value;
+
+            if (!text || !date) {
+                alert('Please enter both activity text and date');
+                return;
+            }
+
+            try {
+                const newActivity = { text, date };
+                await updateDoc(doc(db, "prospects", docId), {
+                    activities: arrayUnion(newActivity)
+                });
+
+                const activityEntry = document.createElement('div');
+                activityEntry.classList.add('activity-entry');
+                activityEntry.innerHTML = `
+                    <input type="text" class="activity-input" value="${text}" readonly>
+                    <input type="date" class="activity-date" value="${date}" readonly>
+                    <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
+                `;
+
+                setupActivityEntryListeners(activityEntry, docId, newActivity);
+
+                const newEntryDiv = activitiesRow.querySelector('.new-entry');
+                newEntryDiv.parentNode.insertBefore(activityEntry, newEntryDiv);
+
+                newActivityInput.value = '';
+                newActivityDate.value = '';
+
+            } catch (error) {
+                console.error("Error adding activity:", error);
+                alert("Error adding activity: " + error.message);
+            }
+        });
+
+        const existingActivities = activitiesRow.querySelectorAll('.activity-entry:not(.new-entry)');
+        existingActivities.forEach(entry => {
+            setupActivityEntryListeners(entry, docId, {
+                text: entry.querySelector('.activity-input').value,
+                date: entry.querySelector('.activity-date').value
+            });
+        });
+    });
+
+    // Re-attach delete functionality
+    const newDeleteBtn = row.querySelector(".delete-btn");
+    newDeleteBtn.addEventListener("click", async () => {
+        if (confirm("Are you sure you want to delete this prospect?")) {
+            try {
+                await deleteDoc(doc(db, "prospects", docId));
+                row.remove();
+                updateStatistics();
+            } catch (error) {
+                console.error("Error deleting prospect:", error);
+                alert("Error deleting prospect: " + error.message);
+            }
+        }
+    });
+}
+
 // Helper function to update row status classes
 function updateRowStatusClass(row, status) {
     row.classList.remove('status-lost', 'status-won', 'status-stalled');
@@ -442,7 +730,7 @@ function sortProspectsByStatus() {
     // Group rows by sales lead
     const rowsBySalesLead = {};
     rows.forEach(row => {
-        const salesLeadCell = row.querySelector('td:nth-child(6)');
+        const salesLeadCell = row.querySelector('td:nth-child(7)');
         if (!salesLeadCell) return;
         
         const salesLead = salesLeadCell.textContent || 'Unknown';
@@ -458,7 +746,7 @@ function sortProspectsByStatus() {
             // Add header
             const header = document.createElement('tr');
             header.classList.add('pod-header');
-            header.innerHTML = `<td colspan="9" class="pod-header">${salesLead}'s Prospects</td>`;
+            header.innerHTML = `<td colspan="10" class="pod-header">${salesLead}'s Prospects</td>`;
             tbody.appendChild(header);
             
             // Add rows
@@ -479,7 +767,7 @@ function sortProspectsByStatus() {
         const wonHeader = document.createElement('tr');
         wonHeader.classList.add('won-prospects-header');
         wonHeader.innerHTML = `
-            <td colspan="9" class="won-prospects-header">
+            <td colspan="10" class="won-prospects-header">
                 <div class="won-prospects-toggle">
                     <i class="fas fa-chevron-right"></i>
                     Won Prospects (${wonProspects.length})
@@ -554,7 +842,7 @@ async function loadProspects() {
         // Add Robby's prospects with header
         if (robbyProspects.length > 0) {
             const robbyHeader = document.createElement('tr');
-            robbyHeader.innerHTML = `<td colspan="9" class="pod-header">Robby's Prospects</td>`;
+            robbyHeader.innerHTML = `<td colspan="10" class="pod-header">Robby's Prospects</td>`;
             tbody.appendChild(robbyHeader);
             
             robbyProspects.forEach(prospect => {
@@ -565,7 +853,7 @@ async function loadProspects() {
         // Add Greyson's prospects with header
         if (greysonProspects.length > 0) {
             const greysonHeader = document.createElement('tr');
-            greysonHeader.innerHTML = `<td colspan="9" class="pod-header">Greyson's Prospects</td>`;
+            greysonHeader.innerHTML = `<td colspan="10" class="pod-header">Greyson's Prospects</td>`;
             tbody.appendChild(greysonHeader);
             
             greysonProspects.forEach(prospect => {
@@ -579,7 +867,7 @@ async function loadProspects() {
                 const header = document.createElement('tr');
                 header.classList.add(className);
                 header.innerHTML = `
-                    <td colspan="9" class="${className}">
+                    <td colspan="10" class="${className}">
                         <div class="collapsible-toggle">
                             <i class="fas fa-chevron-right"></i>
                             ${title} (${prospects.length})
