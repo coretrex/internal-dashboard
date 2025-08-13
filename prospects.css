@@ -112,13 +112,18 @@
     max-width: 100px;
 }
 
-.dashboard-table th:nth-child(9), /* Status */
+.dashboard-table th:nth-child(9), /* Created Date */
 .dashboard-table td:nth-child(9) {
+    max-width: 120px;
+}
+
+.dashboard-table th:nth-child(10), /* Status */
+.dashboard-table td:nth-child(10) {
     max-width: 100px;
 }
 
-.dashboard-table th:nth-child(10), /* Actions */
-.dashboard-table td:nth-child(10) {
+.dashboard-table th:nth-child(11), /* Actions */
+.dashboard-table td:nth-child(11) {
     max-width: 120px;
 }
 

@@ -115,6 +115,7 @@ async function addProspect() {
     const leadSource = document.getElementById('leadSource').value;
     const salesLead = document.getElementById('salesLead').value;
     const revenue = parseFloat(document.getElementById('revenue').value) || 0;
+    const createdDate = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
 
     if (!prospectName || !nextSteps || !dueDate) {
         alert("Please fill in all required fields");
@@ -130,6 +131,7 @@ async function addProspect() {
             leadSource,
             salesLead,
             revenueValue: revenue,
+            createdDate,
             status: 'In-Progress'
         });
 
@@ -141,6 +143,7 @@ async function addProspect() {
             leadSource,
             salesLead,
             revenueValue: revenue,
+            createdDate,
             status: 'In-Progress'
         }, docRef.id);
 
@@ -177,6 +180,7 @@ function addProspectToTable(data, docId) {
         <td>${data.leadSource || 'N/A'}</td>
         <td>${data.salesLead}</td>
         <td>$${data.revenueValue.toLocaleString()}</td>
+        <td>${formatDateWithOrdinal(data.createdDate || new Date().toISOString().split('T')[0])}</td>
         <td>
             <select class="status-dropdown">
                 <option value="In-Progress" ${(data.status || 'In-Progress') === 'In-Progress' ? 'selected' : ''}>In-Progress</option>
@@ -238,7 +242,8 @@ function addProspectToTable(data, docId) {
             leadSource: cells[5].textContent,
             salesLead: cells[6].textContent,
             revenueValue: parseFloat(cells[7].textContent.replace(/[$,]/g, '')),
-            status: cells[8].querySelector('select').value
+            createdDate: cells[8].dataset.date || new Date().toISOString().split('T')[0],
+            status: cells[9].querySelector('select').value
         };
 
         // Replace cells with input fields
@@ -263,15 +268,16 @@ function addProspectToTable(data, docId) {
             </select>
         `;
         cells[7].innerHTML = `<input type="number" class="editable-input" value="${currentData.revenueValue}">`;
+        cells[8].innerHTML = `<input type="date" class="editable-input" value="${currentData.createdDate}">`;
 
         // Replace edit/delete buttons with save/cancel buttons
-        cells[8].innerHTML = `
+        cells[10].innerHTML = `
             <button class="action-btn save-btn" title="Save"><i class="fas fa-save"></i></button>
             <button class="action-btn cancel-btn" title="Cancel"><i class="fas fa-times"></i></button>
         `;
 
         // Add save functionality
-        const saveBtn = cells[8].querySelector(".save-btn");
+        const saveBtn = cells[10].querySelector(".save-btn");
         saveBtn.addEventListener("click", async () => {
             try {
                 const updatedData = {
@@ -282,6 +288,7 @@ function addProspectToTable(data, docId) {
                     leadSource: cells[5].querySelector('select').value,
                     salesLead: cells[6].querySelector('select').value,
                     revenueValue: parseFloat(cells[7].querySelector('input').value) || 0,
+                    createdDate: cells[8].querySelector('input').value, // Allow editing the created date
                     status: currentData.status
                 };
 
@@ -300,9 +307,10 @@ function addProspectToTable(data, docId) {
                 cells[5].textContent = updatedData.leadSource || 'N/A';
                 cells[6].textContent = updatedData.salesLead;
                 cells[7].textContent = `$${updatedData.revenueValue.toLocaleString()}`;
+                cells[8].textContent = formatDateWithOrdinal(updatedData.createdDate);
                 
                 // Restore the original action buttons
-                cells[9].innerHTML = `
+                cells[10].innerHTML = `
                     <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
                     <button class="action-btn activity-btn" title="Activities"><i class="fas fa-history"></i></button>
                     <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
@@ -319,7 +327,7 @@ function addProspectToTable(data, docId) {
         });
 
         // Add cancel functionality
-        const cancelBtn = cells[8].querySelector(".cancel-btn");
+        const cancelBtn = cells[10].querySelector(".cancel-btn");
         cancelBtn.addEventListener("click", () => {
             const todayString = new Date().toISOString().split('T')[0];
             
@@ -333,9 +341,10 @@ function addProspectToTable(data, docId) {
             cells[5].textContent = currentData.leadSource;
             cells[6].textContent = currentData.salesLead;
             cells[7].textContent = `$${currentData.revenueValue.toLocaleString()}`;
+            cells[8].textContent = formatDateWithOrdinal(currentData.createdDate);
             
             // Restore the original action buttons
-            cells[9].innerHTML = `
+            cells[10].innerHTML = `
                 <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
                 <button class="action-btn activity-btn" title="Activities"><i class="fas fa-history"></i></button>
                 <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
@@ -360,7 +369,7 @@ function addProspectToTable(data, docId) {
         const activitiesRow = document.createElement('tr');
         activitiesRow.classList.add('activities-row', 'expanded');
         activitiesRow.innerHTML = `
-            <td colspan="9" class="activities-cell">
+            <td colspan="11" class="activities-cell">
                 <div class="activities-container">
                     ${(data.activities || []).map(activity => `
                         <div class="activity-entry">
@@ -494,7 +503,8 @@ function attachRowEventListeners(row, docId, data) {
             leadSource: cells[5].textContent,
             salesLead: cells[6].textContent,
             revenueValue: parseFloat(cells[7].textContent.replace(/[$,]/g, '')),
-            status: cells[8].querySelector('select').value
+            createdDate: cells[8].dataset.date || new Date().toISOString().split('T')[0],
+            status: cells[9].querySelector('select').value
         };
 
         cells[1].innerHTML = `<input type="text" class="editable-input" value="${currentData.prospectName}">`;
@@ -518,14 +528,15 @@ function attachRowEventListeners(row, docId, data) {
             </select>
         `;
         cells[7].innerHTML = `<input type="number" class="editable-input" value="${currentData.revenueValue}">`;
+        cells[8].innerHTML = `<input type="date" class="editable-input" value="${currentData.createdDate}">`;
 
-        cells[9].innerHTML = `
+        cells[10].innerHTML = `
             <button class="action-btn save-btn" title="Save"><i class="fas fa-save"></i></button>
             <button class="action-btn cancel-btn" title="Cancel"><i class="fas fa-times"></i></button>
         `;
 
-        const saveBtn = cells[9].querySelector(".save-btn");
-        const cancelBtn = cells[9].querySelector(".cancel-btn");
+        const saveBtn = cells[10].querySelector(".save-btn");
+        const cancelBtn = cells[10].querySelector(".cancel-btn");
 
         saveBtn.addEventListener("click", async () => {
             const updatedData = {
@@ -536,6 +547,7 @@ function attachRowEventListeners(row, docId, data) {
                 leadSource: cells[5].querySelector('select').value,
                 salesLead: cells[6].querySelector('select').value,
                 revenueValue: parseFloat(cells[7].querySelector('input').value) || 0,
+                createdDate: cells[8].querySelector('input').value, // Allow editing the created date
                 status: currentData.status
             };
 
@@ -553,8 +565,9 @@ function attachRowEventListeners(row, docId, data) {
             cells[5].textContent = updatedData.leadSource || 'N/A';
             cells[6].textContent = updatedData.salesLead;
             cells[7].textContent = `$${updatedData.revenueValue.toLocaleString()}`;
+            cells[8].textContent = formatDateWithOrdinal(updatedData.createdDate);
             
-            cells[9].innerHTML = `
+            cells[10].innerHTML = `
                 <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
                 <button class="action-btn activity-btn" title="Activities"><i class="fas fa-history"></i></button>
                 <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
@@ -577,8 +590,9 @@ function attachRowEventListeners(row, docId, data) {
             cells[5].textContent = currentData.leadSource;
             cells[6].textContent = currentData.salesLead;
             cells[7].textContent = `$${currentData.revenueValue.toLocaleString()}`;
+            cells[8].textContent = formatDateWithOrdinal(currentData.createdDate);
             
-            cells[9].innerHTML = `
+            cells[10].innerHTML = `
                 <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
                 <button class="action-btn activity-btn" title="Activities"><i class="fas fa-history"></i></button>
                 <button class="action-btn delete-btn" title="Delete"><i class="fas fa-trash"></i></button>
@@ -602,7 +616,7 @@ function attachRowEventListeners(row, docId, data) {
         const activitiesRow = document.createElement('tr');
         activitiesRow.classList.add('activities-row', 'expanded');
         activitiesRow.innerHTML = `
-            <td colspan="10" class="activities-cell">
+            <td colspan="11" class="activities-cell">
                 <div class="activities-container">
                     ${(data.activities || []).map(activity => `
                         <div class="activity-entry">
@@ -746,7 +760,7 @@ function sortProspectsByStatus() {
             // Add header
             const header = document.createElement('tr');
             header.classList.add('pod-header');
-            header.innerHTML = `<td colspan="10" class="pod-header">${salesLead}'s Prospects</td>`;
+            header.innerHTML = `<td colspan="11" class="pod-header">${salesLead}'s Prospects</td>`;
             tbody.appendChild(header);
             
             // Add rows
@@ -767,7 +781,7 @@ function sortProspectsByStatus() {
         const wonHeader = document.createElement('tr');
         wonHeader.classList.add('won-prospects-header');
         wonHeader.innerHTML = `
-            <td colspan="10" class="won-prospects-header">
+            <td colspan="11" class="won-prospects-header">
                 <div class="won-prospects-toggle">
                     <i class="fas fa-chevron-right"></i>
                     Won Prospects (${wonProspects.length})
@@ -842,7 +856,7 @@ async function loadProspects() {
         // Add Robby's prospects with header
         if (robbyProspects.length > 0) {
             const robbyHeader = document.createElement('tr');
-            robbyHeader.innerHTML = `<td colspan="10" class="pod-header">Robby's Prospects</td>`;
+            robbyHeader.innerHTML = `<td colspan="11" class="pod-header">Robby's Prospects</td>`;
             tbody.appendChild(robbyHeader);
             
             robbyProspects.forEach(prospect => {
@@ -853,7 +867,7 @@ async function loadProspects() {
         // Add Greyson's prospects with header
         if (greysonProspects.length > 0) {
             const greysonHeader = document.createElement('tr');
-            greysonHeader.innerHTML = `<td colspan="10" class="pod-header">Greyson's Prospects</td>`;
+            greysonHeader.innerHTML = `<td colspan="11" class="pod-header">Greyson's Prospects</td>`;
             tbody.appendChild(greysonHeader);
             
             greysonProspects.forEach(prospect => {
@@ -867,7 +881,7 @@ async function loadProspects() {
                 const header = document.createElement('tr');
                 header.classList.add(className);
                 header.innerHTML = `
-                    <td colspan="10" class="${className}">
+                    <td colspan="11" class="${className}">
                         <div class="collapsible-toggle">
                             <i class="fas fa-chevron-right"></i>
                             ${title} (${prospects.length})
@@ -1036,6 +1050,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (addProspectBtn) {
         addProspectBtn.addEventListener("click", addProspect);
+    }
+
+    // Set the created date field to today's date
+    const createdDateField = document.getElementById('createdDate');
+    if (createdDateField) {
+        createdDateField.value = new Date().toISOString().split('T')[0];
     }
 
     timerBtn.addEventListener('click', () => {
