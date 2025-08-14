@@ -33,6 +33,7 @@ const prospectMRRGoal = 100000;
 // DOM Elements
 const prospectCountEl = document.getElementById('prospectCount');
 const prospectMRREl = document.getElementById('prospectMRR');
+const averageAgeEl = document.getElementById('averageAge');
 const prospectsTable = document.getElementById('prospectsTable');
 const addProspectBtn = document.getElementById('addProspectBtn');
 const timerBtn = document.getElementById('timerBtn');
@@ -92,7 +93,7 @@ function updateStatistics() {
     // Update prospect MRR - only sum revenue from In-Progress prospects
     let totalRevenue = 0;
     inProgressProspects.forEach(row => {
-        const revenueCell = row.cells[6];
+        const revenueCell = row.cells[7]; // Revenue is in column 7 (index 7)
         if (revenueCell) {
             const revenue = parseFloat(revenueCell.textContent.replace(/[^0-9.-]/g, '')) || 0;
             totalRevenue += revenue;
@@ -102,6 +103,27 @@ function updateStatistics() {
     // Add goal-reached class if goal is met
     const goalText = totalRevenue >= prospectMRRGoal ? '<span class="goal-text goal-reached">/$' : '<span class="goal-text">/$';
     prospectMRREl.innerHTML = `$${totalRevenue.toLocaleString()}${goalText}${prospectMRRGoal.toLocaleString()}</span>`;
+    
+    // Calculate average age of In-Progress prospects
+    let totalDays = 0;
+    let validProspects = 0;
+    const today = new Date();
+    
+    inProgressProspects.forEach(row => {
+        const createdDateCell = row.cells[8]; // Created Date is in column 8 (index 8)
+        if (createdDateCell && createdDateCell.dataset.date) {
+            const createdDate = new Date(createdDateCell.dataset.date + 'T00:00:00');
+            if (!isNaN(createdDate.getTime())) {
+                const daysDiff = Math.floor((today - createdDate) / (1000 * 60 * 60 * 24));
+                totalDays += daysDiff;
+                validProspects++;
+            }
+        }
+    });
+    
+    // Calculate and display average age
+    const averageAge = validProspects > 0 ? Math.round(totalDays / validProspects) : 0;
+    averageAgeEl.innerHTML = `${averageAge}<span class="goal-text"> days</span>`;
 }
 
 // Add prospect function
