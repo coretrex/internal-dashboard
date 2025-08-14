@@ -30,7 +30,7 @@ All JavaScript files containing the hardcoded Firebase API key have been manuall
 // BEFORE:
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 const firebaseConfig = {
-    apiKey: "AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo",
+    apiKey: "AIzaSyDjMtt6gAbbVDbuoUnBnEdSIJVnp6NCUF0",
     // ... other config
 };
 const app = initializeApp(firebaseConfig);
@@ -68,7 +68,7 @@ async function initializeFirebaseApp() {
 4. **Deploy the updated server** with the new configuration
 
 ### 📋 Deployment Checklist:
-- [ ] Revoke old API key: `AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo`
+- [ ] Revoke old API key: `AIzaSyDjMtt6gAbbVDbuoUnBnEdSIJVnp6NCUF0`
 - [ ] Create new API key with domain restrictions
 - [ ] Update `.env` file with new credentials
 - [ ] Test the application with new configuration

@@ -21,7 +21,7 @@ const filesToUpdate = [
 ];
 
 // Firebase config pattern to replace
-const firebaseConfigPattern = /const firebaseConfig = \{[^}]*apiKey:\s*"AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo"[^}]*\};/s;
+const firebaseConfigPattern = /const firebaseConfig = \{[^}]*apiKey:\s*"AIzaSyDjMtt6gAbbVDbuoUnBnEdSIJVnp6NCUF0"[^}]*\};/s;
 
 // New secure import pattern
 const secureImport = `// Import Firebase modules and secure configuration
@@ -89,7 +89,7 @@ function updateFile(filePath) {
         }
         
         // Replace Firebase config
-        if (content.includes('AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo')) {
+        if (content.includes('AIzaSyDjMtt6gAbbVDbuoUnBnEdSIJVnp6NCUF0')) {
             content = content.replace(firebaseConfigPattern, '');
             updated = true;
         }

@@ -2,7 +2,7 @@
 
 ## 🚨 CRITICAL SECURITY ISSUE
 
-Your Firebase API key `AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo` has been exposed in your GitHub repository and is publicly accessible. This is a serious security vulnerability that needs immediate attention.
+Your Firebase API key `AIzaSyDjMtt6gAbbVDbuoUnBnEdSIJVnp6NCUF0` has been exposed in your GitHub repository and is publicly accessible. This is a serious security vulnerability that needs immediate attention.
 
 ## 📋 IMMEDIATE ACTIONS REQUIRED
 
@@ -10,7 +10,7 @@ Your Firebase API key `AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo` has been exposed
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Navigate to your project: `coretrex-internal-dashboard`
 3. Go to **APIs & Services** > **Credentials**
-4. Find the API key `AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo`
+4. Find the API key `AIzaSyDjMtt6gAbbVDbuoUnBnEdSIJVnp6NCUF0`
 5. Click on it and select **Delete** or **Regenerate**
 6. **Confirm the deletion**
 

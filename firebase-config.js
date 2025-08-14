@@ -5,7 +5,7 @@
 async function loadFirebaseConfig() {
     // Using the original API key for now
     const config = {
-        apiKey: "AIzaSyByMNy7bBbsv8CefOzHI6FP-JrRps4HmKo",
+        apiKey: "AIzaSyDjMtt6gAbbVDbuoUnBnEdSIJVnp6NCUF0",
         authDomain: "coretrex-internal-dashboard.firebaseapp.com",
         projectId: "coretrex-internal-dashboard",
         storageBucket: "coretrex-internal-dashboard.firebasestorage.app",
