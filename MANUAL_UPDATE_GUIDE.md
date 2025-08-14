@@ -55,7 +55,7 @@ import {
 ```javascript
 // Firebase configuration
 const firebaseConfig = {
-    apiKey: "AIzaSyDjMtt6gAbbVDbuoUnBnEdSIJVnp6NCUF0",
+    apiKey: "YOUR_API_KEY_HERE",
     authDomain: "coretrex-internal-dashboard.firebaseapp.com",
     projectId: "coretrex-internal-dashboard",
     storageBucket: "coretrex-internal-dashboard.firebasestorage.app",
@@ -125,7 +125,7 @@ If not, follow the manual steps above for each file.
 ## ✅ Verification
 
 After updating each file:
-1. Check that the API key `AIzaSyDjMtt6gAbbVDbuoUnBnEdSIJVnp6NCUF0` is no longer present
+1. Check that no hardcoded API keys are present in the code
 2. Verify that `import { initializeFirebase } from './firebase-config.js';` is added
 3. Confirm that `initializeFirebaseApp()` is called in DOMContentLoaded
 4. Test the application to ensure it still works

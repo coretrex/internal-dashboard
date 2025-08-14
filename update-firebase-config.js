@@ -20,8 +20,8 @@ const filesToUpdate = [
     'tasks.js'
 ];
 
-// Firebase config pattern to replace
-const firebaseConfigPattern = /const firebaseConfig = \{[^}]*apiKey:\s*"AIzaSyDjMtt6gAbbVDbuoUnBnEdSIJVnp6NCUF0"[^}]*\};/s;
+// Firebase config pattern to replace (generic - matches any API key)
+const firebaseConfigPattern = /const firebaseConfig = \{[^}]*apiKey:\s*"[^"]*"[^}]*\};/s;
 
 // New secure import pattern
 const secureImport = `// Import Firebase modules and secure configuration
@@ -88,8 +88,8 @@ function updateFile(filePath) {
             updated = true;
         }
         
-        // Replace Firebase config
-        if (content.includes('AIzaSyDjMtt6gAbbVDbuoUnBnEdSIJVnp6NCUF0')) {
+        // Replace Firebase config (check for any hardcoded API key)
+        if (content.includes('apiKey: "') && content.includes('AIzaSy')) {
             content = content.replace(firebaseConfigPattern, '');
             updated = true;
         }
