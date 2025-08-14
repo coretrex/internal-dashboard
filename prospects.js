@@ -8,7 +8,8 @@ import {
     doc, 
     updateDoc,
     arrayUnion,
-    arrayRemove 
+    arrayRemove,
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 // Initialize Firebase securely
@@ -111,18 +112,49 @@ function updateStatistics() {
     
     inProgressProspects.forEach(row => {
         const createdDateCell = row.cells[8]; // Created Date is in column 8 (index 8)
-        if (createdDateCell && createdDateCell.dataset.date) {
-            const createdDate = new Date(createdDateCell.dataset.date + 'T00:00:00');
-            if (!isNaN(createdDate.getTime())) {
-                const daysDiff = Math.floor((today - createdDate) / (1000 * 60 * 60 * 24));
-                totalDays += daysDiff;
-                validProspects++;
+        if (createdDateCell) {
+            // Try to get the date from dataset first, then from text content
+            let dateString = createdDateCell.dataset.date;
+            if (!dateString) {
+                // If no dataset, try to parse from the displayed text
+                const displayText = createdDateCell.textContent.trim();
+                if (displayText) {
+                    // Convert "January 1st" format back to YYYY-MM-DD
+                    const currentYear = new Date().getFullYear();
+                    const monthNames = [
+                        'January', 'February', 'March', 'April', 'May', 'June',
+                        'July', 'August', 'September', 'October', 'November', 'December'
+                    ];
+                    
+                    for (let i = 0; i < monthNames.length; i++) {
+                        if (displayText.includes(monthNames[i])) {
+                            const dayMatch = displayText.match(/(\d+)/);
+                            if (dayMatch) {
+                                const day = parseInt(dayMatch[1]);
+                                const month = i + 1;
+                                dateString = `${currentYear}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (dateString) {
+                const createdDate = new Date(dateString + 'T00:00:00');
+                if (!isNaN(createdDate.getTime())) {
+                    const daysDiff = Math.floor((today - createdDate) / (1000 * 60 * 60 * 24));
+                    totalDays += daysDiff;
+                    validProspects++;
+                    console.log(`Prospect created: ${dateString}, days old: ${daysDiff}`);
+                }
             }
         }
     });
     
     // Calculate and display average age
     const averageAge = validProspects > 0 ? Math.round(totalDays / validProspects) : 0;
+    console.log(`Total days: ${totalDays}, Valid prospects: ${validProspects}, Average age: ${averageAge}`);
     averageAgeEl.innerHTML = `${averageAge}<span class="goal-text"> days</span>`;
 }
 
@@ -200,7 +232,7 @@ function addProspectToTable(data, docId) {
         <td>${data.leadSource || 'N/A'}</td>
         <td>${data.salesLead}</td>
         <td>$${data.revenueValue.toLocaleString()}</td>
-        <td>${formatDateWithOrdinal(data.createdDate || new Date().toISOString().split('T')[0])}</td>
+        <td data-date="${data.createdDate || new Date().toISOString().split('T')[0]}">${formatDateWithOrdinal(data.createdDate || new Date().toISOString().split('T')[0])}</td>
         <td>
             <select class="status-dropdown">
                 <option value="In-Progress" ${(data.status || 'In-Progress') === 'In-Progress' ? 'selected' : ''}>In-Progress</option>
@@ -1038,6 +1070,11 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             console.log('Prospects: Setting up real-time listener...');
             
+            if (!db) {
+                console.error('Prospects: Database not initialized yet');
+                return;
+            }
+            
             const prospectsCollection = collection(db, "prospects");
             
             onSnapshot(prospectsCollection, (snapshot) => {
@@ -1055,10 +1092,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Start initialization
-    initializeEverything();
-    
-    // Setup real-time listener after initialization
-    setupProspectsRealtimeListener();
+    initializeEverything().then(() => {
+        // Setup real-time listener after initialization is complete
+        setupProspectsRealtimeListener();
+    });
     
     // Add this new code
     const toggleAddProspectBtn = document.querySelector('.toggle-add-prospect');
