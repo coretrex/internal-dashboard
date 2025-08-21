@@ -120,6 +120,38 @@ class Navigation extends HTMLElement {
         }
         navHtml += '</div>';
         this.innerHTML = navHtml;
+        
+        // Chrome-specific fix to ensure navigation is always visible
+        setTimeout(() => {
+            const navButtons = this.querySelector('.nav-buttons');
+            if (navButtons) {
+                // Force a reflow to ensure Chrome renders the element
+                navButtons.style.display = 'none';
+                navButtons.offsetHeight; // Force reflow
+                navButtons.style.display = 'flex';
+                
+                // Additional Chrome-specific visibility check
+                const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+                if (isChrome) {
+                    // Add Chrome-specific class for CSS targeting
+                    navButtons.classList.add('chrome-nav-fix');
+                    
+                    // Ensure the element is visible and properly positioned
+                    navButtons.style.visibility = 'visible';
+                    navButtons.style.opacity = '1';
+                    navButtons.style.pointerEvents = 'auto';
+                    
+                    // Force hardware acceleration
+                    navButtons.style.transform = 'translateX(-50%) translateZ(0)';
+                    navButtons.style.webkitTransform = 'translateX(-50%) translateZ(0)';
+                    
+                    // Additional Chrome-specific positioning fix
+                    navButtons.style.position = 'fixed';
+                    navButtons.style.bottom = '20px';
+                    navButtons.style.left = '50%';
+                }
+            }
+        }, 100);
     }
 }
 
