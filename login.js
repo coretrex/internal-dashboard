@@ -19,6 +19,7 @@ import {
 
 // Global variables for Firebase app and db
 let app, auth, provider, db;
+let isSigningIn = false; // Flag to prevent multiple sign-in attempts
 
 // Initialize Firebase with secure config
 async function initializeFirebaseApp() {
@@ -56,6 +57,31 @@ async function provisionUser(user) {
     }
 }
 
+// Handle successful authentication
+async function handleSuccessfulAuth(user) {
+    try {
+        // Provision/check user in Firestore
+        const userData = await provisionUser(user);
+        if (!userData.enabled) {
+            // User is disabled
+            localStorage.clear();
+            throw new Error('Account is disabled. Please contact your administrator.');
+        }
+        // Store user info and permissions
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userEmail', user.email);
+        localStorage.setItem('userName', user.displayName);
+        localStorage.setItem('userPhoto', user.photoURL || '');
+        localStorage.setItem('userRole', userData.role);
+        localStorage.setItem('userPageAccess', JSON.stringify(userData.pageAccess || []));
+        window.location.href = 'goals.html';
+    } catch (error) {
+        console.error('Error handling authentication:', error);
+        await signOut(auth);
+        throw error;
+    }
+}
+
 // Login functionality
 document.addEventListener('DOMContentLoaded', async () => {
     // Initialize Firebase first
@@ -71,27 +97,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Check if user is already signed in
     onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            // Provision/check user in Firestore
-            const userData = await provisionUser(user);
-            if (!userData.enabled) {
-                // User is disabled
-                localStorage.clear();
+        if (user && !isSigningIn) {
+            // Only handle auth state change if we're not in the middle of signing in
+            try {
+                await handleSuccessfulAuth(user);
+            } catch (error) {
                 if (loginError) {
                     loginError.style.display = "block";
-                    loginError.innerHTML = `<strong>Access Denied</strong><br>Your account is disabled. Please contact your administrator.`;
+                    loginError.innerHTML = `<strong>Authentication Error</strong><br>${error.message}`;
                 }
-                await signOut(auth);
-                return;
             }
-            // Store user info and permissions
-            localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userEmail', user.email);
-            localStorage.setItem('userName', user.displayName);
-            localStorage.setItem('userPhoto', user.photoURL || '');
-            localStorage.setItem('userRole', userData.role);
-            localStorage.setItem('userPageAccess', JSON.stringify(userData.pageAccess || []));
-            window.location.href = 'goals.html';
         }
     });
 
@@ -104,42 +119,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (passwordInput) {
             passwordInput.parentElement.remove();
         }
+        
         loginButton.addEventListener("click", async () => {
+            // Prevent multiple simultaneous sign-in attempts
+            if (isSigningIn) {
+                console.log('Sign-in already in progress...');
+                return;
+            }
+            
             try {
-                // Show loading spinner
+                isSigningIn = true;
+                
+                // Show loading spinner and disable button
                 loginButton.style.display = 'none';
+                loginButton.disabled = true;
                 loginContainer.appendChild(loadingSpinner);
                 loadingSpinner.style.display = 'block';
+                
+                // Clear any previous errors
+                if (loginError) {
+                    loginError.style.display = "none";
+                }
+                
+                // Check if popups are blocked
+                const popupTest = window.open('', '_blank', 'width=1,height=1');
+                if (!popupTest || popupTest.closed || typeof popupTest.closed === 'undefined') {
+                    throw new Error('Popups are blocked. Please allow popups for this site and try again.');
+                }
+                popupTest.close();
+                
                 // Sign in with Google
                 const result = await signInWithPopup(auth, provider);
                 const user = result.user;
-                // Provision/check user in Firestore
-                const userData = await provisionUser(user);
-                if (!userData.enabled) {
-                    // User is disabled
-                    localStorage.clear();
-                    loadingSpinner.style.display = 'none';
-                    loginButton.style.display = 'block';
-                    if (loginError) {
-                        loginError.style.display = "block";
-                        loginError.innerHTML = `<strong>Access Denied</strong><br>Your account is disabled. Please contact your administrator.`;
-                    }
-                    await signOut(auth);
-                    return;
-                }
-                // Store user info and permissions
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('userEmail', user.email);
-                localStorage.setItem('userName', user.displayName);
-                localStorage.setItem('userPhoto', user.photoURL || '');
-                localStorage.setItem('userRole', userData.role);
-                localStorage.setItem('userPageAccess', JSON.stringify(userData.pageAccess || []));
-                window.location.href = 'goals.html';
+                
+                // Handle successful authentication
+                await handleSuccessfulAuth(user);
+                
             } catch (error) {
                 console.error('Sign-in error:', error);
                 // Hide loading spinner and show error
                 loadingSpinner.style.display = 'none';
                 loginButton.style.display = 'block';
+                loginButton.disabled = false;
+                
                 if (loginError) {
                     loginError.style.display = "block";
                     if (error.code === 'auth/configuration-not-found') {
@@ -151,11 +173,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                     } else if (error.code === 'auth/popup-closed-by-user') {
                         loginError.textContent = "Sign-in was cancelled. Please try again.";
                     } else if (error.code === 'auth/popup-blocked') {
-                        loginError.textContent = "Pop-up was blocked. Please allow pop-ups and try again.";
+                        loginError.innerHTML = `
+                            <strong>Pop-up Blocked</strong><br>
+                            Please allow pop-ups for this site and try again.<br>
+                            <small>You can usually do this by clicking the popup blocker icon in your browser's address bar.</small>
+                        `;
+                    } else if (error.code === 'auth/cancelled-popup-request') {
+                        loginError.innerHTML = `
+                            <strong>Authentication Cancelled</strong><br>
+                            The sign-in process was interrupted. Please try again.<br>
+                            <small>If this persists, try refreshing the page or clearing your browser cache.</small>
+                        `;
+                    } else if (error.message.includes('Popups are blocked')) {
+                        loginError.innerHTML = `
+                            <strong>Pop-ups Blocked</strong><br>
+                            ${error.message}<br>
+                            <small>Check your browser settings and try again.</small>
+                        `;
                     } else {
                         loginError.textContent = `Sign-in failed: ${error.message}`;
                     }
                 }
+            } finally {
+                isSigningIn = false;
             }
         });
     }
