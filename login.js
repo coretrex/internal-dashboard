@@ -62,8 +62,8 @@ async function handleSuccessfulAuth(user) {
     try {
         // Provision/check user in Firestore
         const userData = await provisionUser(user);
-        if (!userData.enabled) {
-            // User is disabled
+        if (userData.enabled !== true) {
+            // User is disabled or enabled field is missing
             localStorage.clear();
             throw new Error('Account is disabled. Please contact your administrator.');
         }

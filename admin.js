@@ -197,10 +197,18 @@ function renderUsersTable(users) {
                     }).join('')}
                 </div>
             </td>
+            <td>
+                <span class="status-badge ${user.enabled === true ? 'enabled' : 'disabled'}">
+                    ${user.enabled === true ? 'Enabled' : 'Disabled'}
+                </span>
+            </td>
             <td>${user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</td>
             <td>
                 <button class="admin-btn small" onclick="editUser('${user.email}')">
                     <i class="fas fa-edit"></i>
+                </button>
+                <button class="admin-btn small ${user.enabled === true ? 'warning' : 'success'}" onclick="toggleUserStatus('${user.email}', ${user.enabled === true})">
+                    <i class="fas fa-${user.enabled === true ? 'ban' : 'check'}"></i>
                 </button>
                 <button class="admin-btn small danger" onclick="deleteUser('${user.email}')">
                     <i class="fas fa-trash"></i>
@@ -339,6 +347,7 @@ async function handleAddUser(e) {
             role: role,
             pageAccess: pageAccess,
             photoURL: photoURL,
+            enabled: true,
             createdAt: new Date().toISOString(),
             createdBy: localStorage.getItem('userEmail')
         });
@@ -369,10 +378,12 @@ async function handleEditUser(e) {
         photoURL = previewImg.src;
     }
     try {
+        const enabled = document.getElementById('editUserEnabled').checked;
         await updateDoc(doc(db, "users", email), {
             role: role,
             pageAccess: pageAccess,
             photoURL: photoURL,
+            enabled: enabled,
             updatedAt: new Date().toISOString(),
             updatedBy: localStorage.getItem('userEmail')
         });
@@ -470,6 +481,24 @@ function setupPhotoPreview(inputId, previewId) {
     }
 }
 
+// Toggle user enabled/disabled status
+window.toggleUserStatus = async function(email, currentStatus) {
+    if (confirm(`Are you sure you want to ${currentStatus ? 'disable' : 'enable'} this user?`)) {
+        try {
+            await updateDoc(doc(db, "users", email), {
+                enabled: !currentStatus,
+                updatedAt: new Date().toISOString(),
+                updatedBy: localStorage.getItem('userEmail')
+            });
+            await loadUsers();
+            alert(`User ${!currentStatus ? 'enabled' : 'disabled'} successfully!`);
+        } catch (error) {
+            console.error('Error toggling user status:', error);
+            alert('Error updating user status. Please try again.');
+        }
+    }
+};
+
 // Define editUser as a global function for inline onclick
 window.editUser = async function(email) {
     try {
@@ -482,6 +511,7 @@ window.editUser = async function(email) {
         document.getElementById('editUserId').value = email;
         document.getElementById('editUserEmail').value = user.email;
         document.getElementById('editUserRole').value = user.role;
+        document.getElementById('editUserEnabled').checked = user.enabled === true;
         // Populate page access checkboxes
         const pageAccessContainer = document.getElementById('editUserPageAccess');
         pageAccessContainer.innerHTML = '';
