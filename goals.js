@@ -138,22 +138,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // Update thermometer to accept value
     const updateThermometer = () => {
-        const startMRR = 75000;
-        const targetMRR = 120000;
+        const startMRR = 120000;
+        const targetMRR = 200000;
         const currentMRR = getMRR();
         const progress = ((currentMRR - startMRR) / (targetMRR - startMRR)) * 100;
         const thermometerProgress = document.querySelector('.thermometer-progress');
         if (thermometerProgress) {
-            thermometerProgress.style.width = `${progress}%`;
+            thermometerProgress.style.width = `${Math.max(0, progress)}%`;
         }
         if (mrrValueSpan) mrrValueSpan.textContent = formatMRR(currentMRR);
         // --- MILESTONE GLOW LOGIC ---
         const milestones = [
-            { value: 94000, selector: '[data-milestone="94k"] .milestone-icon', color: '#2979ff' },
-            { value: 100000, selector: '[data-milestone="100k"] .milestone-icon', color: '#2979ff' },
-            { value: 110000, selector: '[data-milestone="110k"] .milestone-icon', color: '#f39c12' },
-            { value: 115000, selector: '[data-milestone="115k"] .milestone-icon', color: '#2ecc71' },
-            { value: 120000, selector: '[data-milestone="120k"] .milestone-icon', color: '#2ecc71' }
+            { value: 120000, selector: '[data-milestone="120k"] .milestone-icon', color: '#2979ff' },
+            { value: 150000, selector: '[data-milestone="150k"] .milestone-icon', color: '#2979ff' },
+            { value: 160000, selector: '[data-milestone="160k"] .milestone-icon', color: '#f39c12' },
+            { value: 170000, selector: '[data-milestone="170k"] .milestone-icon', color: '#2979ff' },
+            { value: 200000, selector: '[data-milestone="200k"] .milestone-icon', color: '#2ecc71' }
         ];
         milestones.forEach((milestone, idx) => {
             const icon = document.querySelector(milestone.selector);
@@ -179,25 +179,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Milestone details
     const milestoneDetails = {
-        '94k': {
-            title: '$94K MRR - Projected MRR Start',
-            details: 'Starting point for our growth journey (May)'
-        },
-        '100k': {
-            title: '$100K MRR - Team Celebration + Merch',
-            details: 'Team Celebration with Branded Merchandise:\n• Journals\n• Shirts\n• Hats\n• Mugs'
-        },
-        '110k': {
-            title: '$110K MRR - Major Perks Unlock',
-            details: 'Comprehensive Benefits Package:\n• Private Brand Product Launch\n• MacBook Pro Transition\n• 401k for All Employees'
-        },
-        '115k': {
-            title: '$115K MRR - Team Expansion',
-            details: 'New Hire to Expand Team'
-        },
         '120k': {
-            title: '$120K MRR - Ultimate Team Experience',
-            details: 'Team Retreat + H4L Giveaway'
+            title: '$120K MRR - Team Celebratory Event Out of Office',
+            details: 'Team Celebration:\n• Off-site Event\n• Team Building Activities\n• Celebration Dinner'
+        },
+        '150k': {
+            title: '$150K MRR - CHOP Barbell Membership',
+            details: 'Team Fitness Benefit:\n• CHOP Barbell Gym Membership\n• Team Workout Sessions\n• Health & Wellness Focus'
+        },
+        '160k': {
+            title: '$160K MRR - Updated HQ',
+            details: 'Office Space Upgrade:\n• Modern Office Renovation\n• Enhanced Work Environment\n• Premium Amenities\n• Collaborative Spaces'
+        },
+        '170k': {
+            title: '$170K MRR - Pod 4 Expansion',
+            details: 'Strategic Pod Growth:\n• Launch Pod 4\n• New Team Members\n• Additional Client Capacity\n• Expanded Service Offerings'
+        },
+        '200k': {
+            title: '$200K MRR - Elite Achievement Unlocked',
+            details: '????'
         }
     };
 
