@@ -334,6 +334,44 @@
         </div>
     </div>
 
+    <!-- Good News Timer Modal -->
+    <div id="goodNewsTimerModal" class="modal">
+        <div class="modal-content good-news-modal-content">
+            <span class="close" id="closeGoodNewsTimerModal">&times;</span>
+            <div class="modal-body">
+                <div class="timer-wheel-container">
+                    <div class="names-display-wrapper">
+                        <div class="names-display" id="namesDisplay">
+                            <div class="name-item" data-person="Robby">Robby</div>
+                            <div class="name-item" data-person="Moe">Moe</div>
+                            <div class="name-item" data-person="Bobby">Bobby</div>
+                            <div class="name-item" data-person="Brandon">Brandon</div>
+                            <div class="name-item" data-person="Stephen">Stephen</div>
+                            <div class="name-item" data-person="Noah">Noah</div>
+                        </div>
+                    </div>
+                    <div class="timer-controls">
+                        <button id="spinWheelBtn" class="spin-btn">Pick Person</button>
+                        <div class="current-person-display">
+                            <h3 id="currentPerson">Ready to Pick!</h3>
+                            <div class="timer-display-large" id="timerDisplayLarge">1:30</div>
+                        </div>
+                        <button id="skipPersonBtn" class="skip-btn" disabled>Skip</button>
+                        <button id="nextPersonBtn" class="next-btn" disabled>Next Person</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Good News Button -->
+    <div class="floating-good-news-btn">
+        <button id="openGoodNewsModal" class="good-news-btn">
+            <i class="fas fa-star"></i>
+            <span>Good News</span>
+        </button>
+    </div>
+
 
 
     <!-- Navigation -->

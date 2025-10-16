@@ -4205,3 +4205,268 @@ body.presence-banner-visible #global-edit-button {
     }
 }
 
+/* Good News Timer Styles */
+.floating-good-news-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1001;
+}
+
+.good-news-btn {
+    background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+    color: white;
+    border: none;
+    padding: 15px 20px;
+    border-radius: 50px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'Poppins', sans-serif;
+}
+
+.good-news-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+}
+
+.good-news-btn i {
+    font-size: 1.2rem;
+}
+
+.good-news-modal-content {
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #222;
+    color: #fff;
+    margin: 10% auto;
+    position: relative;
+}
+
+.good-news-modal-content .close {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    transition: color 0.2s;
+    z-index: 10;
+}
+
+.good-news-modal-content .close:hover {
+    color: #fff;
+}
+
+.good-news-modal-content .modal-body {
+    padding: 2rem;
+    text-align: center;
+}
+
+
+.timer-wheel-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+    flex-wrap: wrap;
+}
+
+.names-display-wrapper {
+    position: relative;
+    width: 300px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.names-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+}
+
+.name-item {
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #666;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    min-width: 120px;
+    text-align: center;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.name-item.highlighted {
+    color: #fff;
+    background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+    border-color: #ff6b6b;
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+}
+
+.name-item.selected {
+    color: #fff;
+    background: linear-gradient(45deg, #4caf50, #66bb6a);
+    border-color: #4caf50;
+    transform: scale(1.15);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.6);
+}
+
+.timer-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    min-width: 250px;
+}
+
+.spin-btn {
+    background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.spin-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+}
+
+.spin-btn:disabled {
+    background: #666;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.current-person-display {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1.5rem;
+    border-radius: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    min-width: 200px;
+}
+
+.current-person-display h3 {
+    color: #fff;
+    margin: 0 0 1rem 0;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.timer-display-large {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.skip-btn {
+    background: linear-gradient(45deg, #ffa726, #ffb74d);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 10px rgba(255, 167, 38, 0.4);
+}
+
+.skip-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px rgba(255, 167, 38, 0.6);
+}
+
+.skip-btn:disabled {
+    background: #666;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.next-btn {
+    background: linear-gradient(45deg, #4caf50, #66bb6a);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 10px rgba(76, 175, 80, 0.4);
+}
+
+.next-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.6);
+}
+
+.next-btn:disabled {
+    background: #666;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Responsive design for Good News Timer */
+@media (max-width: 768px) {
+    .timer-wheel-container {
+        flex-direction: column;
+        gap: 2rem;
+    }
+    
+    .names-display-wrapper {
+        width: 250px;
+        height: 180px;
+    }
+    
+    .name-item {
+        font-size: 1.2rem;
+        padding: 10px 20px;
+        min-width: 100px;
+    }
+    
+    .timer-display-large {
+        font-size: 2.5rem;
+    }
+    
+    .good-news-modal-content {
+        width: 95%;
+        margin: 15% auto;
+    }
+    
+    .good-news-modal-content .modal-body {
+        padding: 1rem;
+    }
+}
+

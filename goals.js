@@ -3929,6 +3929,253 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.open(sheetsUrl, '_blank');
     }
     
+    // Good News Timer Functionality
+    class GoodNewsTimer {
+        constructor() {
+            this.teamMembers = ['Robby', 'Moe', 'Bobby', 'Brandon', 'Stephen', 'Noah'];
+            this.currentPerson = null;
+            this.timerInterval = null;
+            this.timeLeft = 90; // 90 seconds
+            this.isRunning = false;
+            this.usedThisRound = []; // Track who has been selected this round
+            
+            this.modal = document.getElementById('goodNewsTimerModal');
+            this.namesDisplay = document.getElementById('namesDisplay');
+            this.spinBtn = document.getElementById('spinWheelBtn');
+            this.skipBtn = document.getElementById('skipPersonBtn');
+            this.nextBtn = document.getElementById('nextPersonBtn');
+            this.currentPersonDisplay = document.getElementById('currentPerson');
+            this.timerDisplay = document.getElementById('timerDisplayLarge');
+            this.openBtn = document.getElementById('openGoodNewsModal');
+            this.closeBtn = document.getElementById('closeGoodNewsTimerModal');
+            
+            this.init();
+        }
+        
+        init() {
+            // Event listeners
+            this.openBtn.addEventListener('click', () => this.openModal());
+            this.closeBtn.addEventListener('click', () => this.closeModal());
+            this.spinBtn.addEventListener('click', () => this.spinWheel());
+            this.skipBtn.addEventListener('click', () => this.skipPerson());
+            this.nextBtn.addEventListener('click', () => this.nextPerson());
+            
+            // Close modal when clicking outside
+            this.modal.addEventListener('click', (e) => {
+                if (e.target === this.modal) {
+                    this.closeModal();
+                }
+            });
+            
+            // Initialize display
+            this.updateDisplay();
+            this.updateNextButton();
+        }
+        
+        openModal() {
+            this.modal.style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+        
+        closeModal() {
+            this.modal.style.display = 'none';
+            document.body.style.overflow = 'auto'; // Restore scrolling
+            this.endTimer(); // Stop timer if running
+            this.usedThisRound = []; // Reset the round when modal is closed
+            this.updateNextButton();
+            this.resetNameHighlights();
+        }
+        
+        resetNameHighlights() {
+            const nameItems = this.namesDisplay.querySelectorAll('.name-item');
+            nameItems.forEach(item => {
+                item.classList.remove('highlighted', 'selected');
+            });
+        }
+        
+        spinWheel() {
+            if (this.isRunning) return;
+            
+            this.spinBtn.disabled = true;
+            this.spinBtn.textContent = 'Spinning...';
+            
+            // Get next available person (not yet selected this round)
+            const availablePeople = this.teamMembers.filter(person => !this.usedThisRound.includes(person));
+            
+            // If all people have been used, reset the round
+            if (availablePeople.length === 0) {
+                this.usedThisRound = [];
+                availablePeople.push(...this.teamMembers);
+                this.updateNextButton();
+            }
+            
+            // Select a random person from available people
+            const selectedPerson = availablePeople[Math.floor(Math.random() * availablePeople.length)];
+            
+            console.log(`Selected: ${selectedPerson}`);
+            
+            // Start cycling animation
+            this.cycleThroughNames(selectedPerson);
+        }
+        
+        cycleThroughNames(selectedPerson) {
+            const nameItems = this.namesDisplay.querySelectorAll('.name-item');
+            const totalCycles = 1.5 + Math.random() * 1; // 1.5-2.5 full cycles
+            const totalItems = nameItems.length;
+            const totalSteps = Math.floor(totalCycles * totalItems) + Math.random() * totalItems;
+            
+            let currentStep = 0;
+            const cycleInterval = setInterval(() => {
+                // Remove previous highlights
+                nameItems.forEach(item => {
+                    item.classList.remove('highlighted');
+                });
+                
+                // Highlight current item
+                const currentIndex = currentStep % totalItems;
+                nameItems[currentIndex].classList.add('highlighted');
+                
+                currentStep++;
+                
+                // Check if we should stop
+                if (currentStep >= totalSteps) {
+                    clearInterval(cycleInterval);
+                    
+                    // Find the selected person's element and highlight it
+                    const selectedElement = Array.from(nameItems).find(item => 
+                        item.getAttribute('data-person') === selectedPerson
+                    );
+                    
+                    // Remove all highlights
+                    nameItems.forEach(item => {
+                        item.classList.remove('highlighted');
+                    });
+                    
+                    // Highlight the selected person
+                    if (selectedElement) {
+                        selectedElement.classList.add('selected');
+                    }
+                    
+                    // Set the selected person
+                    this.currentPerson = selectedPerson;
+                    this.usedThisRound.push(selectedPerson);
+                    
+                    this.startTimer();
+                    this.updateDisplay();
+                    this.updateNextButton();
+                    
+                    this.spinBtn.disabled = false;
+                    this.spinBtn.textContent = 'Pick Again';
+                }
+            }, 100); // Change every 100ms for faster cycling
+        }
+        
+        startTimer() {
+            this.timeLeft = 90;
+            this.isRunning = true;
+            this.skipBtn.disabled = false;
+            
+            this.timerInterval = setInterval(() => {
+                this.timeLeft--;
+                this.updateTimerDisplay();
+                
+                if (this.timeLeft <= 0) {
+                    this.endTimer();
+                }
+            }, 1000);
+        }
+        
+        endTimer() {
+            this.isRunning = false;
+            if (this.timerInterval) {
+                clearInterval(this.timerInterval);
+                this.timerInterval = null;
+            }
+            this.skipBtn.disabled = true;
+            this.currentPerson = null;
+            this.timeLeft = 90;
+            this.updateDisplay();
+            this.resetNameHighlights();
+            
+            // Play notification sound if available
+            this.playNotificationSound();
+        }
+        
+        skipPerson() {
+            if (!this.isRunning) return;
+            
+            this.endTimer();
+            this.spinBtn.textContent = 'Pick Person';
+        }
+        
+        nextPerson() {
+            // End current timer if running
+            if (this.isRunning) {
+                this.endTimer();
+            }
+            
+            // Move to next person in sequence
+            this.spinWheel();
+        }
+        
+        updateNextButton() {
+            const availablePeople = this.teamMembers.filter(person => !this.usedThisRound.includes(person));
+            
+            if (availablePeople.length > 0) {
+                this.nextBtn.disabled = false;
+                this.nextBtn.textContent = `Next Person (${availablePeople.length} left)`;
+            } else {
+                this.nextBtn.disabled = true;
+                this.nextBtn.textContent = 'All Done!';
+            }
+        }
+        
+        updateDisplay() {
+            if (this.currentPerson && this.isRunning) {
+                this.currentPersonDisplay.textContent = `${this.currentPerson}'s Turn`;
+                this.updateTimerDisplay();
+            } else {
+                this.currentPersonDisplay.textContent = 'Ready to Pick!';
+                this.timerDisplay.textContent = '1:30';
+                this.timerDisplay.style.color = '#fff';
+            }
+        }
+        
+        updateTimerDisplay() {
+            const minutes = Math.floor(this.timeLeft / 60);
+            const seconds = this.timeLeft % 60;
+            this.timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Change color when time is running low
+            if (this.timeLeft <= 10) {
+                this.timerDisplay.style.color = '#ff6b6b';
+            } else if (this.timeLeft <= 30) {
+                this.timerDisplay.style.color = '#ffa726';
+            } else {
+                this.timerDisplay.style.color = '#fff';
+            }
+        }
+        
+        playNotificationSound() {
+            // Try to play the alarm sound if it exists
+            try {
+                const audio = new Audio('Alarm.mp3');
+                audio.play().catch(e => console.log('Could not play notification sound:', e));
+            } catch (e) {
+                console.log('Notification sound not available');
+            }
+        }
+    }
+    
+    // Initialize Good News Timer when DOM is loaded
+    let goodNewsTimer;
+    setTimeout(() => {
+        if (document.getElementById('openGoodNewsModal')) {
+            goodNewsTimer = new GoodNewsTimer();
+            console.log('Good News Timer initialized');
+        }
+    }, 1000);
+
     // TEST SCRIPT COMPLETION
     console.log('=== GOALS.JS LOADING COMPLETE ===');
 }); 
