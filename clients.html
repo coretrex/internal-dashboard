@@ -33,8 +33,12 @@
                 <div class="stat-label">Meetings This Week</div>
             </div>
             <div class="stat">
-                <div class="stat-number" id="tasksDueToday">0</div>
-                <div class="stat-label">Tasks Due Today</div>
+                <div class="stat-number" id="pod1AvgContact">0</div>
+                <div class="stat-label">Pod 1 Avg Days Since Contact</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="pod2AvgContact">0</div>
+                <div class="stat-label">Pod 2 Avg Days Since Contact</div>
             </div>
         </div>
 
@@ -50,6 +54,7 @@
                     <option value="Poor">Poor</option>
                     <option value="Medium">Medium</option>
                     <option value="Strong">Strong</option>
+                    <option value="Terminated">Terminated</option>
                 </select>
                 <select id="currentSensitivity" class="input-field dropdown">
                     <option value="Poor Profit">Poor Profit</option>
@@ -60,7 +65,7 @@
                 </select>
                 <input type="text" id="correctiveAction" placeholder="Corrective Action" class="input-field" />
                 <div class="input-field-group">
-                    <label for="dueBy">Due Date</label>
+                    <label for="dueBy">Last Contact</label>
                     <input type="date" id="dueBy" class="input-field date-picker" />
                 </div>
                 <input type="number" step="0.01" id="trailing30Revenue" placeholder="30 Day Revenue ($)" class="input-field" />
@@ -81,7 +86,7 @@
                         <th>Relationship</th>
                         <th>Sensitivity</th>
                         <th>Corrective Action</th>
-                        <th>Due By</th>
+                        <th>Last Contact</th>
                         <th>30 Day Revenue</th>
                         <th>YoY %</th>
                         <th>Next Meeting</th>

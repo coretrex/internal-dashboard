@@ -57,7 +57,10 @@ async function loadClients() {
         let pod2Count = 0;
         let poorRelationships = 0;
         let meetingsThisWeek = 0;
-        let tasksDueToday = 0;
+        let pod1TotalDays = 0;
+        let pod1ContactCount = 0;
+        let pod2TotalDays = 0;
+        let pod2ContactCount = 0;
 
         // Get today's date and week range
         const today = new Date();
@@ -72,9 +75,11 @@ async function loadClients() {
         querySnapshot.forEach((doc) => {
             const rawData = doc.data();
             
-            // Update statistics
-            if (rawData.teamResponsible === 'Pod 1') pod1Count++;
-            if (rawData.teamResponsible === 'Pod 2') pod2Count++;
+            // Update statistics (exclude terminated clients from pod counts)
+            if (rawData.relationshipStatus !== 'Terminated') {
+                if (rawData.teamResponsible === 'Pod 1') pod1Count++;
+                if (rawData.teamResponsible === 'Pod 2') pod2Count++;
+            }
             if (rawData.relationshipStatus === 'Poor') poorRelationships++;
 
             // Check meetings and tasks
@@ -85,10 +90,17 @@ async function loadClients() {
                 }
             }
 
-            if (rawData.dueBy) {
-                const dueDate = new Date(rawData.dueBy);
-                if (dueDate.toDateString() === today.toDateString()) {
-                    tasksDueToday++;
+            // Calculate days since last contact for each pod
+            if (rawData.lastContact) {
+                const lastContactDate = new Date(rawData.lastContact);
+                const daysSinceContact = Math.floor((today - lastContactDate) / (1000 * 60 * 60 * 24));
+                
+                if (rawData.teamResponsible === 'Pod 1') {
+                    pod1TotalDays += daysSinceContact;
+                    pod1ContactCount++;
+                } else if (rawData.teamResponsible === 'Pod 2') {
+                    pod2TotalDays += daysSinceContact;
+                    pod2ContactCount++;
                 }
             }
 
@@ -98,14 +110,14 @@ async function loadClients() {
                 relationshipStatus: rawData.relationshipStatus || rawData.relationship || '',
                 currentSensitivity: rawData.currentSensitivity || rawData.sensitivity || '',
                 correctiveAction: rawData.correctiveAction || rawData.action || '',
-                dueBy: rawData.dueBy || '',
+                lastContact: rawData.lastContact || '',
                 trailing30Revenue: rawData.trailing30Revenue || rawData.revenue || 0,
                 yoyPercentage: rawData.yoyPercentage || rawData.yoy || 0,
                 nextMeetingDate: rawData.nextMeetingDate || rawData.nextMeeting || '',
                 docId: doc.id
             };
 
-            // Sort into pod arrays
+            // Sort into pod arrays (all clients, including terminated)
             if (mappedData.teamResponsible === 'Pod 1') {
                 pod1Clients.push(mappedData);
             } else if (mappedData.teamResponsible === 'Pod 2') {
@@ -141,12 +153,39 @@ async function loadClients() {
             });
         }
 
+        // Calculate average days since contact for each pod
+        const pod1AvgDays = pod1ContactCount > 0 ? Math.round(pod1TotalDays / pod1ContactCount) : 0;
+        const pod2AvgDays = pod2ContactCount > 0 ? Math.round(pod2TotalDays / pod2ContactCount) : 0;
+        
         // Update UI statistics
         document.getElementById('pod1Count').textContent = pod1Count;
         document.getElementById('pod2Count').textContent = pod2Count;
         document.getElementById('poorRelationships').textContent = poorRelationships;
         document.getElementById('meetingsThisWeek').textContent = meetingsThisWeek;
-        document.getElementById('tasksDueToday').textContent = tasksDueToday;
+        
+        // Update pod average contact KPIs with color coding
+        const pod1AvgElement = document.getElementById('pod1AvgContact');
+        const pod2AvgElement = document.getElementById('pod2AvgContact');
+        
+        pod1AvgElement.textContent = pod1AvgDays;
+        pod2AvgElement.textContent = pod2AvgDays;
+        
+        // Apply color coding based on thresholds
+        function applyContactColor(element, days) {
+            element.style.color = '';
+            if (days === 0) {
+                element.style.color = 'white';
+            } else if (days <= 2) {
+                element.style.color = 'green';
+            } else if (days === 3) {
+                element.style.color = 'orange';
+            } else if (days >= 4) {
+                element.style.color = 'red';
+            }
+        }
+        
+        applyContactColor(pod1AvgElement, pod1AvgDays);
+        applyContactColor(pod2AvgElement, pod2AvgDays);
 
     } catch (error) {
         console.error("Error loading clients:", error);
@@ -168,6 +207,8 @@ function createClientRow(data, docId) {
                 return `<span class="relationship-emoji" data-status="Medium">&#128528;</span>`; // 😐
             case 'Poor':
                 return `<span class="relationship-emoji" data-status="Poor">&#128545;</span>`; // 😡
+            case 'Terminated':
+                return `<span class="relationship-emoji" data-status="Terminated">&#10060;</span>`; // ❌
             default:
                 return '';
         }
@@ -183,6 +224,17 @@ function createClientRow(data, docId) {
         return dueDate < today;
     }
 
+    // Helper function for last contact - only mark red if 4+ days old
+    function isContactOverdue(dateString) {
+        if (!dateString) return false;
+        const contactDate = new Date(dateString);
+        contactDate.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const daysDiff = Math.floor((today - contactDate) / (1000 * 60 * 60 * 24));
+        return daysDiff >= 4;
+    }
+
     // Map the data consistently
     const mappedData = {
         brandName: data.brandName || '',
@@ -190,7 +242,7 @@ function createClientRow(data, docId) {
         relationshipStatus: data.relationshipStatus || '',
         currentSensitivity: data.currentSensitivity || '',
         correctiveAction: data.correctiveAction || '',
-        dueBy: data.dueBy || '',
+        lastContact: data.lastContact || '',
         trailing30Revenue: data.trailing30Revenue || 0,
         yoyPercentage: data.yoyPercentage || 0,
         nextMeetingDate: data.nextMeetingDate || '',
@@ -202,7 +254,7 @@ function createClientRow(data, docId) {
         <td>${getRelationshipEmoji(mappedData.relationshipStatus)}</td>
         <td>${mappedData.currentSensitivity}</td>
         <td>${mappedData.correctiveAction}</td>
-        <td class="${isPastDue(mappedData.dueBy) ? 'past-due' : ''}">${mappedData.dueBy}</td>
+        <td class="${isContactOverdue(mappedData.lastContact) ? 'past-due' : ''}">${mappedData.lastContact}</td>
         <td>$${(mappedData.trailing30Revenue).toLocaleString()}</td>
         <td>${mappedData.yoyPercentage}%</td>
         <td class="${isPastDue(mappedData.nextMeetingDate) ? 'past-due' : ''}">${mappedData.nextMeetingDate}</td>
@@ -223,7 +275,7 @@ function createClientRow(data, docId) {
                 relationshipStatus: mappedData.relationshipStatus,
                 currentSensitivity: mappedData.currentSensitivity,
                 correctiveAction: mappedData.correctiveAction,
-                dueBy: mappedData.dueBy,
+                lastContact: mappedData.lastContact,
                 trailing30Revenue: mappedData.trailing30Revenue,
                 yoyPercentage: mappedData.yoyPercentage,
                 nextMeetingDate: mappedData.nextMeetingDate
@@ -239,6 +291,7 @@ function createClientRow(data, docId) {
                 <option value="Poor" ${currentData.relationshipStatus === 'Poor' ? 'selected' : ''}>Poor</option>
                 <option value="Medium" ${currentData.relationshipStatus === 'Medium' ? 'selected' : ''}>Medium</option>
                 <option value="Strong" ${currentData.relationshipStatus === 'Strong' ? 'selected' : ''}>Strong</option>
+                <option value="Terminated" ${currentData.relationshipStatus === 'Terminated' ? 'selected' : ''}>Terminated</option>
             </select>`;
             cells[3].innerHTML = `<select class="editable-input">
                 <option value="Poor Profit" ${currentData.currentSensitivity === 'Poor Profit' ? 'selected' : ''}>Poor Profit</option>
@@ -248,7 +301,7 @@ function createClientRow(data, docId) {
                 <option value="Lack of Trust" ${currentData.currentSensitivity === 'Lack of Trust' ? 'selected' : ''}>Lack of Trust</option>
             </select>`;
             cells[4].innerHTML = `<input type="text" class="editable-input" value="${currentData.correctiveAction}">`;
-            cells[5].innerHTML = `<input type="date" class="editable-input" value="${currentData.dueBy}">`;
+            cells[5].innerHTML = `<input type="date" class="editable-input" value="${currentData.lastContact}">`;
             cells[6].innerHTML = `<input type="number" step="0.01" class="editable-input" value="${currentData.trailing30Revenue}">`;
             cells[7].innerHTML = `<input type="number" step="0.01" class="editable-input" value="${currentData.yoyPercentage}">`;
             cells[8].innerHTML = `<input type="date" class="editable-input" value="${currentData.nextMeetingDate}">`;
@@ -268,7 +321,7 @@ function createClientRow(data, docId) {
                         relationshipStatus: cells[2].querySelector('select').value,
                         currentSensitivity: cells[3].querySelector('select').value,
                         correctiveAction: cells[4].querySelector('input').value.trim(),
-                        dueBy: cells[5].querySelector('input').value,
+                        lastContact: cells[5].querySelector('input').value,
                         trailing30Revenue: parseFloat(cells[6].querySelector('input').value) || 0,
                         yoyPercentage: parseFloat(cells[7].querySelector('input').value) || 0,
                         nextMeetingDate: cells[8].querySelector('input').value
@@ -404,7 +457,7 @@ async function addClient() {
             relationshipStatus: document.getElementById('relationshipStatus').value,
             currentSensitivity: document.getElementById('currentSensitivity').value,
             correctiveAction: document.getElementById('correctiveAction').value,
-            dueBy: document.getElementById('dueBy').value,
+            lastContact: document.getElementById('dueBy').value,
             trailing30Revenue: parseFloat(document.getElementById('trailing30Revenue').value) || 0,
             yoyPercentage: parseFloat(document.getElementById('yoyPercentage').value) || 0,
             nextMeetingDate: document.getElementById('nextMeetingDate').value
