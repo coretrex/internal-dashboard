@@ -4470,3 +4470,411 @@ body.presence-banner-visible #global-edit-button {
     }
 }
 
+/* Section Timer Modal Styles */
+.section-timer-modal {
+    position: fixed !important;
+    right: 1rem !important;
+    left: auto !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 360px !important;
+    max-width: 90vw !important;
+    height: auto !important;
+    margin: 0 !important;
+    background-color: transparent !important;
+    backdrop-filter: none !important;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.section-timer-modal.minimized {
+    width: 200px;
+    height: auto;
+}
+
+.section-timer-modal.minimized .section-timer-body {
+    display: none;
+}
+
+.section-timer-modal.minimized .section-timer-header {
+    padding: 0.75rem 1rem;
+}
+
+.section-timer-modal.minimized .section-timer-header h2 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.section-timer-modal.minimized .section-progress {
+    display: none;
+}
+
+.section-timer-modal.minimized .minimized-summary {
+    display: block !important;
+}
+
+.minimized-summary {
+    display: none;
+    text-align: center;
+    margin-top: 0.5rem;
+}
+
+.summary-section {
+    font-size: 0.9rem;
+    color: #4285f4;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.summary-time {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: white;
+    font-family: 'Courier New', monospace;
+}
+
+.section-timer-content {
+    background: linear-gradient(135deg, #002247 0%, #003366 100%);
+    color: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+}
+
+.section-timer-header {
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.section-timer-header h2 {
+    margin: 0 0 0.75rem 0;
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.section-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4285f4, #34a853);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    width: 20%;
+}
+
+.progress-text {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.8);
+    white-space: nowrap;
+}
+
+.section-timer-body {
+    padding: 1.25rem;
+}
+
+.current-section {
+    text-align: center;
+    margin-bottom: 1.25rem;
+}
+
+.current-section h3 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.1rem;
+    color: #4285f4;
+    font-weight: 600;
+}
+
+.section-time-display {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: white;
+    font-family: 'Courier New', monospace;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    margin: 0;
+}
+
+.section-timer-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    justify-content: center;
+}
+
+.section-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 100px;
+    justify-content: center;
+}
+
+.start-btn {
+    background: linear-gradient(45deg, #34a853, #2e7d32);
+    color: white;
+}
+
+.start-btn:hover {
+    background: linear-gradient(45deg, #2e7d32, #1b5e20);
+    transform: translateY(-2px);
+}
+
+.stop-btn {
+    background: linear-gradient(45deg, #dc3545, #c82333);
+    color: white;
+}
+
+.stop-btn:hover {
+    background: linear-gradient(45deg, #c82333, #a71e2a);
+    transform: translateY(-2px);
+}
+
+.skip-btn {
+    background: linear-gradient(45deg, #ffc107, #ff8f00);
+    color: #000;
+}
+
+.skip-btn:hover:not(:disabled) {
+    background: linear-gradient(45deg, #ff8f00, #ff6f00);
+    transform: translateY(-2px);
+}
+
+.skip-btn:disabled {
+    background: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.5);
+    cursor: not-allowed;
+    transform: none;
+}
+
+.reset-btn {
+    background: linear-gradient(45deg, #6c757d, #495057);
+    color: white;
+}
+
+.reset-btn:hover {
+    background: linear-gradient(45deg, #495057, #343a40);
+    transform: translateY(-2px);
+}
+
+/* Reset icon button - floating in bottom right */
+.reset-icon-btn {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #6c757d, #495057);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.reset-icon-btn:hover {
+    background: linear-gradient(45deg, #495057, #343a40);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Minimize button - floating in bottom left */
+.minimize-btn {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.minimize-btn:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.section-list {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    width: 100%;
+}
+
+.section-list h4 {
+    margin: 0 0 0.75rem 0;
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.section-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.section-item {
+    padding: 0.5rem 0.75rem;
+    margin: 0.35rem 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    border-left: 3px solid transparent;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    min-width: 100%;
+    cursor: pointer;
+}
+
+.section-item:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(2px);
+}
+
+.section-item:active {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateX(1px);
+}
+
+.section-item.current {
+    background: rgba(66, 133, 244, 0.2);
+    border-left-color: #4285f4;
+    color: #4285f4;
+}
+
+.section-item.completed {
+    background: rgba(52, 168, 83, 0.2);
+    border-left-color: #34a853;
+    color: #34a853;
+    opacity: 0.7;
+}
+
+.section-item.pending {
+    opacity: 0.6;
+}
+
+/* Floating Start Timer Button */
+.floating-start-timer-btn {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.floating-start-timer-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.floating-start-timer-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4);
+}
+
+.floating-start-timer-btn i {
+    font-size: 1.1rem;
+}
+
+/* Responsive adjustments for section timer modal */
+@media (max-width: 768px) {
+    .section-timer-modal {
+        right: 0.5rem;
+        left: 0.5rem;
+        width: auto;
+        max-width: none;
+    }
+    
+    .section-timer-content {
+        margin: 0;
+    }
+    
+    .section-timer-header,
+    .section-timer-body {
+        padding: 0.75rem;
+    }
+    
+    .section-time-display {
+        font-size: 1.8rem;
+    }
+    
+    .section-timer-controls {
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+    
+    .section-btn {
+        min-width: auto;
+        width: 100%;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.75rem;
+    }
+    
+    .section-list {
+        padding: 0.75rem;
+    }
+    
+    .section-item {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+    }
+    
+    .floating-start-timer-btn {
+        bottom: 1rem;
+        right: 1rem;
+        padding: 0.8rem 1.2rem;
+        font-size: 0.9rem;
+    }
+}
+

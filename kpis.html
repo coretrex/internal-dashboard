@@ -137,12 +137,6 @@
 
     <nav-menu></nav-menu>
     <script src="navigation.js"></script>
-    <div class="floating-timer">
-        <button id="timerBtn" class="timer-btn">
-            <i class="fas fa-play"></i> Start Timer
-        </button>
-        <div id="timerDisplay" class="timer-display">15:00</div>
-    </div>
     <script src="timer.js"></script>
     <!-- Firebase imports removed - now handled by kpi.js -->
     <!-- KPI Note Modal -->
@@ -157,5 +151,70 @@
             </div>
         </div>
     </div>
+
+    <!-- Section Timer Modal -->
+    <div id="sectionTimerModal" class="modal section-timer-modal" style="display:none;">
+        <div class="modal-content section-timer-content">
+            <span class="close" id="closeSectionTimerModal">&times;</span>
+            <div class="section-timer-header">
+                <h2>Section Timer</h2>
+                <div class="section-progress">
+                    <div class="progress-bar">
+                        <div id="sectionProgress" class="progress-fill"></div>
+                    </div>
+                    <span class="progress-text">Section <span id="currentSectionNumber">1</span> of 5</span>
+                </div>
+                <div class="minimized-summary" style="display:none;">
+                    <div class="summary-section">
+                        <span id="summarySectionName">Lead Gen</span>
+                    </div>
+                    <div class="summary-time">
+                        <span id="summaryTimeDisplay">01:00</span>
+                    </div>
+                </div>
+            </div>
+            <div class="section-timer-body">
+                <div class="current-section">
+                    <h3 id="currentSectionName">Lead Gen</h3>
+                    <div id="sectionTimeDisplay" class="section-time-display">01:00</div>
+                </div>
+                <div class="section-timer-controls">
+                    <button id="startSectionBtn" class="section-btn start-btn">
+                        <i class="fas fa-play"></i> Start
+                    </button>
+                    <button id="stopSectionBtn" class="section-btn stop-btn" style="display:none;">
+                        <i class="fas fa-stop"></i> Stop
+                    </button>
+                        <button id="skipSectionBtn" class="section-btn skip-btn" disabled>
+                            <i class="fas fa-forward"></i> Next
+                        </button>
+                </div>
+                <div class="section-list">
+                    <h4>Agenda:</h4>
+                    <ul id="sectionList">
+                        <li class="section-item" data-section="0">Lead Gen (1:00)</li>
+                        <li class="section-item" data-section="1">Prospects (2:00)</li>
+                        <li class="section-item" data-section="2">Pod 1 (3:00)</li>
+                        <li class="section-item" data-section="3">Pod 2 (3:00)</li>
+                        <li class="section-item" data-section="4">Pod 3 (1:30)</li>
+                    </ul>
+                </div>
+            </div>
+            <!-- Reset button as floating icon -->
+            <button id="resetSectionBtn" class="reset-icon-btn">
+                <i class="fas fa-redo"></i>
+            </button>
+            <!-- Minimize button -->
+            <button id="minimizeBtn" class="minimize-btn">
+                <i class="fas fa-minus"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Floating Start Timer Button -->
+    <button id="floatingStartTimerBtn" class="floating-start-timer-btn">
+        <i class="fas fa-play"></i>
+        <span>Start Timer</span>
+    </button>
 </body>
 </html> 
