@@ -3980,7 +3980,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         closeModal() {
             this.modal.style.display = 'none';
             document.body.style.overflow = 'auto'; // Restore scrolling
-            this.endTimer(); // Stop timer if running
+            this.endTimer(false); // Stop timer if running, but don't play sound
             this.usedThisRound = []; // Reset the round when modal is closed
             this.updateNextButton();
             this.resetNameHighlights();
@@ -4085,7 +4085,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, 1000);
         }
         
-        endTimer() {
+        endTimer(playSound = true) {
             this.isRunning = false;
             if (this.timerInterval) {
                 clearInterval(this.timerInterval);
@@ -4097,21 +4097,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             this.updateDisplay();
             this.resetNameHighlights();
             
-            // Play notification sound if available
-            this.playNotificationSound();
+            // Only play notification sound if timer expired naturally
+            if (playSound) {
+                this.playNotificationSound();
+            }
         }
         
         skipPerson() {
             if (!this.isRunning) return;
             
-            this.endTimer();
+            this.endTimer(false); // Don't play sound when skipping
             this.spinBtn.textContent = 'Pick Person';
         }
         
         nextPerson() {
             // End current timer if running
             if (this.isRunning) {
-                this.endTimer();
+                this.endTimer(false); // Don't play sound when moving to next person
             }
             
             // Move to next person in sequence
@@ -4157,12 +4159,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         playNotificationSound() {
-            // Try to play the alarm sound if it exists
+            // Play a simple beep sound
             try {
-                const audio = new Audio('Alarm.mp3');
-                audio.play().catch(e => console.log('Could not play notification sound:', e));
+                // Create a simple beep using Web Audio API
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // 800Hz frequency
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5); // 0.5 second beep
             } catch (e) {
-                console.log('Notification sound not available');
+                console.log('Could not play beep sound:', e);
             }
         }
     }
