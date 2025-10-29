@@ -361,11 +361,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             row.cells[3].innerHTML = `<input type="number" class="editable-input" value="${currentValues.meetings}" min="0">`;
             row.cells[5].innerHTML = `
                 <select class="editable-input">
-                    <option value="Robby Asbery" ${currentValues.owner === 'Robby Asbery' ? 'selected' : ''}>Robby Asbery</option>
-                    <option value="Martin Seshoene" ${currentValues.owner === 'Martin Seshoene' ? 'selected' : ''}>Martin Seshoene</option>
-                    <option value="Chris Maren" ${currentValues.owner === 'Chris Maren' ? 'selected' : ''}>Chris Maren</option>
+                    <option value="Rebook" ${currentValues.owner === 'Rebook' || currentValues.owner === 'Robby Asbery' || currentValues.owner === 'Robby' ? 'selected' : ''}>Rebook</option>
                     <option value="Meta Ads" ${currentValues.owner === 'Meta Ads' ? 'selected' : ''}>Meta Ads</option>
                     <option value="Cold Email" ${currentValues.owner === 'Cold Email' ? 'selected' : ''}>Cold Email</option>
+                    <option value="Referral" ${currentValues.owner === 'Referral' ? 'selected' : ''}>Referral</option>
                 </select>
             `;
             row.cells[6].innerHTML = `<input type="text" class="editable-input" value="${currentValues.notes}">`;
@@ -526,11 +525,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Function to update the KPI summary table
     async function updateKpiSummaryTable(startDate = null, endDate = null) {
         const salespeople = [
-            { name: 'Robby Asbery' },
-            { name: 'Martin Seshoene' },
-            { name: 'Chris Maren' },
+            { name: 'Rebook' },
             { name: 'Meta Ads' },
-            { name: 'Cold Email' }
+            { name: 'Cold Email' },
+            { name: 'Referral' }
         ];
         const kpiData = await loadKPIData();
         const tbody = document.getElementById('kpiSummaryBody');
@@ -545,9 +543,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const salespeopleRows = salespeople.map(person => {
             // Filter and sort entries for this person
             let entries;
-            if (person.name === 'Robby Asbery') {
+            if (person.name === 'Rebook') {
                 entries = kpiData
-                    .filter(entry => entry.owner === 'Robby' || entry.owner === 'Robby Asbery')
+                    .filter(entry => entry.owner === 'Robby' || entry.owner === 'Robby Asbery' || entry.owner === 'Rebook')
                     .sort((a, b) => new Date(b.date) - new Date(a.date));
             } else {
                 entries = kpiData
@@ -576,7 +574,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             // Add to overall totals
             totalMeetingsAll += totalMeetings; // Include all meetings in total
-            if (person.name !== 'Meta Ads' && person.name !== 'Cold Email') {
+            if (person.name !== 'Meta Ads' && person.name !== 'Cold Email' && person.name !== 'Referral') {
                 totalCallsAll += totalCalls; // Only include calls for conversion rate calculation
                 totalMeetingsForConversion += totalMeetings; // Only include meetings from people who make calls
             }
@@ -587,7 +585,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Calculate conversion rate
             let conversionRate;
             let conversionRateClass = '';
-            if (person.name === 'Meta Ads' || person.name === 'Cold Email') {
+            if (person.name === 'Meta Ads' || person.name === 'Cold Email' || person.name === 'Referral') {
                 conversionRate = 'N/A';
                 conversionRateClass = 'na-value';
             } else {
@@ -597,7 +595,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Determine cold calls display
             let coldCallsDisplay;
             let coldCallsClass = '';
-            if (person.name === 'Meta Ads' || person.name === 'Cold Email') {
+            if (person.name === 'Meta Ads' || person.name === 'Cold Email' || person.name === 'Referral') {
                 coldCallsDisplay = 'N/A';
                 coldCallsClass = 'na-value';
             } else {
@@ -967,11 +965,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const canvas = document.getElementById('kpiGraphCanvas');
         const kpiData = await loadKPIData();
         const salespeople = [
-            { name: 'Robby Asbery', firstName: 'Robby', aliases: ['Robby', 'Robby Asbery'], color: 'rgba(33, 150, 243, 1)', bg: 'rgba(33, 150, 243, 0.3)' },
-            { name: 'Martin Seshoene', firstName: 'Martin', aliases: ['Martin Seshoene'], color: 'rgba(76, 175, 80, 1)', bg: 'rgba(76, 175, 80, 0.3)' },
-            { name: 'Chris Maren', firstName: 'Chris', aliases: ['Chris Maren'], color: 'rgba(255, 193, 7, 1)', bg: 'rgba(255, 193, 7, 0.3)' },
+            { name: 'Rebook', firstName: 'Rebook', aliases: ['Robby', 'Robby Asbery', 'Rebook'], color: 'rgba(33, 150, 243, 1)', bg: 'rgba(33, 150, 243, 0.3)' },
             { name: 'Meta Ads', firstName: 'Meta', aliases: ['Meta Ads'], color: 'rgba(156, 39, 176, 1)', bg: 'rgba(156, 39, 176, 0.3)' },
-            { name: 'Cold Email', firstName: 'Email', aliases: ['Cold Email'], color: 'rgba(255, 87, 34, 1)', bg: 'rgba(255, 87, 34, 0.3)' }
+            { name: 'Cold Email', firstName: 'Email', aliases: ['Cold Email'], color: 'rgba(255, 87, 34, 1)', bg: 'rgba(255, 87, 34, 0.3)' },
+            { name: 'Referral', firstName: 'Referral', aliases: ['Referral'], color: 'rgba(0, 188, 212, 1)', bg: 'rgba(0, 188, 212, 0.3)' }
         ];
         // Get all unique dates in the range
         const allDatesSet = new Set();
