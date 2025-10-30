@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>CoreTrex - Projects</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="clients.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="projects-body">
+    <div class="page-content">
+        <h1>Projects</h1>
+        <div id="projectsTopLinks" class="projects-top-links"></div>
+        <div id="main-pods" class="projects-grid">
+            <!-- Pods will be rendered here by projects.js -->
+        </div>
+    </div>
+    <!-- Navigation -->
+    <nav-menu></nav-menu>
+    <script src="navigation.js"></script>
+    <script type="module" src="projects.js"></script>
+
+    <!-- Task Delete Confirmation Modal -->
+    <div id="taskDeleteModal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:420px;">
+            <span class="close" id="taskDeleteClose">&times;</span>
+            <h2>Delete Task</h2>
+            <p id="taskDeleteMessage">Are you sure you want to delete this task?</p>
+            <div style="display:flex; gap:10px; margin-top:14px; justify-content:flex-start;">
+                <button id="taskDeleteCancel" class="cancel-comment-btn">Cancel</button>
+                <button id="taskDeleteConfirm" class="save-comment-btn" style="background:#e74c3c;">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Details Drawer -->
+    <div id="taskDrawer" class="projects-drawer hidden">
+        <div class="projects-drawer-header">
+            <h3 id="drawerTaskTitle">Task Details</h3>
+            <button id="closeTaskDrawer" class="projects-drawer-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="projects-drawer-body">
+            <label class="projects-drawer-label" for="drawerLongDescription">Long Description</label>
+            <textarea id="drawerLongDescription" class="projects-drawer-textarea" placeholder="Add a detailed description..."></textarea>
+
+            <div class="projects-drawer-section">
+                <div class="projects-drawer-section-header">
+                    <span>Attachments (URLs)</span>
+                    <button id="addAttachmentBtn" class="projects-drawer-add">+ Add</button>
+                </div>
+                <ul id="attachmentsList" class="projects-drawer-attachments"></ul>
+            </div>
+        </div>
+        <div class="projects-drawer-footer">
+            <button id="saveTaskDetailsBtn" class="save-comment-btn">Save</button>
+            <button id="cancelTaskDetailsBtn" class="cancel-comment-btn">Cancel</button>
+        </div>
+    </div>
+</body>
+</html>

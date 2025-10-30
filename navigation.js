@@ -97,6 +97,7 @@ class Navigation extends HTMLElement {
             { id: 'kpis', href: 'kpis.html', icon: 'fas fa-chart-bar', label: 'Sales Metrics' },
             { id: 'prospects', href: 'prospects.html', icon: 'fas fa-chart-line', label: 'Prospects' },
             { id: 'clients', href: 'clients.html', icon: 'fas fa-users', label: 'Clients' },
+            { id: 'projects', href: 'projects.html', icon: 'fas fa-tasks', label: 'Projects' },
         ];
 
         // Build navigation HTML
