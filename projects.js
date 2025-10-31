@@ -428,6 +428,8 @@ function createTaskItem(taskData, podId, subId, taskId) {
       if (taskId) pendingCompletedTaskIds.add(taskId);
       // Use captured position so the animation is centered even if the row hides immediately
       triggerBobbyFirework(centerX, centerY);
+      // Play completion sound
+      playCompletionSound();
       
       // Fetch latest task data from Firestore to check for recurring settings
       let latestTaskData = taskData;
@@ -1284,6 +1286,19 @@ function partitionTasks(containerEl) {
 }
 
 // (Removed) global completed visibility controls; per-project toggle only
+
+// Play completion sound
+function playCompletionSound() {
+  try {
+    const audio = new Audio('complete.mp3');
+    audio.volume = 0.5; // Set volume to 50% to avoid being too loud
+    audio.play().catch(e => {
+      console.log('[Projects] Could not play completion sound:', e);
+    });
+  } catch (e) {
+    console.log('[Projects] Error creating audio:', e);
+  }
+}
 
 // Bobby firework effect
 function triggerBobbyFirework(clientX, clientY) {
