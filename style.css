@@ -4491,11 +4491,18 @@ body.presence-banner-visible #global-edit-button {
 .projects-body .status-pill.blocked { background:#ffebee; color:#c62828; }
 .projects-body .status-pill.pending { background:#fff8e1; color:#ef6c00; }
 
-.projects-body .action-btn.delete-btn { background:transparent !important; border:none !important; box-shadow:none !important; color:#e74c3c !important; }
-.projects-body .action-btn.delete-btn i { color:#e74c3c !important; }
-.projects-body .action-btn.delete-btn:hover, .projects-body .action-btn.delete-btn:hover i { color:#c0392b !important; }
+.projects-body .action-btn.delete-btn { background:transparent !important; border:none !important; box-shadow:none !important; color:#5f6368 !important; }
+.projects-body .action-btn.delete-btn i { color:#5f6368 !important; }
+.projects-body .action-btn.delete-btn:hover, .projects-body .action-btn.delete-btn:hover i { color:#e74c3c !important; }
 
 .projects-body .drop-indicator { height:2px; background:#4a78c2; border-radius:2px; margin:6px 0; }
+
+/* Global Completed Tasks Section */
+.projects-body .global-completed-section { margin-top: 40px; padding-top: 24px; border-top: 2px solid #e9eaee; }
+.projects-body .global-completed-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.projects-body .global-completed-header h2 { color: #202124; font-size: 1.3rem; font-weight: 700; margin: 0; }
+.projects-body .global-completed-toggle { background: transparent; border: none; color: #4a78c2; font-weight: 600; font-size: 1rem; cursor: pointer; padding: 8px 12px; border-radius: 8px; transition: color .2s, background .2s; }
+.projects-body .global-completed-toggle:hover { color: #2b63c7; background: rgba(74,120,194,.08); text-decoration: underline; }
 
 /* Task Details Drawer */
 .projects-drawer.hidden { transform: translateX(100%); opacity: 0; pointer-events: none; }
@@ -4714,19 +4721,19 @@ body.presence-banner-visible #global-edit-button {
   color: #5f6368;
 }
 
-/* Ensure delete buttons are icon-only (no background) and red */
+/* Ensure delete buttons are icon-only (no background) - grey by default, red on hover */
 .action-btn.delete-btn {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  color: #e74c3c !important;
+  color: #5f6368 !important;
 }
 .action-btn.delete-btn i {
-  color: #e74c3c !important;
+  color: #5f6368 !important;
 }
 .action-btn.delete-btn:hover,
 .action-btn.delete-btn:hover i {
-  color: #c0392b !important;
+  color: #e74c3c !important;
 }
 
 .task-completed {

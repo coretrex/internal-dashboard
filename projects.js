@@ -141,23 +141,19 @@ function createSubProjectElement(subTitle, podId, subprojectId) {
   // Tasks list
   const taskUl = document.createElement('ul');
   taskContent.appendChild(taskUl);
-  // Completed tasks (hidden by default)
+  // Completed tasks (hidden by default, controlled globally)
   const completedUl = document.createElement('ul');
   completedUl.className = 'completed-list hidden';
+  completedUl.dataset.podId = podId;
+  completedUl.dataset.subprojectId = subprojectId;
   taskContent.appendChild(completedUl);
-  // Toggle link
-  const completedToggle = document.createElement('a');
-  completedToggle.href = '#';
-  completedToggle.className = 'completed-toggle';
-  completedToggle.textContent = 'Show completed tasks (0)';
-  taskContent.appendChild(completedToggle);
-  // Add Task link inside the expanded area only
+  // Add Task button at the bottom of the task list
   const addTaskBtn = document.createElement('button');
   addTaskBtn.className = 'add-task-link add-task-btn';
   addTaskBtn.type = 'button';
   addTaskBtn.textContent = '+ Add Task';
-  // Place Add Task at the top (just below the header)
-  taskContent.insertBefore(addTaskBtn, taskUl);
+  // Place Add Task at the bottom (after completed list)
+  taskContent.appendChild(addTaskBtn);
   wrapper.appendChild(taskContent);
   // Accordion interaction
   header.querySelector('.expand-control').onclick = () => {
@@ -194,21 +190,6 @@ function createSubProjectElement(subTitle, podId, subprojectId) {
     updateCompletedToggleText(taskUl);
     // ensure open to show the new task
     if (taskContent.classList.contains('hidden')) header.querySelector('.expand-control').click();
-  });
-  // Toggle completed section
-  completedToggle.addEventListener('click', (e)=>{
-    e.preventDefault();
-    completedUl.classList.toggle('hidden');
-    console.log('[Projects] Toggled completed section', {
-      podId,
-      subprojectId: wrapper.dataset.subprojectId,
-      hidden: completedUl.classList.contains('hidden')
-    });
-    // Ensure the task list is expanded when showing completed tasks
-    if (!completedUl.classList.contains('hidden') && taskContent.classList.contains('hidden')) {
-      header.querySelector('.expand-control')?.click();
-    }
-    updateCompletedToggleText(taskUl);
   });
   // Rename subproject handled via double-click on title (inline editor below)
   // Inline rename on double-click
@@ -335,6 +316,8 @@ function createTaskItem(taskData, podId, subId, taskId) {
       if (completedUl) {
         li.style.display = '';
         completedUl.appendChild(li);
+        // Ensure completed list stays hidden (user must toggle to view)
+        completedUl.classList.add('hidden');
         console.log('[Projects] Moved task to completed list', { taskId });
         // Keep partitioning strict
         partitionTasks(parentListContainer);
@@ -428,9 +411,13 @@ function createTaskItem(taskData, podId, subId, taskId) {
     applyStatusStyle();
     const value = statusSelect.value;
     quickSave('status', value);
-    // If status is set to Done, treat as completion; otherwise ensure not completed
-    if (value === 'Done' && !checkbox.checked) {
-      await handleCompletionToggle(true);
+    // If status is set to Done, hide the task completely
+    if (value === 'Done') {
+      // Mark as completed and hide the task element
+      checkbox.checked = true;
+      li.style.display = 'none'; // Completely hide the task
+      // Remove from DOM entirely to keep things clean
+      setTimeout(() => li.remove(), 100);
     } else if (value !== 'Done' && checkbox.checked) {
       await handleCompletionToggle(false);
     }
@@ -596,6 +583,54 @@ function showOnlyPod(podId) {
   });
 }
 
+function initGlobalCompletedSection() {
+  const toggleBtn = document.getElementById('toggleGlobalCompleted');
+  const globalSection = document.getElementById('globalCompletedSection');
+  
+  if (!toggleBtn || !globalSection) return;
+  
+  // Update the toggle button and section visibility
+  function updateGlobalToggle() {
+    const allCompletedLists = document.querySelectorAll('.completed-list');
+    let totalCount = 0;
+    allCompletedLists.forEach(list => {
+      totalCount += list.querySelectorAll('li').length;
+    });
+    
+    if (totalCount === 0) {
+      globalSection.style.display = 'none';
+      return;
+    }
+    
+    // Always show the section if there are completed tasks
+    globalSection.style.display = 'block';
+    
+    // Update button text based on visibility state
+    const allHidden = Array.from(allCompletedLists).every(list => list.classList.contains('hidden'));
+    toggleBtn.textContent = allHidden ? `Show completed tasks (${totalCount})` : `Hide completed tasks (${totalCount})`;
+  }
+  
+  toggleBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const allCompletedLists = document.querySelectorAll('.completed-list');
+    const allHidden = Array.from(allCompletedLists).every(list => list.classList.contains('hidden'));
+    
+    // Toggle all completed lists
+    allCompletedLists.forEach(list => {
+      if (allHidden) {
+        list.classList.remove('hidden');
+      } else {
+        list.classList.add('hidden');
+      }
+    });
+    
+    updateGlobalToggle();
+  });
+  
+  // Store update function globally for use elsewhere
+  window.updateGlobalCompletedToggle = updateGlobalToggle;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   (async () => {
     await initializeFirebaseApp();
@@ -603,6 +638,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPods();
     initFilters();
     initTaskDrawer();
+    initGlobalCompletedSection();
   })();
 });
 
@@ -684,6 +720,10 @@ async function loadTasksInto(podId, subId, listEl) {
     return 0;
   });
   items.forEach(d => {
+    // Completely hide tasks with status "Done" - these are permanently archived
+    if ((d.status || 'Open').toLowerCase() === 'done') {
+      return; // Skip rendering Done tasks entirely
+    }
     const li = createTaskItem({
       text: d.text,
       completed: d.completed,
@@ -694,12 +734,15 @@ async function loadTasksInto(podId, subId, listEl) {
       longDescription: d.longDescription,
       attachments: d.attachments
     }, podId, subId, d.id);
+    // Completed tasks (checkbox checked) go to completed list and are viewable via toggle
+    // Note: Tasks with status "Done" are already filtered out above
     if (d.completed) {
       if (completedUl) {
         completedUl.appendChild(li);
-        console.log('[Projects] Appended completed task', { podId, subId, taskId: d.id });
-      } // else skip rendering completed in the active list entirely
+        console.log('[Projects] Appended completed task to completed list', { podId, subId, taskId: d.id });
+      }
     } else {
+      // Incomplete tasks go to the main active list
       // Skip rendering items we just marked complete but server hasn't caught up yet
       if (!pendingCompletedTaskIds.has(d.id)) {
         listEl.appendChild(li);
@@ -710,8 +753,11 @@ async function loadTasksInto(podId, subId, listEl) {
   enforceCompletedHidden(listEl.parentElement, /*doNotHide*/ true);
   // Ensure partitioning is correct on load
   partitionTasks(listEl.parentElement);
+  // Ensure completed list is hidden by default after loading
   const comp = listEl.parentElement?.querySelector('.completed-list');
   if (comp) {
+    // Always hide completed list by default on load (user can toggle to show)
+    comp.classList.add('hidden');
     console.log('[Projects] Completed list visibility after load', {
       podId,
       subId,
@@ -736,14 +782,10 @@ function setProjectsHeader(title) {
 }
 
 function updateCompletedToggleText(incompleteUl) {
-  const container = incompleteUl.parentElement;
-  const completedUl = container.querySelector('.completed-list');
-  const toggle = container.querySelector('.completed-toggle');
-  if (!completedUl || !toggle) return;
-  const count = completedUl.querySelectorAll('li').length;
-  const isHidden = completedUl.classList.contains('hidden');
-  toggle.textContent = `${isHidden ? 'Show' : 'Hide'} completed tasks (${count})`;
-  console.log('[Projects] Updated completed toggle text', { count, isHidden });
+  // Update the global completed toggle instead of per-project toggles
+  if (window.updateGlobalCompletedToggle) {
+    window.updateGlobalCompletedToggle();
+  }
 }
 
 // Defensive rule: ensure completed tasks are not visible in the main list and
@@ -752,11 +794,23 @@ function enforceCompletedHidden(containerEl, doNotHide = false) {
   const incompleteUl = containerEl.querySelector('ul');
   const completedUl = containerEl.querySelector('.completed-list');
   if (!incompleteUl || !completedUl) return;
-  // Move any completed rows that accidentally reside in the incomplete list
+  // Remove "Done" tasks completely if they somehow exist
   Array.from(incompleteUl.children).forEach(li => {
+    const status = li.querySelector('.status-select')?.value;
+    if (status === 'Done') {
+      li.remove();
+      return;
+    }
     const cb = li.querySelector('.task-toggle');
     if (cb && cb.checked) {
       completedUl.appendChild(li);
+    }
+  });
+  // Remove "Done" tasks from completed list as well
+  Array.from(completedUl.children).forEach(li => {
+    const status = li.querySelector('.status-select')?.value;
+    if (status === 'Done') {
+      li.remove();
     }
   });
   // Optionally avoid forcing hidden state so user toggle works
@@ -771,19 +825,27 @@ function partitionTasks(containerEl) {
   const incompleteUl = containerEl.querySelector('ul');
   const completedUl = containerEl.querySelector('.completed-list');
   if (!incompleteUl || !completedUl) return;
-  // Move completed to completedUl
+  // Remove "Done" tasks completely if they somehow still exist
   Array.from(incompleteUl.children).forEach(li => {
-    const cb = li.querySelector('.task-toggle');
     const status = li.querySelector('.status-select')?.value;
-    if ((cb && cb.checked) || status === 'Done') {
+    if (status === 'Done') {
+      li.remove();
+      return;
+    }
+    const cb = li.querySelector('.task-toggle');
+    if (cb && cb.checked) {
       completedUl.appendChild(li);
     }
   });
-  // Move non-completed back to incompleteUl
+  // Remove "Done" tasks from completed list and move non-completed back to incompleteUl
   Array.from(completedUl.children).forEach(li => {
-    const cb = li.querySelector('.task-toggle');
     const status = li.querySelector('.status-select')?.value;
-    if (!((cb && cb.checked) || status === 'Done')) {
+    if (status === 'Done') {
+      li.remove();
+      return;
+    }
+    const cb = li.querySelector('.task-toggle');
+    if (!(cb && cb.checked)) {
       incompleteUl.appendChild(li);
     }
   });
