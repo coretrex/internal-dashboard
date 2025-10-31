@@ -4525,6 +4525,17 @@ body.presence-banner-visible #global-edit-button {
   line-height: 1;
 }
 
+/* Inline editing styles for project and task names */
+.projects-body .subproject-title[contenteditable="true"],
+.projects-body .task-text[contenteditable="true"] {
+  padding: 6px 10px;
+  margin: -6px -10px;
+  border-radius: 6px;
+  outline: 2px solid #4a78c2;
+  outline-offset: 0;
+  background: #fff;
+}
+
 .projects-body .drop-indicator { height:2px; background:#4a78c2; border-radius:2px; margin:6px 0; }
 
 /* Global Completed Tasks Section */
