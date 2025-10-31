@@ -4468,6 +4468,13 @@ body.presence-banner-visible #global-edit-button {
 .projects-body .task-header { display:grid; grid-template-columns: var(--task-grid); gap:12px; padding:10px 16px; color:#5f6368; font-weight:700; font-size:.9rem; border-bottom:1px solid #edf0f3; align-items:center; background:#f5f6f7; border-radius:8px; }
 .projects-body .task-header > div:first-child { padding-left:0; grid-column: 1 / span 2; }
 .projects-body .task-list li { display:grid; grid-template-columns: var(--task-grid); align-items:center; gap:8px; position:relative; padding:6px 10px; width:100%; margin:1px 0; border-bottom:1px solid #e9eaee; }
+/* CRITICAL: Hide any tasks with status "Done" from the active/incomplete list ONLY (not completed-list) */
+.projects-body .task-list > ul:not(.completed-list) > li.task-done-status,
+.projects-body .task-list > ul:first-of-type > li.task-done-status { display: none !important; }
+/* Hide the completed list when it has the hidden class */
+.projects-body .task-list .completed-list.hidden { display: none !important; }
+/* Ensure tasks in completed-list are always visible when the list is shown */
+.projects-body .task-list .completed-list:not(.hidden) > li { display: grid !important; }
 .projects-body .task-list li:hover { background:#f7f8fa; border-radius:8px; }
 .projects-body .task-checkbox-cell { display:flex; align-items:center; justify-content:center; }
 .projects-body .task-name-cell { display:flex; align-items:center; }
