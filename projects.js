@@ -1446,6 +1446,14 @@ function initTaskDrawer() {
 async function openTaskDrawer({ podId, subId, taskId, title, longDescription = '', attachments = [] }) {
   const drawer = document.getElementById('taskDrawer');
   if (!drawer) return;
+  
+  // If drawer is already open, just close it and return
+  if (!drawer.classList.contains('hidden')) {
+    drawer.classList.add('hidden');
+    currentDrawerContext = null;
+    return;
+  }
+  
   currentDrawerContext = { podId, subId, taskId };
   document.getElementById('drawerTaskTitle').textContent = title || 'Task Details';
   // Load up-to-date details from Firestore
