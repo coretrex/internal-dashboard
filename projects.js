@@ -342,9 +342,7 @@ function createTaskItem(taskData, podId, subId, taskId) {
   const li = document.createElement('li');
   const safe = (v) => (v == null ? '' : v);
   const statusLower = (taskData.status || 'Open').toLowerCase();
-  const isDone = statusLower === 'done';
-  // Tasks with "Done" status should be treated as completed
-  const isCompleted = taskData.completed || isDone;
+  const isCompleted = taskData.completed;
   const hasDesc = !!(taskData.longDescription && String(taskData.longDescription).trim().length > 0);
   const hasAtch = Array.isArray(taskData.attachments) && taskData.attachments.length > 0;
   // (deprecated) detailsIcons removed in favor of a single comment icon
@@ -366,9 +364,11 @@ function createTaskItem(taskData, podId, subId, taskId) {
     <div class="task-status">
       <select class="task-select status-select">
         <option value="Open" ${statusLower==='open' ? 'selected' : ''}>Open</option>
-        <option value="Pending" ${statusLower==='pending' ? 'selected' : ''}>Pending</option>
-        <option value="Blocked" ${statusLower==='blocked' ? 'selected' : ''}>Blocked</option>
-        <option value="Done" ${statusLower==='done' ? 'selected' : ''}>Done</option>
+        <option value="Recurring" ${statusLower==='recurring' ? 'selected' : ''}>Recurring</option>
+        <option value="On-Hold" ${statusLower==='on-hold' ? 'selected' : ''}>On-Hold</option>
+        <option value="Waiting on Client Feedback" ${statusLower==='waiting on client feedback' ? 'selected' : ''}>Waiting on Client Feedback</option>
+        <option value="In-Progress" ${statusLower==='in-progress' ? 'selected' : ''}>In-Progress</option>
+        <option value="Awaiting Front-End Verification" ${statusLower==='awaiting front-end verification' ? 'selected' : ''}>Awaiting Front-End Verification</option>
       </select>
     </div>
     <div class="task-actions">
@@ -505,69 +505,21 @@ function createTaskItem(taskData, podId, subId, taskId) {
   // style status select based on value
   function applyStatusStyle() {
     const val = (statusSelect.value || 'Open').toLowerCase();
-    statusSelect.classList.remove('status-open', 'status-pending', 'status-blocked', 'status-done');
+    statusSelect.classList.remove('status-open', 'status-recurring', 'status-on-hold', 'status-waiting', 'status-in-progress', 'status-awaiting');
     if (val === 'open') statusSelect.classList.add('status-open');
-    else if (val === 'pending') statusSelect.classList.add('status-pending');
-    else if (val === 'blocked') statusSelect.classList.add('status-blocked');
-    else if (val === 'done') statusSelect.classList.add('status-done');
+    else if (val === 'recurring') statusSelect.classList.add('status-recurring');
+    else if (val === 'on-hold') statusSelect.classList.add('status-on-hold');
+    else if (val === 'waiting on client feedback') statusSelect.classList.add('status-waiting');
+    else if (val === 'in-progress') statusSelect.classList.add('status-in-progress');
+    else if (val === 'awaiting front-end verification') statusSelect.classList.add('status-awaiting');
   }
   applyStatusStyle();
   statusSelect.addEventListener('change', async () => {
     applyStatusStyle();
     const value = statusSelect.value;
     
-    // If status is set to Done, immediately hide and move to completed
-    if (value === 'Done') {
-      // Mark with CSS class for hiding
-      li.classList.add('task-done-status');
-      
-      // Update database first
-      if (podId && subId && taskId) {
-        const podRef = doc(db, 'pods', podId);
-        const subRef = doc(podRef, 'subprojects', subId);
-        const taskRef = doc(subRef, 'tasks', taskId);
-        await updateDoc(taskRef, { completed: true, status: 'Done' });
-      }
-      
-      checkbox.checked = true;
-      // Ensure visual strike-through immediately
-      textSpan.classList.add('task-completed');
-      const parentListContainer = li.closest('.task-list');
-      const incompleteUl = parentListContainer?.querySelector('ul');
-      const completedUl = parentListContainer?.querySelector('.completed-list');
-      
-      // FORCE REMOVE from incomplete list
-      if (incompleteUl && incompleteUl.contains(li)) {
-        incompleteUl.removeChild(li);
-      }
-      
-      // Add to completed list
-      if (completedUl) {
-        li.classList.remove('task-done-status'); // Remove hide class in completed list
-        completedUl.appendChild(li);
-        completedUl.classList.add('hidden');
-      }
-      
-      // Update toggle
-      if (incompleteUl) {
-        updateCompletedToggleText(incompleteUl);
-      }
-      // Update task count
-      const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
-      if (subprojectCard) updateTaskCount(subprojectCard);
-      // Update KPIs
-      updateKPIs();
-      return; // Exit early, don't save status again
-    } else {
-      // Remove done-status class if changing away from Done
-      li.classList.remove('task-done-status');
-    }
-    
-    // For non-Done status changes, save normally
+    // Save status normally
     quickSave('status', value);
-    if (value !== 'Done' && checkbox.checked) {
-      await handleCompletionToggle(false);
-    }
   });
 
   function startInlineEdit() {
@@ -892,14 +844,11 @@ async function loadTasksInto(podId, subId, listEl) {
       longDescription: d.longDescription,
       attachments: d.attachments
     }, podId, subId, d.id);
-    // Tasks with status "Done" or completed (checkbox checked) go to completed list
-    const isDone = (d.status || 'Open').toLowerCase() === 'done';
-    if (d.completed || isDone) {
+    // Tasks that are completed go to completed list
+    if (d.completed) {
       if (completedUl) {
-        // Remove hide class when adding to completed list
-        li.classList.remove('task-done-status');
         completedUl.appendChild(li);
-        console.log('[Projects] Appended completed task to completed list', { podId, subId, taskId: d.id, isDone });
+        console.log('[Projects] Appended completed task to completed list', { podId, subId, taskId: d.id });
       }
     } else {
       // Incomplete tasks go to the main active list
@@ -907,11 +856,6 @@ async function loadTasksInto(podId, subId, listEl) {
       if (!pendingCompletedTaskIds.has(d.id)) {
         listEl.appendChild(li);
       }
-    }
-    
-    // Add CSS class to hide "Done" tasks if they somehow end up in incomplete list
-    if (isDone) {
-      li.classList.add('task-done-status');
     }
   });
   // Defensive sweep: ensure completed rows reside in completed list
@@ -975,22 +919,15 @@ function enforceCompletedHidden(containerEl, doNotHide = false) {
   const completedUl = containerEl.querySelector('.completed-list');
   if (!incompleteUl || !completedUl) return;
   
-  // CRITICAL: Remove ALL "Done" tasks and completed tasks from incomplete list
+  // CRITICAL: Remove ALL completed tasks from incomplete list
   const tasksToMove = Array.from(incompleteUl.children).filter(li => {
-    const status = li.querySelector('.status-select')?.value;
     const cb = li.querySelector('.task-toggle');
-    const isDone = status === 'Done';
-    // Add hide class immediately if it's Done
-    if (isDone) {
-      li.classList.add('task-done-status');
-    }
-    return isDone || (cb && cb.checked);
+    return cb && cb.checked;
   });
   
   tasksToMove.forEach(li => {
     incompleteUl.removeChild(li);
     if (!completedUl.contains(li)) {
-      li.classList.remove('task-done-status'); // Remove hide class when in completed list
       completedUl.appendChild(li);
     }
   });
@@ -1008,34 +945,22 @@ function partitionTasks(containerEl) {
   const completedUl = containerEl.querySelector('.completed-list');
   if (!incompleteUl || !completedUl) return;
   
-  // CRITICAL: Move ALL "Done" tasks and completed tasks from incompleteUl to completedUl
+  // CRITICAL: Move ALL completed tasks from incompleteUl to completedUl
   const tasksToMove = Array.from(incompleteUl.children).filter(li => {
-    const status = li.querySelector('.status-select')?.value;
     const cb = li.querySelector('.task-toggle');
-    const isDone = status === 'Done';
-    // Add hide class immediately if it's Done
-    if (isDone) {
-      li.classList.add('task-done-status');
-    }
-    return isDone || (cb && cb.checked);
+    return cb && cb.checked;
   });
   
   tasksToMove.forEach(li => {
     incompleteUl.removeChild(li);
     if (!completedUl.contains(li)) {
-      li.classList.remove('task-done-status'); // Remove hide class when in completed list
       completedUl.appendChild(li);
     }
   });
   
-  // Move non-completed, non-Done tasks back to incompleteUl
+  // Move non-completed tasks back to incompleteUl
   Array.from(completedUl.children).forEach(li => {
-    const status = li.querySelector('.status-select')?.value;
     const cb = li.querySelector('.task-toggle');
-    // Never move "Done" tasks back to incomplete
-    if (status === 'Done') {
-      return;
-    }
     // Only move back if not completed
     if (!(cb && cb.checked)) {
       completedUl.removeChild(li);
