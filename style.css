@@ -566,6 +566,13 @@ h1 {
   z-index: 1500; /* Increased z-index to be higher than user info widget */
   /* Fallback for browsers that don't support backdrop-filter */
   background: rgba(255, 255, 255, 0.9);
+  /* Ensure buttons remain on one line and scroll if needed */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  max-width: calc(100vw - 40px);
+  white-space: nowrap;
 }
 
 /* Chrome-specific fix for backdrop-filter issues */
@@ -623,6 +630,14 @@ h1 {
   cursor: pointer;
   transition: all 0.3s ease;
   text-decoration: none;
+  /* Keep icon and label on one line */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  line-height: 1;
+  flex: 0 0 auto; /* Prevent shrinking that causes wrapping */
+  min-width: max-content;
 }
 
 .nav-btn:hover {
@@ -631,6 +646,19 @@ h1 {
 
 .nav-btn.active {
   background: #2979ff;
+}
+
+/* Subtle scrollbar for horizontal overflow (optional) */
+.nav-buttons::-webkit-scrollbar { height: 6px; }
+.nav-buttons::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.2);
+  border-radius: 3px;
+}
+
+/* Tweak spacing on narrower viewports to minimize scroll */
+@media (max-width: 1280px) {
+  .nav-buttons { gap: 8px; padding: 8px 10px; }
+  .nav-btn { padding: 10px 18px; font-size: 13px; }
 }
 
 /* Add these new styles */
