@@ -4652,6 +4652,19 @@ body.presence-banner-visible #global-edit-button {
   border-color: #bbdefb;
 }
 
+/* Clickable KPI block styling */
+.projects-kpi-clickable {
+  cursor: pointer;
+  background: #e8f5e9 !important;
+  border-color: #c8e6c9 !important;
+}
+
+.projects-kpi-clickable:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+  background: #c8e6c9 !important;
+}
+
 /* Inline editing styles for project and task names */
 .projects-body .subproject-title[contenteditable="true"],
 .projects-body .task-text[contenteditable="true"] {

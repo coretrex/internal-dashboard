@@ -99,6 +99,11 @@ function updateKPIs() {
   let dueToday = 0;
   let overdue = 0;
   let total = 0;
+  let myTasks = 0;
+  
+  // Get current user's name from localStorage
+  const userName = localStorage.getItem('userName') || '';
+  const userFirstName = userName.split(' ')[0];
   
   // Get only visible pod cards
   const visiblePods = document.querySelectorAll('.pod-card[style*="display: none"]');
@@ -117,6 +122,15 @@ function updateKPIs() {
     incompleteTasks.forEach(taskLi => {
       total++;
       
+      // Check if task is assigned to current user
+      const assigneeDisplay = taskLi.querySelector('.assignee-display');
+      if (assigneeDisplay && userFirstName) {
+        const assigneeText = assigneeDisplay.textContent;
+        if (assigneeText.includes(userFirstName)) {
+          myTasks++;
+        }
+      }
+      
       const dateInput = taskLi.querySelector('.date-input');
       if (dateInput && dateInput.value) {
         const dueDate = dateInput.value; // Format: YYYY-MM-DD
@@ -131,10 +145,20 @@ function updateKPIs() {
   });
   
   // Update KPI displays
+  const kpiMyTasksEl = document.getElementById('kpiMyTasks');
   const kpiDueTodayEl = document.getElementById('kpiDueToday');
   const kpiOverdueEl = document.getElementById('kpiOverdue');
   const kpiTotalEl = document.getElementById('kpiTotal');
   
+  if (kpiMyTasksEl) {
+    kpiMyTasksEl.textContent = myTasks;
+    // Add visual indicator if there are overdue tasks assigned to user
+    if (myTasks > 0) {
+      kpiMyTasksEl.style.color = '#2196F3';
+    } else {
+      kpiMyTasksEl.style.color = '';
+    }
+  }
   if (kpiDueTodayEl) kpiDueTodayEl.textContent = dueToday;
   if (kpiOverdueEl) kpiOverdueEl.textContent = overdue;
   if (kpiTotalEl) kpiTotalEl.textContent = total;
@@ -1028,6 +1052,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTaskDrawer();
     initGlobalCompletedSection();
     initRecurringModal();
+    initMyTasksModal();
   })();
 });
 
@@ -1478,4 +1503,346 @@ async function openTaskDrawer({ podId, subId, taskId, title, longDescription = '
     list.appendChild(li);
   });
   drawer.classList.remove('hidden');
+}
+
+// ============ MY TASKS FUNCTIONALITY ============
+
+// Function to load tasks with optional user and project filters from visible tasks on the page
+function loadMyTasks(filterUser = null, filterProject = null) {
+  const myTasksList = [];
+  
+  // If no filter specified, use current user
+  if (filterUser === null) {
+    const userName = localStorage.getItem('userName') || '';
+    filterUser = userName.split(' ')[0];
+  }
+  
+  console.log('[My Tasks] Filtering by user:', filterUser || 'All Users', 'project:', filterProject || 'All Projects');
+  
+  // Get ALL pod cards (not just visible ones) to allow filtering across all projects
+  const allPods = Array.from(document.querySelectorAll('.pod-card'));
+  
+  console.log('[My Tasks] Checking all pods:', allPods.length);
+  
+  allPods.forEach(podCard => {
+    const podId = podCard.dataset.podId;
+    const podData = podInfo.find(p => p.id === podId);
+    const podTitle = podData ? podData.title : podId;
+    
+    // Check if this pod matches the project filter
+    if (filterProject && podId !== filterProject) {
+      return; // Skip this pod if it doesn't match
+    }
+    
+    // Get all subprojects in this pod
+    const subprojects = podCard.querySelectorAll('.subproject-card');
+    
+    subprojects.forEach(subCard => {
+      const subTitle = subCard.querySelector('.subproject-title')?.textContent || 'Untitled';
+      const subId = subCard.dataset.subprojectId;
+      
+      // Get incomplete tasks from this subproject
+      const taskList = subCard.querySelector('.task-list > ul:not(.completed-list)');
+      if (!taskList) return;
+      
+      const tasks = taskList.querySelectorAll('li');
+      
+      tasks.forEach(taskLi => {
+        const assigneeDisplay = taskLi.querySelector('.assignee-display');
+        const taskText = taskLi.querySelector('.task-text')?.textContent || 'Untitled Task';
+        const dateInput = taskLi.querySelector('.date-input');
+        const statusSelect = taskLi.querySelector('.status-select');
+        
+        if (!assigneeDisplay) return;
+        
+        const assigneeText = assigneeDisplay.textContent;
+        
+        // Check if this task matches the user filter
+        // If filterUser is empty string, show all tasks
+        // Otherwise, check if assignee includes the filter name
+        const userMatches = !filterUser || assigneeText.includes(filterUser);
+        
+        if (userMatches) {
+          console.log('[My Tasks] Match found:', taskText, 'assignee:', assigneeText, 'pod:', podTitle);
+          
+          myTasksList.push({
+            podTitle,
+            subTitle,
+            text: taskText,
+            dueDate: dateInput?.value || '',
+            status: statusSelect?.value || 'Open',
+            assignee: assigneeText
+          });
+        }
+      });
+    });
+  });
+  
+  console.log(`[My Tasks] Total matched: ${myTasksList.length}`);
+  
+  // Sort by due date
+  myTasksList.sort((a, b) => {
+    if (!a.dueDate && !b.dueDate) return 0;
+    if (!a.dueDate) return 1;
+    if (!b.dueDate) return -1;
+    return new Date(a.dueDate) - new Date(b.dueDate);
+  });
+  
+  return myTasksList;
+}
+
+// Function to render tasks in the modal
+function renderTasksInModal(filterUser = null, filterProject = null) {
+  const content = document.getElementById('myTasksContent');
+  
+  if (!content) {
+    console.error('Content element not found');
+    return;
+  }
+  
+  try {
+    console.log('[My Tasks] Loading tasks...');
+    const myTasks = loadMyTasks(filterUser, filterProject);
+    console.log('[My Tasks] Found tasks:', myTasks.length, myTasks);
+    
+    if (myTasks.length === 0) {
+      let filterText = 'tasks';
+      let projectName = '';
+      if (filterProject) {
+        const podData = podInfo.find(p => p.id === filterProject);
+        projectName = podData ? podData.title : filterProject;
+      }
+      if (filterUser && filterProject) {
+        filterText = `tasks assigned to <strong>${filterUser}</strong> in project <strong>${projectName}</strong>`;
+      } else if (filterUser) {
+        filterText = `tasks assigned to <strong>${filterUser}</strong>`;
+      } else if (filterProject) {
+        filterText = `tasks in project <strong>${projectName}</strong>`;
+      }
+      content.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: #333;">
+          <p style="margin-bottom: 0.5rem;">No ${filterText}.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    let html = '';
+    
+    myTasks.forEach(task => {
+      const isOverdue = task.dueDate && task.dueDate < today;
+      const borderColor = isOverdue ? '#ff6b6b' : '#2196F3';
+      const statusColor = getStatusColor(task.status);
+      
+      html += `
+        <div style="background: #f9f9f9; padding: 1rem; border-radius: 8px; border-left: 4px solid ${borderColor}; margin-bottom: 0.75rem;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+            <div style="flex: 1;">
+              <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 0.25rem; color: #000;">
+                ${task.text}
+              </div>
+              <div style="color: #666; font-size: 0.85rem;">
+                ${task.podTitle} → ${task.subTitle}
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.9rem; color: #333;">
+            <div>
+              <span style="color: #666;">Assigned to:</span>
+              <span style="color: #000; font-weight: 500;">
+                ${task.assignee || 'Unassigned'}
+              </span>
+            </div>
+            <div>
+              <span style="color: #666;">Due:</span>
+              <span style="color: ${isOverdue ? '#ff6b6b' : '#000'}; font-weight: ${isOverdue ? 'bold' : 'normal'};">
+                ${task.dueDate || 'No date'}
+              </span>
+              ${isOverdue ? '<span style="color: #ff6b6b; margin-left: 0.25rem;">(OVERDUE)</span>' : ''}
+            </div>
+            <div>
+              <span style="color: #666;">Status:</span>
+              <span style="color: ${statusColor}; font-weight: 500;">
+                ${task.status}
+              </span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
+    content.innerHTML = html;
+    
+  } catch (error) {
+    console.error('[My Tasks] Error rendering tasks:', error);
+    content.innerHTML = `
+      <div style="text-align: center; padding: 2rem; color: #ff6b6b;">
+        <p>Error loading tasks. Please try again.</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem;">${error.message}</p>
+      </div>
+    `;
+  }
+}
+
+// Function to populate user filter dropdown
+async function populateUserFilter() {
+  const userFilter = document.getElementById('taskUserFilter');
+  if (!userFilter) return;
+  
+  try {
+    const users = await loadAssignableUsers();
+    
+    // Clear existing options except "All Users"
+    userFilter.innerHTML = '<option value="">All Users</option>';
+    
+    // Add each user as an option (using first name for simplicity)
+    users.forEach(user => {
+      const firstName = user.name ? user.name.split(' ')[0] : user.email;
+      const option = document.createElement('option');
+      option.value = firstName;
+      option.textContent = user.name || user.email;
+      userFilter.appendChild(option);
+    });
+    
+    // Add "Unassigned" option at the end
+    const unassignedOption = document.createElement('option');
+    unassignedOption.value = 'Unassigned';
+    unassignedOption.textContent = 'Unassigned';
+    userFilter.appendChild(unassignedOption);
+    
+    console.log('[My Tasks] Populated filter with', users.length, 'users');
+  } catch (error) {
+    console.error('[My Tasks] Error populating user filter:', error);
+  }
+}
+
+// Function to populate project filter dropdown
+function populateProjectFilter() {
+  const projectFilter = document.getElementById('taskProjectFilter');
+  if (!projectFilter) return;
+  
+  // Clear existing options
+  projectFilter.innerHTML = '<option value="">All Projects</option>';
+  
+  // Use all pods from podInfo instead of just visible ones
+  const pods = podInfo.map(pod => ({
+    id: pod.id,
+    title: pod.title
+  }));
+  
+  // Sort pods alphabetically
+  pods.sort((a, b) => a.title.localeCompare(b.title));
+  
+  // Add pods to dropdown
+  pods.forEach(pod => {
+    const option = document.createElement('option');
+    option.value = pod.id;
+    option.textContent = pod.title;
+    projectFilter.appendChild(option);
+  });
+  
+  console.log('[My Tasks] Populated project filter with', pods.length, 'main projects');
+}
+
+// Function to open the My Tasks modal
+async function openMyTasksModal() {
+  const modal = document.getElementById('myTasksModal');
+  const userFilter = document.getElementById('taskUserFilter');
+  const projectFilter = document.getElementById('taskProjectFilter');
+  
+  if (!modal) {
+    console.error('Modal element not found');
+    return;
+  }
+  
+  // Populate user filter dropdown
+  await populateUserFilter();
+  
+  // Populate project filter dropdown
+  populateProjectFilter();
+  
+  // Set user dropdown to current user by default
+  if (userFilter) {
+    const userName = localStorage.getItem('userName') || '';
+    const userFirstName = userName.split(' ')[0];
+    userFilter.value = userFirstName;
+  }
+  
+  // Set project dropdown to "All Projects" by default
+  if (projectFilter) {
+    projectFilter.value = '';
+  }
+  
+  // Show modal
+  modal.style.display = 'block';
+  
+  // Render tasks with current filters
+  renderTasksInModal(
+    userFilter ? userFilter.value : null,
+    projectFilter ? projectFilter.value : null
+  );
+}
+
+// Helper function to get status color
+function getStatusColor(status) {
+  const statusLower = (status || 'open').toLowerCase();
+  switch (statusLower) {
+    case 'open': return '#4CAF50';
+    case 'recurring': return '#9C27B0';
+    case 'on-hold': return '#FF9800';
+    case 'waiting on client feedback': return '#FFC107';
+    case 'in-progress': return '#2196F3';
+    case 'awaiting front-end verification': return '#00BCD4';
+    default: return '#9E9E9E';
+  }
+}
+
+// Initialize My Tasks modal event listeners
+function initMyTasksModal() {
+  const myTasksKpi = document.getElementById('myTasksKpi');
+  const closeMyTasksModal = document.getElementById('closeMyTasksModal');
+  const modal = document.getElementById('myTasksModal');
+  const userFilter = document.getElementById('taskUserFilter');
+  const projectFilter = document.getElementById('taskProjectFilter');
+  
+  if (myTasksKpi) {
+    myTasksKpi.addEventListener('click', openMyTasksModal);
+  }
+  
+  if (closeMyTasksModal) {
+    closeMyTasksModal.addEventListener('click', () => {
+      if (modal) modal.style.display = 'none';
+    });
+  }
+  
+  // Add event listener for user filter dropdown
+  if (userFilter) {
+    userFilter.addEventListener('change', (e) => {
+      const userFilterValue = e.target.value;
+      const projectFilterValue = projectFilter ? projectFilter.value : '';
+      console.log('[My Tasks] User filter changed to:', userFilterValue || 'All Users');
+      renderTasksInModal(userFilterValue || '', projectFilterValue || '');
+    });
+  }
+  
+  // Add event listener for project filter dropdown
+  if (projectFilter) {
+    projectFilter.addEventListener('change', (e) => {
+      const userFilterValue = userFilter ? userFilter.value : '';
+      const projectFilterValue = e.target.value;
+      console.log('[My Tasks] Project filter changed to:', projectFilterValue || 'All Projects');
+      renderTasksInModal(userFilterValue || '', projectFilterValue || '');
+    });
+  }
+  
+  // Close modal when clicking outside
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+  }
 }

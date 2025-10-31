@@ -13,6 +13,10 @@
         
         <!-- KPI Blocks -->
         <div class="projects-kpi-container">
+            <div class="projects-kpi-block projects-kpi-clickable" id="myTasksKpi" style="cursor: pointer;" title="Click to view your assigned tasks">
+                <div class="projects-kpi-value" id="kpiMyTasks">0</div>
+                <div class="projects-kpi-label">My Tasks</div>
+            </div>
             <div class="projects-kpi-block">
                 <div class="projects-kpi-value" id="kpiDueToday">0</div>
                 <div class="projects-kpi-label">Due Today</div>
@@ -137,6 +141,35 @@
         <div class="projects-drawer-footer">
             <button id="saveTaskDetailsBtn" class="save-comment-btn">Save</button>
             <button id="cancelTaskDetailsBtn" class="cancel-comment-btn">Cancel</button>
+        </div>
+    </div>
+
+    <!-- My Tasks Modal -->
+    <div id="myTasksModal" class="modal" style="display:none;">
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 900px; max-height: 70vh; background-color: #fefefe; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1001; display: flex; flex-direction: column;">
+            <span class="close" id="closeMyTasksModal" style="position: absolute; right: 1.5rem; top: 1rem; font-size: 2rem; z-index: 10; cursor: pointer; color: #666;">&times;</span>
+            <div style="padding: 2rem 2rem 1rem 2rem; border-bottom: 1px solid #eee; flex-shrink: 0;">
+                <h2 style="margin: 0 0 1rem 0;">Tasks</h2>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label for="taskUserFilter" style="font-weight: 500; color: #333;">User:</label>
+                        <select id="taskUserFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; min-width: 150px;">
+                            <option value="">All Users</option>
+                            <!-- Options will be populated dynamically from users list -->
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label for="taskProjectFilter" style="font-weight: 500; color: #333;">Project:</label>
+                        <select id="taskProjectFilter" style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9rem; min-width: 200px;">
+                            <option value="">All Projects</option>
+                            <!-- Options will be populated dynamically from visible projects -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div id="myTasksContent" style="overflow-y: auto; overflow-x: hidden; padding: 1.5rem 2rem; flex: 1; min-height: 200px;">
+                <!-- Task list will be populated here -->
+            </div>
         </div>
     </div>
 </body>
