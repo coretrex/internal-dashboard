@@ -4498,9 +4498,32 @@ body.presence-banner-visible #global-edit-button {
 .projects-body .status-pill.blocked { background:#ffebee; color:#c62828; }
 .projects-body .status-pill.pending { background:#fff8e1; color:#ef6c00; }
 
-.projects-body .action-btn.delete-btn { background:transparent !important; border:none !important; box-shadow:none !important; color:#5f6368 !important; }
+.projects-body .action-btn.delete-btn { background:transparent !important; border:none !important; box-shadow:none !important; color:#5f6368 !important; opacity: 0; transition: opacity 0.2s ease; }
 .projects-body .action-btn.delete-btn i { color:#5f6368 !important; }
 .projects-body .action-btn.delete-btn:hover, .projects-body .action-btn.delete-btn:hover i { color:#e74c3c !important; }
+
+/* Show delete button on hover for subprojects */
+.projects-body .subproject-header:hover .delete-btn { opacity: 1; }
+
+/* Show delete button on hover for tasks */
+.projects-body li:hover .delete-btn { opacity: 1; }
+
+/* Task count badge */
+.projects-body .task-count {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  margin-left: 8px;
+  background: #e8eaed;
+  color: #5f6368;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+}
 
 .projects-body .drop-indicator { height:2px; background:#4a78c2; border-radius:2px; margin:6px 0; }
 
@@ -4734,6 +4757,8 @@ body.presence-banner-visible #global-edit-button {
   border: none !important;
   box-shadow: none !important;
   color: #5f6368 !important;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 .action-btn.delete-btn i {
   color: #5f6368 !important;
@@ -4741,6 +4766,11 @@ body.presence-banner-visible #global-edit-button {
 .action-btn.delete-btn:hover,
 .action-btn.delete-btn:hover i {
   color: #e74c3c !important;
+}
+
+/* Show delete button on hover for task rows */
+.task-list li:hover .action-btn.delete-btn {
+  opacity: 1;
 }
 
 .task-completed {

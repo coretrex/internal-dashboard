@@ -54,6 +54,18 @@ const podInfo = [
 // In-memory registry of subprojects keyed by pod id
 const podToProjects = new Map();
 
+// Helper function to update task count for a subproject
+function updateTaskCount(subprojectCard) {
+  const incompleteUl = subprojectCard.querySelector('ul:not(.completed-list)');
+  const taskCount = incompleteUl ? incompleteUl.querySelectorAll('li').length : 0;
+  const countSpan = subprojectCard.querySelector('.task-count');
+  if (countSpan) {
+    countSpan.textContent = taskCount;
+    // Hide count if there are no tasks
+    countSpan.style.display = taskCount > 0 ? 'inline-flex' : 'none';
+  }
+}
+
 function createPodElement(pod) {
   const podDiv = document.createElement('div');
   podDiv.className = 'pod-card';
@@ -120,6 +132,7 @@ function createSubProjectElement(subTitle, podId, subprojectId) {
   header.innerHTML = `
     <span class="expand-control"><i class="fas fa-caret-right"></i></span>
     <span class="subproject-title">${subTitle}</span>
+    <span class="task-count">0</span>
     <div>
       <button class="action-btn delete-btn" title="Delete"><i class="fa-regular fa-trash-can"></i></button>
     </div>
@@ -328,6 +341,9 @@ function createTaskItem(taskData, podId, subId, taskId) {
         partitionTasks(parentListContainer);
       }
       updateCompletedToggleText(incompleteUl);
+      // Update task count
+      const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
+      if (subprojectCard) updateTaskCount(subprojectCard);
     }
     if (!checkbox.checked) {
       if (taskId) pendingCompletedTaskIds.delete(taskId);
@@ -337,6 +353,9 @@ function createTaskItem(taskData, podId, subId, taskId) {
       // Keep partitioning strict
       partitionTasks(parentListContainer);
       updateCompletedToggleText(incompleteUl);
+      // Update task count
+      const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
+      if (subprojectCard) updateTaskCount(subprojectCard);
     }
     // Persist then reload to ensure proper placement and dedupe
     if (podId && subId && taskId) {
@@ -452,6 +471,9 @@ function createTaskItem(taskData, podId, subId, taskId) {
       if (incompleteUl) {
         updateCompletedToggleText(incompleteUl);
       }
+      // Update task count
+      const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
+      if (subprojectCard) updateTaskCount(subprojectCard);
       return; // Exit early, don't save status again
     } else {
       // Remove done-status class if changing away from Done
@@ -518,6 +540,11 @@ function createTaskItem(taskData, podId, subId, taskId) {
         const subRef = doc(podRef, 'subprojects', subId);
         const taskRef = doc(subRef, 'tasks', taskId);
         deleteDoc(taskRef);
+      }
+      // Update task count after deletion
+      const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
+      if (subprojectCard) {
+        updateTaskCount(subprojectCard);
       }
     });
   });
@@ -823,6 +850,12 @@ async function loadTasksInto(podId, subId, listEl) {
     });
   }
   updateCompletedToggleText(listEl);
+  
+  // Update task count for this subproject
+  const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
+  if (subprojectCard) {
+    updateTaskCount(subprojectCard);
+  }
 }
 
 function refreshTopLinksSelection(podId, projectName) {
