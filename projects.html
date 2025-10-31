@@ -10,6 +10,23 @@
 <body class="projects-body">
     <div class="page-content">
         <h1>Projects</h1>
+        
+        <!-- KPI Blocks -->
+        <div class="projects-kpi-container">
+            <div class="projects-kpi-block">
+                <div class="projects-kpi-value" id="kpiDueToday">0</div>
+                <div class="projects-kpi-label">Due Today</div>
+            </div>
+            <div class="projects-kpi-block projects-kpi-overdue">
+                <div class="projects-kpi-value" id="kpiOverdue">0</div>
+                <div class="projects-kpi-label">Overdue</div>
+            </div>
+            <div class="projects-kpi-block">
+                <div class="projects-kpi-value" id="kpiTotal">0</div>
+                <div class="projects-kpi-label">Total Tasks</div>
+            </div>
+        </div>
+        
         <div id="projectsTopLinks" class="projects-top-links"></div>
         <div id="main-pods" class="projects-grid">
             <!-- Pods will be rendered here by projects.js -->

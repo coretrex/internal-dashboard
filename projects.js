@@ -63,7 +63,81 @@ function updateTaskCount(subprojectCard) {
     countSpan.textContent = taskCount;
     // Hide count if there are no tasks
     countSpan.style.display = taskCount > 0 ? 'inline-flex' : 'none';
+    
+    // Check if any tasks are overdue
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+    
+    let hasOverdue = false;
+    if (incompleteUl) {
+      const tasks = incompleteUl.querySelectorAll('li');
+      tasks.forEach(taskLi => {
+        const dateInput = taskLi.querySelector('.date-input');
+        if (dateInput && dateInput.value && dateInput.value < todayStr) {
+          hasOverdue = true;
+        }
+      });
+    }
+    
+    // Apply overdue class if needed
+    if (hasOverdue) {
+      countSpan.classList.add('has-overdue');
+    } else {
+      countSpan.classList.remove('has-overdue');
+    }
   }
+}
+
+// Helper function to update KPI values for the currently visible pod
+function updateKPIs() {
+  // Get today's date in YYYY-MM-DD format
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0];
+  
+  let dueToday = 0;
+  let overdue = 0;
+  let total = 0;
+  
+  // Get only visible pod cards
+  const visiblePods = document.querySelectorAll('.pod-card[style*="display: none"]');
+  const allPods = document.querySelectorAll('.pod-card');
+  
+  // Find which pods are currently visible
+  const visiblePodsList = Array.from(allPods).filter(pod => {
+    const style = pod.getAttribute('style');
+    return !style || !style.includes('display: none');
+  });
+  
+  // Get incomplete tasks only from visible pods
+  visiblePodsList.forEach(pod => {
+    const incompleteTasks = pod.querySelectorAll('.task-list > ul:not(.completed-list) > li');
+    
+    incompleteTasks.forEach(taskLi => {
+      total++;
+      
+      const dateInput = taskLi.querySelector('.date-input');
+      if (dateInput && dateInput.value) {
+        const dueDate = dateInput.value; // Format: YYYY-MM-DD
+        
+        if (dueDate === todayStr) {
+          dueToday++;
+        } else if (dueDate < todayStr) {
+          overdue++;
+        }
+      }
+    });
+  });
+  
+  // Update KPI displays
+  const kpiDueTodayEl = document.getElementById('kpiDueToday');
+  const kpiOverdueEl = document.getElementById('kpiOverdue');
+  const kpiTotalEl = document.getElementById('kpiTotal');
+  
+  if (kpiDueTodayEl) kpiDueTodayEl.textContent = dueToday;
+  if (kpiOverdueEl) kpiOverdueEl.textContent = overdue;
+  if (kpiTotalEl) kpiTotalEl.textContent = total;
 }
 
 function createPodElement(pod) {
@@ -344,6 +418,8 @@ function createTaskItem(taskData, podId, subId, taskId) {
       // Update task count
       const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
       if (subprojectCard) updateTaskCount(subprojectCard);
+      // Update KPIs
+      updateKPIs();
     }
     if (!checkbox.checked) {
       if (taskId) pendingCompletedTaskIds.delete(taskId);
@@ -356,6 +432,8 @@ function createTaskItem(taskData, podId, subId, taskId) {
       // Update task count
       const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
       if (subprojectCard) updateTaskCount(subprojectCard);
+      // Update KPIs
+      updateKPIs();
     }
     // Persist then reload to ensure proper placement and dedupe
     if (podId && subId && taskId) {
@@ -420,7 +498,10 @@ function createTaskItem(taskData, podId, subId, taskId) {
     quickSave('assignees', selected);
     if (selected.length) quickSave('assignee', selected[0].name || selected[0].email); else quickSave('assignee', '');
   });
-  dateInput.addEventListener('change', () => quickSave('dueDate', dateInput.value));
+  dateInput.addEventListener('change', () => {
+    quickSave('dueDate', dateInput.value);
+    updateKPIs();
+  });
   // style status select based on value
   function applyStatusStyle() {
     const val = (statusSelect.value || 'Open').toLowerCase();
@@ -474,6 +555,8 @@ function createTaskItem(taskData, podId, subId, taskId) {
       // Update task count
       const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
       if (subprojectCard) updateTaskCount(subprojectCard);
+      // Update KPIs
+      updateKPIs();
       return; // Exit early, don't save status again
     } else {
       // Remove done-status class if changing away from Done
@@ -546,6 +629,8 @@ function createTaskItem(taskData, podId, subId, taskId) {
       if (subprojectCard) {
         updateTaskCount(subprojectCard);
       }
+      // Update KPIs
+      updateKPIs();
     });
   });
   return li;
@@ -650,6 +735,8 @@ function showOnlyPod(podId) {
   document.querySelectorAll('.pod-card').forEach(pod => {
     pod.style.display = pod.dataset.podId === podId ? '' : 'none';
   });
+  // Update KPIs for the newly visible pod
+  updateKPIs();
 }
 
 function initGlobalCompletedSection() {
@@ -856,6 +943,9 @@ async function loadTasksInto(podId, subId, listEl) {
   if (subprojectCard) {
     updateTaskCount(subprojectCard);
   }
+  
+  // Update KPIs
+  updateKPIs();
 }
 
 function refreshTopLinksSelection(podId, projectName) {

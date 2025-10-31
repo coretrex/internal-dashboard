@@ -4525,6 +4525,66 @@ body.presence-banner-visible #global-edit-button {
   line-height: 1;
 }
 
+/* Task count badge with overdue tasks */
+.projects-body .task-count.has-overdue {
+  background: #f5d0cb;
+  color: #000000;
+}
+
+/* Projects KPI Blocks */
+.projects-kpi-container {
+  display: flex;
+  gap: 16px;
+  margin: 20px auto 24px auto;
+  flex-wrap: wrap;
+  max-width: 1200px;
+}
+
+.projects-kpi-block {
+  flex: 1;
+  min-width: 150px;
+  background: #fef7e0;
+  border: 1px solid #f9efc7;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.projects-kpi-block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+}
+
+.projects-kpi-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #000000;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.projects-kpi-label {
+  font-size: 0.875rem;
+  color: #000000;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Overdue block - very subtle red background */
+.projects-kpi-overdue {
+  background: #f5d0cb !important;
+  border-color: #f5d0cb !important;
+}
+
+/* Total tasks block - soft blue background */
+.projects-kpi-block:last-child {
+  background: #e3f2fd;
+  border-color: #bbdefb;
+}
+
 /* Inline editing styles for project and task names */
 .projects-body .subproject-title[contenteditable="true"],
 .projects-body .task-text[contenteditable="true"] {
