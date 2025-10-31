@@ -45,10 +45,10 @@ async function loadAssignableUsers() {
 }
 
 const podInfo = [
-  { id: 'pod1', title: 'Pod 1' },
-  { id: 'pod2', title: 'Pod 2' },
-  { id: 'pod3', title: 'Pod 3' },
-  { id: 'sales', title: 'Sales' }
+  { id: 'pod1', title: 'Pod 1', icon: 'fa-rocket' },
+  { id: 'pod2', title: 'Pod 2', icon: 'fa-dumbbell' },
+  { id: 'pod3', title: 'Pod 3', icon: 'fa-meteor' },
+  { id: 'sales', title: 'Sales', icon: 'fa-chart-line' }
 ];
 
 // In-memory registry of subprojects keyed by pod id
@@ -724,7 +724,7 @@ function initFilters() {
   podInfo.forEach((pod, idx) => {
     const a = document.createElement('a');
     a.href = '#';
-    a.textContent = pod.title;
+    a.innerHTML = `<i class="fas ${pod.icon}"></i> ${pod.title}`;
     a.dataset.podId = pod.id;
     if (idx === 0) a.classList.add('active');
     a.addEventListener('click', (e) => {
@@ -735,7 +735,7 @@ function initFilters() {
       // show only selected pod (don't auto-filter to a single project)
       showOnlyPod(pod.id);
       // Always set header to pod name when clicking top link
-      setProjectsHeader(pod.title);
+      setProjectsHeader(pod.title, pod.icon);
     });
     linksBar.appendChild(a);
   });
@@ -745,7 +745,8 @@ function initFilters() {
   showOnlyPod(firstPodId);
   // Set header to first pod name by default
   const firstPodTitle = podInfo[0].title;
-  setProjectsHeader(firstPodTitle);
+  const firstPodIcon = podInfo[0].icon;
+  setProjectsHeader(firstPodTitle, firstPodIcon);
 }
 
 function showOnlyPod(podId) {
@@ -1172,13 +1173,23 @@ function refreshTopLinksSelection(podId, projectName) {
   // If current visible pod matches, just update header; keep all subprojects visible
   const activeLink = document.querySelector('.projects-top-links a.active');
   if (activeLink && activeLink.dataset.podId === podId) {
-    setProjectsHeader(projectName || activeLink.textContent || 'Projects');
+    // Find the pod info to get the proper title and icon
+    const pod = podInfo.find(p => p.id === podId);
+    const title = projectName || pod?.title || 'Projects';
+    const icon = projectName ? null : pod?.icon; // Only show icon for pod-level, not subproject
+    setProjectsHeader(title, icon);
   }
 }
 
-function setProjectsHeader(title) {
+function setProjectsHeader(title, icon = null) {
   const h1 = document.querySelector('.page-content h1');
-  if (h1) h1.textContent = title || 'Projects';
+  if (h1) {
+    if (icon) {
+      h1.innerHTML = `<i class="fas ${icon}"></i> ${title || 'Projects'}`;
+    } else {
+      h1.textContent = title || 'Projects';
+    }
+  }
 }
 
 function updateCompletedToggleText(incompleteUl) {

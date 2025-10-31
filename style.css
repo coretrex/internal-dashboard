@@ -53,6 +53,14 @@ h1 {
 }
 .projects-body h1 {
   color: #202124;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.projects-body h1 i {
+  font-size: 1.8rem;
+  color: #4a78c2;
 }
 
 /* Stats container */
@@ -4348,6 +4356,12 @@ body.presence-banner-visible #global-edit-button {
   padding: 6px 10px;
   border-radius: 8px;
   transition: color 0.2s, background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.projects-top-links a i {
+  font-size: 1rem;
 }
 .projects-top-links a:hover {
   color: #2b63c7;
@@ -4439,7 +4453,8 @@ body.presence-banner-visible #global-edit-button {
    ============================== */
 .projects-body .projects-grid { display: grid; grid-template-columns: 1fr; gap: 18px; max-width: 1600px; width: 95%; margin: 0 auto; }
 .projects-body .projects-top-links { display:flex; justify-content:center; align-items:center; gap:18px; margin:6px 0 14px 0; }
-.projects-body .projects-top-links a { color:#4a78c2; text-decoration:none; font-weight:700; font-size:1.05rem; padding:6px 10px; border-radius:8px; transition: color .2s, background .2s; }
+.projects-body .projects-top-links a { color:#4a78c2; text-decoration:none; font-weight:700; font-size:1.05rem; padding:6px 10px; border-radius:8px; transition: color .2s, background .2s; display:inline-flex; align-items:center; gap:8px; }
+.projects-body .projects-top-links a i { font-size:1rem; }
 .projects-body .projects-top-links a:hover { color:#2b63c7; background:rgba(74,120,194,.08); }
 .projects-body .projects-top-links a.active { color:#1f4fa3; background:rgba(74,120,194,.18); box-shadow:0 2px 8px rgba(74,120,194,.15); }
 
