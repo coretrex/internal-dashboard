@@ -346,10 +346,12 @@ function createTaskItem(taskData, podId, subId, taskId) {
   const hasDesc = !!(taskData.longDescription && String(taskData.longDescription).trim().length > 0);
   const hasAtch = Array.isArray(taskData.attachments) && taskData.attachments.length > 0;
   // (deprecated) detailsIcons removed in favor of a single comment icon
+  const isRecurring = taskData.recurring && taskData.recurring.isRecurring;
   li.innerHTML = `
     <div class="task-checkbox-cell"><input type="checkbox" class="task-toggle" ${isCompleted ? 'checked' : ''}></div>
     <div class="task-name-cell">
       <span class="task-text">${safe(taskData.text)}</span>
+      ${isRecurring ? `<span class=\"recurring-badge\" title=\"This task repeats ${taskData.recurring.frequency}\"><i class=\"fas fa-rotate\"></i></span>` : ''}
       ${hasDesc || hasAtch ? `<span class=\"task-comment-indicator\" title=\"This task has additional details\"><i class=\"fas fa-comment-dots\"></i></span>` : ''}
     </div>
     <div class="task-assignee">
@@ -402,6 +404,51 @@ function createTaskItem(taskData, podId, subId, taskId) {
       if (taskId) pendingCompletedTaskIds.add(taskId);
       // Use captured position so the animation is centered even if the row hides immediately
       triggerBobbyFirework(centerX, centerY);
+      
+      // Fetch latest task data from Firestore to check for recurring settings
+      let latestTaskData = taskData;
+      if (podId && subId && taskId) {
+        try {
+          const podRef = doc(db, 'pods', podId);
+          const subRef = doc(podRef, 'subprojects', subId);
+          const taskRef = doc(subRef, 'tasks', taskId);
+          const taskSnap = await getDoc(taskRef);
+          if (taskSnap.exists()) {
+            latestTaskData = taskSnap.data();
+          }
+        } catch (e) {
+          console.error('[Recurring] Error fetching latest task data:', e);
+        }
+      }
+      
+      // Handle recurring tasks - create next instance
+      if (latestTaskData.recurring && latestTaskData.recurring.isRecurring) {
+        // Calculate from TODAY's date, not the task's original due date
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        const nextDueDate = calculateNextRecurringDate(todayStr, latestTaskData.recurring);
+        if (nextDueDate && podId && subId) {
+          // Create a new task with the next due date
+          const podRef = doc(db, 'pods', podId);
+          const subRef = doc(podRef, 'subprojects', subId);
+          const tasksCol = collection(subRef, 'tasks');
+          await addDoc(tasksCol, {
+            text: latestTaskData.text,
+            completed: false,
+            assignee: latestTaskData.assignee || '',
+            assignees: latestTaskData.assignees || [],
+            dueDate: nextDueDate,
+            status: latestTaskData.status || 'Open',
+            longDescription: latestTaskData.longDescription || '',
+            attachments: latestTaskData.attachments || [],
+            recurring: latestTaskData.recurring,
+            createdAt: Date.now()
+          });
+          // Reload tasks to show the new recurring instance
+          await loadTasksInto(podId, subId, incompleteUl);
+        }
+      }
+      
       // Move to completed list immediately and rely on toggle visibility
       if (completedUl) {
         li.style.display = '';
@@ -502,6 +549,24 @@ function createTaskItem(taskData, podId, subId, taskId) {
     quickSave('dueDate', dateInput.value);
     updateKPIs();
   });
+  
+  // Add recurring icon button next to date input
+  const dateCell = dateInput.parentElement;
+  const recurringBtn = document.createElement('button');
+  recurringBtn.className = 'recurring-icon-btn';
+  recurringBtn.innerHTML = '<i class="fas fa-repeat"></i>';
+  recurringBtn.title = 'Set recurring';
+  recurringBtn.type = 'button';
+  recurringBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openRecurringModal(podId, subId, taskId, dateInput, taskData.recurring);
+  });
+  dateCell.appendChild(recurringBtn);
+  
+  // Update recurring button appearance if task is recurring
+  if (taskData.recurring && taskData.recurring.isRecurring) {
+    recurringBtn.classList.add('is-recurring');
+  }
   // style status select based on value
   function applyStatusStyle() {
     const val = (statusSelect.value || 'Open').toLowerCase();
@@ -745,6 +810,214 @@ function initGlobalCompletedSection() {
   window.updateGlobalCompletedToggle = updateGlobalToggle;
 }
 
+// Recurring Task Modal Logic
+let currentRecurringTask = null;
+
+// Calculate next recurring date based on frequency and settings
+function calculateNextRecurringDate(currentDueDate, recurringData) {
+  if (!currentDueDate || !recurringData) return null;
+  
+  const currentDate = new Date(currentDueDate);
+  if (isNaN(currentDate.getTime())) return null;
+  
+  const frequency = recurringData.frequency;
+  let nextDate = new Date(currentDate);
+  
+  if (frequency === 'daily') {
+    // Add 1 day
+    nextDate.setDate(nextDate.getDate() + 1);
+  } else if (frequency === 'weekly') {
+    // Find the next occurrence based on selected days
+    const selectedDays = recurringData.days || [];
+    
+    if (selectedDays.length === 0) {
+      // Default to 7 days if no days selected
+      nextDate.setDate(nextDate.getDate() + 7);
+    } else {
+      // Sort days for easier processing
+      const sortedDays = [...selectedDays].sort((a, b) => a - b);
+      const currentDay = currentDate.getDay();
+      
+      // Find next occurrence in the cycle
+      let nextOccurrenceDay = null;
+      
+      // First, check if there's a selected day later in the current week
+      for (const day of sortedDays) {
+        if (day > currentDay) {
+          nextOccurrenceDay = day;
+          break;
+        }
+      }
+      
+      // If no day found later this week, wrap to first selected day of next week
+      if (nextOccurrenceDay === null) {
+        nextOccurrenceDay = sortedDays[0];
+        // Calculate days to add (go to next week)
+        const daysToAdd = (7 - currentDay) + nextOccurrenceDay;
+        nextDate.setDate(nextDate.getDate() + daysToAdd);
+      } else {
+        // Add days to get to next occurrence this week
+        const daysToAdd = nextOccurrenceDay - currentDay;
+        nextDate.setDate(nextDate.getDate() + daysToAdd);
+      }
+    }
+  } else if (frequency === 'monthly') {
+    // Add 1 month, keeping the same day
+    nextDate.setMonth(nextDate.getMonth() + 1);
+  }
+  
+  // Format as YYYY-MM-DD
+  const year = nextDate.getFullYear();
+  const month = String(nextDate.getMonth() + 1).padStart(2, '0');
+  const day = String(nextDate.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+}
+
+function initRecurringModal() {
+  const modal = document.getElementById('recurringModal');
+  const closeBtn = document.getElementById('closeRecurringModal');
+  const saveBtn = document.getElementById('saveRecurringBtn');
+  const clearBtn = document.getElementById('clearRecurringBtn');
+  const frequencySelect = document.getElementById('recurringFrequency');
+  const daysSection = document.getElementById('recurringDaysSection');
+  
+  if (!modal) return;
+  
+  // Close modal handlers
+  const closeModal = () => {
+    modal.classList.add('hidden');
+    currentRecurringTask = null;
+  };
+  
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  
+  // Click outside to close
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+  
+  // Toggle days section based on frequency
+  if (frequencySelect) {
+    frequencySelect.addEventListener('change', () => {
+      if (daysSection) {
+        daysSection.style.display = frequencySelect.value === 'weekly' ? 'block' : 'none';
+      }
+    });
+  }
+  
+  // Save recurring settings
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      if (!currentRecurringTask) return;
+      
+      const { podId, subId, taskId, dateInput } = currentRecurringTask;
+      const frequency = document.getElementById('recurringFrequency').value;
+      
+      let days = [];
+      if (frequency === 'weekly') {
+        const dayCheckboxes = document.querySelectorAll('#recurringDaysSection input[type="checkbox"]:checked');
+        days = Array.from(dayCheckboxes).map(cb => parseInt(cb.value));
+      }
+      
+      const recurringData = {
+        isRecurring: true,
+        frequency,
+        days
+      };
+      
+      // Save to Firestore
+      if (podId && subId && taskId) {
+        const podRef = doc(db, 'pods', podId);
+        const subRef = doc(podRef, 'subprojects', subId);
+        const taskRef = doc(subRef, 'tasks', taskId);
+        await updateDoc(taskRef, { recurring: recurringData });
+        
+        // Update icon to green immediately
+        const recurringBtn = dateInput?.parentElement?.querySelector('.recurring-icon-btn');
+        if (recurringBtn) {
+          recurringBtn.classList.add('is-recurring');
+        }
+        
+        // Update task list to show the recurring badge
+        const container = document.querySelector(`.subproject-card[data-subproject-id="${subId}"] ul`);
+        if (container) await loadTasksInto(podId, subId, container);
+      }
+      
+      closeModal();
+    });
+  }
+  
+  // Clear recurring settings
+  if (clearBtn) {
+    clearBtn.addEventListener('click', async () => {
+      if (!currentRecurringTask) return;
+      
+      const { podId, subId, taskId, dateInput } = currentRecurringTask;
+      
+      // Remove recurring from Firestore
+      if (podId && subId && taskId) {
+        const podRef = doc(db, 'pods', podId);
+        const subRef = doc(podRef, 'subprojects', subId);
+        const taskRef = doc(subRef, 'tasks', taskId);
+        await updateDoc(taskRef, { recurring: null });
+        
+        // Update icon to grey immediately
+        const recurringBtn = dateInput?.parentElement?.querySelector('.recurring-icon-btn');
+        if (recurringBtn) {
+          recurringBtn.classList.remove('is-recurring');
+        }
+        
+        // Update task list to remove the recurring badge
+        const container = document.querySelector(`.subproject-card[data-subproject-id="${subId}"] ul`);
+        if (container) await loadTasksInto(podId, subId, container);
+      }
+      
+      closeModal();
+    });
+  }
+}
+
+function openRecurringModal(podId, subId, taskId, dateInput, recurringData = null) {
+  const modal = document.getElementById('recurringModal');
+  const frequencySelect = document.getElementById('recurringFrequency');
+  const daysSection = document.getElementById('recurringDaysSection');
+  
+  if (!modal) return;
+  
+  // Store current task context
+  currentRecurringTask = { podId, subId, taskId, dateInput };
+  
+  // Populate modal with existing data or defaults
+  if (frequencySelect) {
+    frequencySelect.value = recurringData?.frequency || 'weekly';
+    // Trigger change event to show/hide days section
+    frequencySelect.dispatchEvent(new Event('change'));
+  }
+  
+  // Set day checkboxes
+  const dayCheckboxes = document.querySelectorAll('#recurringDaysSection input[type="checkbox"]');
+  dayCheckboxes.forEach(cb => {
+    const dayValue = parseInt(cb.value);
+    if (recurringData?.days && Array.isArray(recurringData.days)) {
+      cb.checked = recurringData.days.includes(dayValue);
+    } else {
+      // Default to the current task's due date day of week
+      if (dateInput.value) {
+        const dueDate = new Date(dateInput.value);
+        cb.checked = dayValue === dueDate.getDay();
+      } else {
+        // If no due date, default to today
+        const today = new Date();
+        cb.checked = dayValue === today.getDay();
+      }
+    }
+  });
+  
+  // Show modal
+  modal.classList.remove('hidden');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   (async () => {
     await initializeFirebaseApp();
@@ -753,6 +1026,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFilters();
     initTaskDrawer();
     initGlobalCompletedSection();
+    initRecurringModal();
   })();
 });
 
@@ -816,7 +1090,8 @@ async function loadTasksInto(podId, subId, listEl) {
       dueDate: data.dueDate || '',
       status: data.status || 'Open',
       longDescription: data.longDescription || '',
-      attachments: data.attachments || []
+      attachments: data.attachments || [],
+      recurring: data.recurring || null
     });
   });
   // Sort by due date ascending (empty due dates at bottom)
@@ -842,7 +1117,8 @@ async function loadTasksInto(podId, subId, listEl) {
       dueDate: d.dueDate,
       status: d.status,
       longDescription: d.longDescription,
-      attachments: d.attachments
+      attachments: d.attachments,
+      recurring: d.recurring
     }, podId, subId, d.id);
     // Tasks that are completed go to completed list
     if (d.completed) {

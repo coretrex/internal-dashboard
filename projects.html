@@ -58,6 +58,64 @@
         </div>
     </div>
 
+    <!-- Recurring Task Modal -->
+    <div id="recurringModal" class="recurring-modal hidden">
+        <div class="recurring-modal-content">
+            <div class="recurring-modal-header">
+                <h3>Recurring Task</h3>
+                <button id="closeRecurringModal" class="recurring-modal-close">&times;</button>
+            </div>
+            <div class="recurring-modal-body">
+                <div class="recurring-field">
+                    <label>Repeats</label>
+                    <select id="recurringFrequency" class="recurring-select">
+                        <option value="daily">Daily</option>
+                        <option value="weekly" selected>Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+                
+                <div class="recurring-field" id="recurringDaysSection">
+                    <label>On these days</label>
+                    <div class="recurring-days">
+                        <label class="recurring-day-option">
+                            <input type="checkbox" value="0" />
+                            <span>S</span>
+                        </label>
+                        <label class="recurring-day-option">
+                            <input type="checkbox" value="1" />
+                            <span>M</span>
+                        </label>
+                        <label class="recurring-day-option">
+                            <input type="checkbox" value="2" />
+                            <span>T</span>
+                        </label>
+                        <label class="recurring-day-option">
+                            <input type="checkbox" value="3" />
+                            <span>W</span>
+                        </label>
+                        <label class="recurring-day-option">
+                            <input type="checkbox" value="4" checked />
+                            <span>T</span>
+                        </label>
+                        <label class="recurring-day-option">
+                            <input type="checkbox" value="5" />
+                            <span>F</span>
+                        </label>
+                        <label class="recurring-day-option">
+                            <input type="checkbox" value="6" />
+                            <span>S</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="recurring-modal-footer">
+                <button id="clearRecurringBtn" class="recurring-clear-btn">Turn Off Recurring</button>
+                <button id="saveRecurringBtn" class="recurring-save-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Task Details Drawer -->
     <div id="taskDrawer" class="projects-drawer hidden">
         <div class="projects-drawer-header">

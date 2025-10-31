@@ -4477,8 +4477,26 @@ body.presence-banner-visible #global-edit-button {
 .projects-body .task-list .completed-list:not(.hidden) > li { display: grid !important; }
 .projects-body .task-list li:hover { background:#f7f8fa; border-radius:8px; }
 .projects-body .task-checkbox-cell { display:flex; align-items:center; justify-content:center; }
-.projects-body .task-name-cell { display:flex; align-items:center; }
+.projects-body .task-name-cell { display:flex; align-items:center; gap: 6px; }
 .projects-body .task-name-cell .task-text { line-height: 1.1; }
+
+.recurring-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: #e3f2fd;
+  color: #1976d2;
+  border-radius: 50%;
+  font-size: 10px;
+  cursor: help;
+  transition: all 0.2s ease;
+}
+.recurring-badge:hover {
+  background: #bbdefb;
+  transform: scale(1.1);
+}
 
 .projects-body .task-toggle { appearance:none; -webkit-appearance:none; width:16px; height:16px; border:2px solid #c1c7d0; border-radius:50%; display:inline-block; position:relative; cursor:pointer; background:#fff; transition:all .15s ease; box-sizing:content-box; }
 .projects-body .task-toggle:hover { border-color:#8fa3bf; }
@@ -4487,6 +4505,38 @@ body.presence-banner-visible #global-edit-button {
 
 .projects-body .task-input { width:100%; padding:4px 6px; border:1px solid #e0e3e7; border-radius:6px; font-size:.9rem; background:#f5f6f7; margin:0; transition: background .15s ease, border-color .15s ease; }
 .projects-body .task-input:focus { background:#ffffff; border-color:#c5c9d0; outline:none; }
+
+.projects-body .task-date { position: relative; display: flex; align-items: center; gap: 4px; }
+.projects-body .task-date .task-input { flex: 1; min-width: 0; }
+
+.recurring-icon-btn {
+  background: transparent;
+  border: none;
+  color: #d1d5db;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.recurring-icon-btn:hover {
+  background: #f1f3f4;
+  color: #9ca3af;
+}
+
+.recurring-icon-btn.is-recurring {
+  color: #22c55e;
+}
+
+.recurring-icon-btn.is-recurring:hover {
+  background: #f0fdf4;
+  color: #16a34a;
+}
 .projects-body .task-select { padding:4px 6px; border:1px solid #e0e3e7; border-radius:6px; font-size:.85rem; background:#fff; margin:0; width: 100%; max-width: 140px; }
 .projects-body .task-select.status-open { background:#e8f5e9; color:#2e7d32; border-color:#c8e6c9; }
 .projects-body .task-select.status-recurring { background:#f3e5f5; color:#6a1b9a; border-color:#e1bee7; }
@@ -4596,6 +4646,195 @@ body.presence-banner-visible #global-edit-button {
   outline: 2px solid #4a78c2;
   outline-offset: 0;
   background: #fff;
+}
+
+/* Recurring Task Modal */
+.recurring-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.recurring-modal.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.recurring-modal-content {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.recurring-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e9eaee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.recurring-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #202124;
+}
+
+.recurring-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #5f6368;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+.recurring-modal-close:hover {
+  background: #f1f3f4;
+}
+
+.recurring-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.recurring-field {
+  margin-bottom: 20px;
+}
+
+.recurring-field label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #202124;
+  margin-bottom: 8px;
+}
+
+.recurring-input,
+.recurring-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e0e3e7;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #fff;
+  transition: border-color 0.2s;
+}
+
+.recurring-input:focus,
+.recurring-select:focus {
+  outline: none;
+  border-color: #4a78c2;
+}
+
+.recurring-days {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.recurring-day-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.recurring-day-option input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.recurring-day-option span {
+  width: 40px;
+  height: 40px;
+  border: 2px solid #e0e3e7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #5f6368;
+  background: #fff;
+  transition: all 0.2s;
+}
+
+.recurring-day-option input[type="checkbox"]:checked + span {
+  background: #4a78c2;
+  color: #fff;
+  border-color: #4a78c2;
+}
+
+.recurring-day-option:hover span {
+  border-color: #4a78c2;
+}
+
+.recurring-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e9eaee;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.recurring-clear-btn {
+  padding: 10px 20px;
+  border: 1px solid #e0e3e7;
+  background: #fff;
+  color: #5f6368;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.recurring-clear-btn:hover {
+  background: #f8f9fa;
+  border-color: #c1c7d0;
+}
+
+.recurring-save-btn {
+  padding: 10px 20px;
+  border: none;
+  background: #4a78c2;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.recurring-save-btn:hover {
+  background: #2b63c7;
 }
 
 .projects-body .drop-indicator { height:2px; background:#4a78c2; border-radius:2px; margin:6px 0; }
