@@ -55,22 +55,22 @@ async function loadClients() {
 
         let pod1Count = 0;
         let pod2Count = 0;
-        let poorRelationships = 0;
-        let meetingsThisWeek = 0;
+        let pod3Count = 0;
         let pod1TotalDays = 0;
         let pod1ContactCount = 0;
         let pod2TotalDays = 0;
         let pod2ContactCount = 0;
+        let pod3TotalDays = 0;
+        let pod3ContactCount = 0;
 
-        // Get today's date and week range
+        // Get today's date
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const endOfWeek = new Date(today);
-        endOfWeek.setDate(today.getDate() + 7);
 
         // Create arrays to store clients by pod
         const pod1Clients = [];
         const pod2Clients = [];
+        const pod3Clients = [];
 
         querySnapshot.forEach((doc) => {
             const rawData = doc.data();
@@ -79,15 +79,7 @@ async function loadClients() {
             if (rawData.relationshipStatus !== 'Terminated') {
                 if (rawData.teamResponsible === 'Pod 1') pod1Count++;
                 if (rawData.teamResponsible === 'Pod 2') pod2Count++;
-            }
-            if (rawData.relationshipStatus === 'Poor') poorRelationships++;
-
-            // Check meetings and tasks
-            if (rawData.nextMeetingDate) {
-                const meetingDate = new Date(rawData.nextMeetingDate);
-                if (meetingDate >= today && meetingDate <= endOfWeek) {
-                    meetingsThisWeek++;
-                }
+                if (rawData.teamResponsible === 'Pod 3') pod3Count++;
             }
 
             // Calculate days since last contact for each pod
@@ -101,6 +93,9 @@ async function loadClients() {
                 } else if (rawData.teamResponsible === 'Pod 2') {
                     pod2TotalDays += daysSinceContact;
                     pod2ContactCount++;
+                } else if (rawData.teamResponsible === 'Pod 3') {
+                    pod3TotalDays += daysSinceContact;
+                    pod3ContactCount++;
                 }
             }
 
@@ -122,12 +117,15 @@ async function loadClients() {
                 pod1Clients.push(mappedData);
             } else if (mappedData.teamResponsible === 'Pod 2') {
                 pod2Clients.push(mappedData);
+            } else if (mappedData.teamResponsible === 'Pod 3') {
+                pod3Clients.push(mappedData);
             }
         });
 
         // Sort each pod array by brand name
         pod1Clients.sort((a, b) => a.brandName.localeCompare(b.brandName));
         pod2Clients.sort((a, b) => a.brandName.localeCompare(b.brandName));
+        pod3Clients.sort((a, b) => a.brandName.localeCompare(b.brandName));
 
         // Create pod header and add Pod 1 clients
         if (pod1Clients.length > 0) {
@@ -153,22 +151,36 @@ async function loadClients() {
             });
         }
 
+        // Create pod header and add Pod 3 clients
+        if (pod3Clients.length > 0) {
+            const pod3Header = document.createElement('tr');
+            pod3Header.innerHTML = `<td colspan="11" class="pod-header">Pod 3</td>`;
+            tbody.appendChild(pod3Header);
+            
+            pod3Clients.forEach(client => {
+                const row = createClientRow(client, client.docId);
+                tbody.appendChild(row);
+            });
+        }
+
         // Calculate average days since contact for each pod
         const pod1AvgDays = pod1ContactCount > 0 ? Math.round(pod1TotalDays / pod1ContactCount) : 0;
         const pod2AvgDays = pod2ContactCount > 0 ? Math.round(pod2TotalDays / pod2ContactCount) : 0;
+        const pod3AvgDays = pod3ContactCount > 0 ? Math.round(pod3TotalDays / pod3ContactCount) : 0;
         
         // Update UI statistics
         document.getElementById('pod1Count').textContent = pod1Count;
         document.getElementById('pod2Count').textContent = pod2Count;
-        document.getElementById('poorRelationships').textContent = poorRelationships;
-        document.getElementById('meetingsThisWeek').textContent = meetingsThisWeek;
+        document.getElementById('pod3Count').textContent = pod3Count;
         
         // Update pod average contact KPIs with color coding
         const pod1AvgElement = document.getElementById('pod1AvgContact');
         const pod2AvgElement = document.getElementById('pod2AvgContact');
+        const pod3AvgElement = document.getElementById('pod3AvgContact');
         
         pod1AvgElement.textContent = pod1AvgDays;
         pod2AvgElement.textContent = pod2AvgDays;
+        pod3AvgElement.textContent = pod3AvgDays;
         
         // Apply color coding based on thresholds
         function applyContactColor(element, days) {
@@ -186,6 +198,7 @@ async function loadClients() {
         
         applyContactColor(pod1AvgElement, pod1AvgDays);
         applyContactColor(pod2AvgElement, pod2AvgDays);
+        applyContactColor(pod3AvgElement, pod3AvgDays);
 
     } catch (error) {
         console.error("Error loading clients:", error);
@@ -286,6 +299,7 @@ function createClientRow(data, docId) {
             cells[1].innerHTML = `<select class="editable-input">
                 <option value="Pod 1" ${currentData.teamResponsible === 'Pod 1' ? 'selected' : ''}>Pod 1</option>
                 <option value="Pod 2" ${currentData.teamResponsible === 'Pod 2' ? 'selected' : ''}>Pod 2</option>
+                <option value="Pod 3" ${currentData.teamResponsible === 'Pod 3' ? 'selected' : ''}>Pod 3</option>
             </select>`;
             cells[2].innerHTML = `<select class="editable-input">
                 <option value="Poor" ${currentData.relationshipStatus === 'Poor' ? 'selected' : ''}>Poor</option>

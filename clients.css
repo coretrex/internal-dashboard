@@ -161,9 +161,32 @@
     background: #2196F3; /* Material Design Blue */
 }
 
+/* Clients table specific delete button styles */
+.dashboard-table .delete-btn,
 .delete-btn {
-    background: #dc3545;
-    color: white;
+    background: #d3d3d3 !important;
+    color: #333 !important;
+    border: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: inline-block !important;
+    padding: 0.25rem 0.5rem !important;
+    cursor: pointer !important;
+}
+
+.dashboard-table .delete-btn i,
+.delete-btn i {
+    color: #777 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    font-size: 14px !important;
+    display: inline-block !important;
+}
+
+.dashboard-table .delete-btn:hover,
+.delete-btn:hover {
+    background: #b8b8b8 !important;
+    opacity: 1 !important;
 }
 
 .save-btn {
