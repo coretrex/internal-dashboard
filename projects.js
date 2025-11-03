@@ -499,23 +499,20 @@ function createTaskItem(taskData, podId, subId, taskId) {
             recurring: latestTaskData.recurring,
             createdAt: Date.now()
           });
-          // Reload tasks to show the new recurring instance
-          await loadTasksInto(podId, subId, incompleteUl);
+          // Real-time listener will automatically add the new task to the UI
         }
       }
       
-      // Move to completed list immediately and rely on toggle visibility
-      if (completedUl) {
-        li.style.display = '';
-        // Remove hide class when moving to completed list
-        li.classList.remove('task-done-status');
-        completedUl.appendChild(li);
-        // Ensure completed list stays hidden (user must toggle to view)
-        completedUl.classList.add('hidden');
-        console.log('[Projects] Moved task to completed list', { taskId });
-        // Keep partitioning strict
-        partitionTasks(parentListContainer);
+      // Remove from DOM immediately - real-time listener will handle the rest
+      li.remove();
+      console.log('[Projects] Task completed and removed from UI', { taskId });
+      
+      // If completed list is currently visible, add it there
+      if (completedUl && !completedUl.classList.contains('hidden')) {
+        // Reload completed tasks to include this newly completed task
+        await loadCompletedTasksInto(podId, subId, completedUl);
       }
+      
       updateCompletedToggleText(incompleteUl);
       // Update task count
       const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
@@ -525,19 +522,8 @@ function createTaskItem(taskData, podId, subId, taskId) {
     }
     if (!checkbox.checked) {
       if (taskId) pendingCompletedTaskIds.delete(taskId);
-      // move back to incomplete list
-      if (incompleteUl) incompleteUl.appendChild(li);
-      console.log('[Projects] Moved task back to incomplete list', { taskId });
-      // Keep partitioning strict
-      partitionTasks(parentListContainer);
-      updateCompletedToggleText(incompleteUl);
-      // Update task count
-      const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
-      if (subprojectCard) updateTaskCount(subprojectCard);
-      // Update KPIs
-      updateKPIs();
       
-      // Persist unchecked status
+      // Persist unchecked status - real-time listener will handle UI update
       if (podId && subId && taskId) {
         const podRef = doc(db, 'pods', podId);
         const subRef = doc(podRef, 'subprojects', subId);
@@ -551,8 +537,21 @@ function createTaskItem(taskData, podId, subId, taskId) {
             lastModifiedByEmail: currentUserEmail,
             lastModifiedAt: Date.now()
           });
-        } catch (_) {}
+        } catch (e) {
+          console.error('[Projects] Error uncompleting task:', e);
+        }
       }
+      
+      // Remove from completed list DOM - real-time listener will add it to incomplete list
+      li.remove();
+      console.log('[Projects] Task uncompleted and removed from completed list', { taskId });
+      
+      updateCompletedToggleText(incompleteUl);
+      // Update task count
+      const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
+      if (subprojectCard) updateTaskCount(subprojectCard);
+      // Update KPIs
+      updateKPIs();
     }
   }
 
@@ -865,12 +864,47 @@ function initGlobalCompletedSection() {
   if (!toggleBtn || !globalSection) return;
   
   // Update the toggle button and section visibility
-  function updateGlobalToggle() {
+  async function updateGlobalToggle() {
     const allCompletedLists = document.querySelectorAll('.completed-list');
+    
+    // Count completed tasks from Firestore (not DOM, since they're not loaded yet)
     let totalCount = 0;
-    allCompletedLists.forEach(list => {
-      totalCount += list.querySelectorAll('li').length;
+    const countPromises = [];
+    
+    // Get all visible pods
+    const visiblePods = Array.from(document.querySelectorAll('.pod-card')).filter(pod => {
+      const style = pod.getAttribute('style');
+      return !style || !style.includes('display: none');
     });
+    
+    // For each visible pod, count completed tasks in all its subprojects
+    for (const podCard of visiblePods) {
+      const podId = podCard.dataset.podId;
+      const subprojects = podCard.querySelectorAll('.subproject-card');
+      
+      subprojects.forEach(subCard => {
+        const subId = subCard.dataset.subprojectId;
+        if (podId && subId) {
+          const countPromise = (async () => {
+            try {
+              const podRef = doc(db, 'pods', podId);
+              const subRef = doc(podRef, 'subprojects', subId);
+              const tasksCol = collection(subRef, 'tasks');
+              const completedQuery = query(tasksCol, where('completed', '==', true));
+              const snapshot = await getDocs(completedQuery);
+              return snapshot.size;
+            } catch (e) {
+              console.error('[Projects] Error counting completed tasks:', e);
+              return 0;
+            }
+          })();
+          countPromises.push(countPromise);
+        }
+      });
+    }
+    
+    const counts = await Promise.all(countPromises);
+    totalCount = counts.reduce((sum, count) => sum + count, 0);
     
     if (totalCount === 0) {
       globalSection.style.display = 'none';
@@ -885,25 +919,53 @@ function initGlobalCompletedSection() {
     toggleBtn.textContent = allHidden ? `Show completed tasks (${totalCount})` : `Hide completed tasks (${totalCount})`;
   }
   
-  toggleBtn.addEventListener('click', (e) => {
+  toggleBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     const allCompletedLists = document.querySelectorAll('.completed-list');
     const allHidden = Array.from(allCompletedLists).every(list => list.classList.contains('hidden'));
     
-    // Toggle all completed lists
-    allCompletedLists.forEach(list => {
-      if (allHidden) {
-        // Show the completed list
+    if (allHidden) {
+      // Load completed tasks for all visible subprojects
+      console.log('[Projects] Loading completed tasks for all visible subprojects...');
+      console.log('[Projects] Found completed lists:', allCompletedLists.length);
+      
+      const loadPromises = [];
+      allCompletedLists.forEach((list, index) => {
+        const podId = list.dataset.podId;
+        const subprojectId = list.dataset.subprojectId;
+        
+        console.log(`[Projects] List ${index}:`, { podId, subprojectId, element: list });
+        
+        if (podId && subprojectId) {
+          // Load completed tasks for this subproject
+          loadPromises.push(loadCompletedTasksInto(podId, subprojectId, list));
+        } else {
+          console.warn(`[Projects] List ${index} missing podId or subprojectId`);
+        }
+      });
+      
+      console.log('[Projects] Starting', loadPromises.length, 'load operations...');
+      
+      // Wait for all completed tasks to load
+      await Promise.all(loadPromises);
+      
+      console.log('[Projects] All loads complete, showing lists...');
+      
+      // Now show all completed lists
+      allCompletedLists.forEach(list => {
         list.classList.remove('hidden');
-        // Ensure all tasks in the completed list are visible (remove hide class)
-        list.querySelectorAll('li.task-done-status').forEach(li => {
-          li.classList.remove('task-done-status');
-        });
-      } else {
-        // Hide the completed list
+        console.log('[Projects] Showing list:', list);
+      });
+      
+      console.log('[Projects] Done showing completed tasks');
+    } else {
+      // Hide all completed lists (clear them to save memory)
+      allCompletedLists.forEach(list => {
         list.classList.add('hidden');
-      }
-    });
+        // Clear the list to free up memory
+        list.innerHTML = '';
+      });
+    }
     
     updateGlobalToggle();
   });
@@ -1324,21 +1386,18 @@ async function loadTasksInto(podId, subId, listEl) {
   const subRef = doc(podRef, 'subprojects', subId);
   const tasksCol = collection(subRef, 'tasks');
   
-  // Use onSnapshot for real-time updates
-  const unsubscribe = onSnapshot(tasksCol, (snapshot) => {
-    console.log('[Projects] Tasks snapshot received for subproject:', subId, 'count:', snapshot.size);
+  // OPTIMIZATION: Only load incomplete tasks by default (completed = false)
+  // This prevents loading hundreds/thousands of completed tasks on page load
+  const incompleteQuery = query(tasksCol, where('completed', '==', false));
+  
+  // Use onSnapshot for real-time updates - only for INCOMPLETE tasks
+  const unsubscribe = onSnapshot(incompleteQuery, (snapshot) => {
+    console.log('[Projects] Incomplete tasks snapshot received for subproject:', subId, 'count:', snapshot.size);
     
-    // Track existing task elements by task ID
+    // Track existing task elements in incomplete list
     const existingTasks = new Map();
     if (listEl) {
       listEl.querySelectorAll('li').forEach(li => {
-        // We need to find the task ID somehow - we'll store it as data attribute
-        const taskId = li.dataset?.taskId;
-        if (taskId) existingTasks.set(taskId, li);
-      });
-    }
-    if (completedUl) {
-      completedUl.querySelectorAll('li').forEach(li => {
         const taskId = li.dataset?.taskId;
         if (taskId) existingTasks.set(taskId, li);
       });
@@ -1376,9 +1435,8 @@ async function loadTasksInto(podId, subId, listEl) {
       return 0;
     });
     
-    // Clear lists
+    // Clear incomplete list only
     if (listEl) listEl.innerHTML = '';
-    if (completedUl) completedUl.innerHTML = '';
     
     items.forEach(d => {
       // Check if task element already exists
@@ -1415,44 +1473,18 @@ async function loadTasksInto(podId, subId, listEl) {
         });
       }
       
-      // Tasks that are completed go to completed list
-      if (d.completed) {
-        if (completedUl) {
-          completedUl.appendChild(li);
-        }
-      } else {
-        // Incomplete tasks go to the main active list
-        // Skip rendering items we just marked complete but server hasn't caught up yet
-        if (!pendingCompletedTaskIds.has(d.id)) {
-          if (listEl) listEl.appendChild(li);
-        }
+      // All items here are incomplete, so add to main list
+      // Skip rendering items we just marked complete but server hasn't caught up yet
+      if (!pendingCompletedTaskIds.has(d.id)) {
+        if (listEl) listEl.appendChild(li);
       }
     });
     
-    // Remove deleted tasks
+    // Remove deleted tasks from incomplete list
     existingTasks.forEach((li) => {
-      console.log('[Projects] Task deleted, removing from UI');
+      console.log('[Projects] Task deleted or completed, removing from incomplete list');
       li.remove();
     });
-    
-    // Defensive sweep: ensure completed rows reside in completed list
-    if (listEl.parentElement) {
-      enforceCompletedHidden(listEl.parentElement, /*doNotHide*/ true);
-      partitionTasks(listEl.parentElement);
-    }
-    
-    // Ensure completed list is hidden by default after loading
-    if (completedUl) {
-      // Keep hidden state if it was already hidden
-      if (!completedUl.classList.contains('hidden')) {
-        // Only set to hidden on first load
-        const isFirstLoad = completedUl.dataset.initialized !== 'true';
-        if (isFirstLoad) {
-          completedUl.classList.add('hidden');
-          completedUl.dataset.initialized = 'true';
-        }
-      }
-    }
     
     updateCompletedToggleText(listEl);
     
@@ -1468,6 +1500,150 @@ async function loadTasksInto(podId, subId, listEl) {
   
   // Store unsubscribe function
   taskListeners.set(listenerKey, unsubscribe);
+}
+
+// Load completed tasks on-demand (called when user clicks "Show completed")
+async function loadCompletedTasksInto(podId, subId, completedUl) {
+  if (!completedUl) return;
+  
+  // Show loading indicator
+  completedUl.innerHTML = '<li style="padding: 1rem; text-align: center; color: #999; list-style: none;"><i class="fas fa-spinner fa-spin"></i> Loading completed tasks...</li>';
+  
+  const podRef = doc(db, 'pods', podId);
+  const subRef = doc(podRef, 'subprojects', subId);
+  const tasksCol = collection(subRef, 'tasks');
+  
+  // Try to query with ordering first (requires index)
+  const completedQueryWithOrder = query(
+    tasksCol, 
+    where('completed', '==', true),
+    orderBy('lastModifiedAt', 'desc'),
+    limit(50)
+  );
+  
+  // Fallback query without ordering (works without index)
+  const completedQuerySimple = query(
+    tasksCol, 
+    where('completed', '==', true),
+    limit(50)
+  );
+  
+  try {
+    let snapshot;
+    let usedFallback = false;
+    
+    try {
+      // Try the ordered query first
+      snapshot = await getDocs(completedQueryWithOrder);
+    } catch (indexError) {
+      // Check if this is an index error by looking at code or message
+      const isIndexError = 
+        (indexError.code && indexError.code === 'failed-precondition') ||
+        (indexError.message && indexError.message.toLowerCase().includes('index')) ||
+        (indexError.message && indexError.message.includes('requires an index'));
+      
+      if (isIndexError) {
+        console.log('[Projects] Index not created yet, using simple query. Error:', indexError.message);
+        snapshot = await getDocs(completedQuerySimple);
+        usedFallback = true;
+      } else {
+        console.error('[Projects] Non-index error:', indexError);
+        throw indexError;
+      }
+    }
+    
+    console.log('[Projects] Loaded completed tasks for subproject:', subId, 'count:', snapshot.size);
+    
+    // Clear completed list
+    completedUl.innerHTML = '';
+    
+    // If using fallback, show a helpful message
+    if (usedFallback) {
+      const indexNotice = document.createElement('li');
+      indexNotice.style.cssText = 'padding: 1rem; background: #fff3cd; border-left: 4px solid #ffc107; margin-bottom: 0.5rem; list-style: none; border-radius: 4px;';
+      indexNotice.innerHTML = `
+        <div style="font-weight: 600; color: #856404; margin-bottom: 0.5rem;">⚠️ First-Time Setup Needed</div>
+        <div style="color: #856404; font-size: 0.9rem; margin-bottom: 0.75rem;">
+          To sort completed tasks by date, a Firestore index is required. This is a one-time setup that takes 2 minutes.
+        </div>
+        <a href="https://console.firebase.google.com/project/coretrex-internal-dashboard/firestore/indexes" 
+           target="_blank" 
+           style="display: inline-block; background: #ffc107; color: #000; padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; font-weight: 600; transition: all 0.2s;"
+           onmouseover="this.style.background='#ffb300'" 
+           onmouseout="this.style.background='#ffc107'">
+          📋 Create Index (opens Firebase Console)
+        </a>
+        <div style="color: #856404; font-size: 0.85rem; margin-top: 0.75rem;">
+          <strong>Steps:</strong> 1) Click link above 2) Find "tasks" collection 3) Click "Create Index" 4) Wait 2 min 5) Refresh
+        </div>
+      `;
+      completedUl.appendChild(indexNotice);
+    }
+    
+    // Create task elements
+    const tasks = [];
+    snapshot.forEach(t => {
+      const data = t.data();
+      tasks.push({
+        id: t.id,
+        data: data,
+        lastModifiedAt: data.lastModifiedAt || 0
+      });
+    });
+    
+    // Sort by lastModifiedAt client-side if using fallback
+    if (usedFallback) {
+      tasks.sort((a, b) => b.lastModifiedAt - a.lastModifiedAt);
+    }
+    
+    // Create task list items
+    tasks.forEach(({ id, data }) => {
+      const li = createTaskItem({
+        text: data.text || 'Untitled',
+        completed: true,
+        assignee: data.assignee || '',
+        assignees: Array.isArray(data.assignees) ? data.assignees : [],
+        dueDate: data.dueDate || '',
+        status: data.status || 'Open',
+        longDescription: data.longDescription || '',
+        attachments: data.attachments || [],
+        recurring: data.recurring || null
+      }, podId, subId, id);
+      
+      completedUl.appendChild(li);
+    });
+    
+    // Show a message if we hit the limit
+    if (snapshot.size >= 50) {
+      const notice = document.createElement('li');
+      notice.style.cssText = 'padding: 0.5rem; text-align: center; color: #666; font-size: 0.85rem; list-style: none;';
+      notice.textContent = 'Showing 50 most recent completed tasks';
+      completedUl.appendChild(notice);
+    }
+    
+    // If no tasks found
+    if (snapshot.size === 0 && !usedFallback) {
+      const emptyNotice = document.createElement('li');
+      emptyNotice.style.cssText = 'padding: 1rem; text-align: center; color: #999; font-size: 0.9rem; list-style: none;';
+      emptyNotice.textContent = 'No completed tasks yet';
+      completedUl.appendChild(emptyNotice);
+    }
+    
+  } catch (error) {
+    console.error('[Projects] Error loading completed tasks:', error);
+    
+    // Show user-friendly error message
+    completedUl.innerHTML = '';
+    const errorNotice = document.createElement('li');
+    errorNotice.style.cssText = 'padding: 1rem; background: #ffebee; border-left: 4px solid #f44336; margin-bottom: 0.5rem; list-style: none; border-radius: 4px;';
+    errorNotice.innerHTML = `
+      <div style="font-weight: 600; color: #c62828; margin-bottom: 0.5rem;">❌ Error Loading Completed Tasks</div>
+      <div style="color: #c62828; font-size: 0.9rem;">
+        ${error.message || 'Unknown error occurred'}
+      </div>
+    `;
+    completedUl.appendChild(errorNotice);
+  }
 }
 
 // Helper function to update existing task element with new data
@@ -1544,63 +1720,21 @@ function updateCompletedToggleText(incompleteUl) {
   }
 }
 
-// Defensive rule: ensure completed tasks are not visible in the main list and
-// the completed section stays hidden unless explicitly toggled open
+// NOTE: These functions are kept for backwards compatibility but are no longer needed
+// with on-demand completed task loading. Completed tasks are now loaded separately.
+
+// Defensive rule: ensure completed tasks are not visible in the main list
+// DEPRECATED: No longer needed with on-demand loading
 function enforceCompletedHidden(containerEl, doNotHide = false) {
-  const incompleteUl = containerEl.querySelector('ul');
-  const completedUl = containerEl.querySelector('.completed-list');
-  if (!incompleteUl || !completedUl) return;
-  
-  // CRITICAL: Remove ALL completed tasks from incomplete list
-  const tasksToMove = Array.from(incompleteUl.children).filter(li => {
-    const cb = li.querySelector('.task-toggle');
-    return cb && cb.checked;
-  });
-  
-  tasksToMove.forEach(li => {
-    incompleteUl.removeChild(li);
-    if (!completedUl.contains(li)) {
-      completedUl.appendChild(li);
-    }
-  });
-  
-  // Optionally avoid forcing hidden state so user toggle works
-  if (!doNotHide) {
-    if (!completedUl.classList.contains('hidden')) completedUl.classList.add('hidden');
-  }
-  updateCompletedToggleText(incompleteUl);
+  // No-op: Real-time listeners handle task separation automatically
+  console.log('[Projects] enforceCompletedHidden called (deprecated, no-op)');
 }
 
 // Always keep lists partitioned: completed items in completedUl, others in incompleteUl
+// DEPRECATED: No longer needed with on-demand loading
 function partitionTasks(containerEl) {
-  const incompleteUl = containerEl.querySelector('ul');
-  const completedUl = containerEl.querySelector('.completed-list');
-  if (!incompleteUl || !completedUl) return;
-  
-  // CRITICAL: Move ALL completed tasks from incompleteUl to completedUl
-  const tasksToMove = Array.from(incompleteUl.children).filter(li => {
-    const cb = li.querySelector('.task-toggle');
-    return cb && cb.checked;
-  });
-  
-  tasksToMove.forEach(li => {
-    incompleteUl.removeChild(li);
-    if (!completedUl.contains(li)) {
-      completedUl.appendChild(li);
-    }
-  });
-  
-  // Move non-completed tasks back to incompleteUl
-  Array.from(completedUl.children).forEach(li => {
-    const cb = li.querySelector('.task-toggle');
-    // Only move back if not completed
-    if (!(cb && cb.checked)) {
-      completedUl.removeChild(li);
-      incompleteUl.appendChild(li);
-    }
-  });
-  
-  updateCompletedToggleText(incompleteUl);
+  // No-op: Real-time listeners handle task separation automatically
+  console.log('[Projects] partitionTasks called (deprecated, no-op)');
 }
 
 // (Removed) global completed visibility controls; per-project toggle only
