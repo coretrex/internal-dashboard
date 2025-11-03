@@ -17,8 +17,15 @@ import {
   limit,
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import {
+  getStorage,
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+  deleteObject
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-let app, db;
+let app, db, storage;
 let cachedUsers = null; // [{id, name, email, photoURL}]
 // Track tasks that were just marked completed to prevent flicker reappearance
 const pendingCompletedTaskIds = new Set();
@@ -30,6 +37,7 @@ async function initializeFirebaseApp() {
   const firebaseInstance = await initializeFirebase();
   app = firebaseInstance.app;
   db = firebaseInstance.db;
+  storage = getStorage(app);
 }
 
 async function loadAssignableUsers() {
@@ -1889,53 +1897,309 @@ function showConfirmModal(message) {
 
 // Task Drawer logic
 let currentDrawerContext = null;
+let uploadingFiles = new Map(); // Track ongoing uploads
+
 function initTaskDrawer() {
   const drawer = document.getElementById('taskDrawer');
   const closeBtn = document.getElementById('closeTaskDrawer');
   const cancelBtn = document.getElementById('cancelTaskDetailsBtn');
   const saveBtn = document.getElementById('saveTaskDetailsBtn');
-  const addAttachmentBtn = document.getElementById('addAttachmentBtn');
+  const fileInput = document.getElementById('attachmentFileInput');
+  
   if (!drawer) return;
+  
   function close() {
     drawer.classList.add('hidden');
     currentDrawerContext = null;
+    uploadingFiles.clear();
   }
+  
   if (closeBtn) closeBtn.addEventListener('click', close);
   if (cancelBtn) cancelBtn.addEventListener('click', close);
-  if (addAttachmentBtn) addAttachmentBtn.addEventListener('click', () => {
-    const list = document.getElementById('attachmentsList');
-    const li = document.createElement('li');
-    li.innerHTML = `<input type="text" placeholder="Attachment URL" class="attachment-url"/><input type="text" placeholder="Label (optional)" class="attachment-label"/>`;
-    list.appendChild(li);
-  });
+  
+  // Handle file selection
+  if (fileInput) {
+    fileInput.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) return;
+      
+      if (!currentDrawerContext) return;
+      const { podId, subId, taskId } = currentDrawerContext;
+      
+      // Upload each file
+      for (const file of files) {
+        await uploadFileAttachment(file, podId, subId, taskId);
+      }
+      
+      // Clear the input so the same file can be selected again
+      fileInput.value = '';
+    });
+  }
+  
   if (saveBtn) saveBtn.addEventListener('click', async () => {
     if (!currentDrawerContext) return;
     const { podId, subId, taskId } = currentDrawerContext;
     const longDescription = document.getElementById('drawerLongDescription').value;
-    const list = document.getElementById('attachmentsList');
-    const attachments = [];
-    list.querySelectorAll('li').forEach(li => {
-      const url = li.querySelector('.attachment-url')?.value?.trim();
-      const label = li.querySelector('.attachment-label')?.value?.trim();
-      if (url) attachments.push({ url, label: label || url });
-    });
+    
+    // Get current attachments from Firestore (don't modify them here, just update description)
     const podRef = doc(db, 'pods', podId);
     const subRef = doc(podRef, 'subprojects', subId);
     const taskRef = doc(subRef, 'tasks', taskId);
+    
     const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
     const currentUserEmail = localStorage.getItem('userEmail') || '';
+    
     await updateDoc(taskRef, { 
-      longDescription, 
-      attachments,
+      longDescription,
       lastModifiedBy: currentUserName,
       lastModifiedByEmail: currentUserEmail,
       lastModifiedAt: Date.now()
     });
-    // refresh the task list to update detail icons
+    
+    // Refresh the task list to update detail icons
     const container = document.querySelector(`.subproject-card[data-subproject-id="${subId}"] ul`);
     if (container) await loadTasksInto(podId, subId, container);
     close();
   });
+}
+
+// Upload a file attachment to Firebase Storage
+async function uploadFileAttachment(file, podId, subId, taskId) {
+  try {
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      alert(`File "${file.name}" is too large. Maximum size is 10MB.`);
+      return;
+    }
+    
+    // Create a unique file path in Firebase Storage
+    const timestamp = Date.now();
+    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storagePath = `task-attachments/${podId}/${subId}/${taskId}/${timestamp}_${sanitizedFileName}`;
+    const storageRef = ref(storage, storagePath);
+    
+    // Add uploading indicator to the list
+    const list = document.getElementById('attachmentsList');
+    const uploadItem = document.createElement('div');
+    uploadItem.className = 'attachment-upload-item';
+    uploadItem.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: #f0f8ff; border-radius: 4px; margin-bottom: 0.5rem;">
+        <i class="fas fa-spinner fa-spin" style="color: #2196F3;"></i>
+        <span style="flex: 1; font-size: 0.9rem;">${file.name}</span>
+        <span class="upload-progress" style="font-size: 0.85rem; color: #666;">0%</span>
+      </div>
+    `;
+    list.appendChild(uploadItem);
+    
+    // Start upload
+    const uploadTask = uploadBytesResumable(storageRef, file);
+    
+    // Track progress
+    uploadTask.on('state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        const progressSpan = uploadItem.querySelector('.upload-progress');
+        if (progressSpan) {
+          progressSpan.textContent = Math.round(progress) + '%';
+        }
+      },
+      (error) => {
+        console.error('[Attachments] Upload error:', error);
+        uploadItem.innerHTML = `
+          <div style="padding: 0.75rem; background: #ffebee; border-radius: 4px; margin-bottom: 0.5rem; color: #c62828;">
+            <i class="fas fa-exclamation-circle"></i> Failed to upload: ${file.name}
+          </div>
+        `;
+        setTimeout(() => uploadItem.remove(), 3000);
+      },
+      async () => {
+        // Upload complete - get download URL
+        try {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          
+          // Add to Firestore
+          const podRef = doc(db, 'pods', podId);
+          const subRef = doc(podRef, 'subprojects', subId);
+          const taskRef = doc(subRef, 'tasks', taskId);
+          
+          // Get current attachments
+          const taskSnap = await getDoc(taskRef);
+          const currentAttachments = taskSnap.exists() ? (taskSnap.data().attachments || []) : [];
+          
+          // Add new attachment
+          const newAttachment = {
+            name: file.name,
+            url: downloadURL,
+            storagePath: storagePath,
+            size: file.size,
+            type: file.type,
+            uploadedAt: Date.now(),
+            uploadedBy: localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown'
+          };
+          
+          const updatedAttachments = [...currentAttachments, newAttachment];
+          
+          const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+          const currentUserEmail = localStorage.getItem('userEmail') || '';
+          
+          await updateDoc(taskRef, {
+            attachments: updatedAttachments,
+            lastModifiedBy: currentUserName,
+            lastModifiedByEmail: currentUserEmail,
+            lastModifiedAt: Date.now()
+          });
+          
+          // Replace upload indicator with actual file item
+          uploadItem.remove();
+          await refreshAttachmentsList(podId, subId, taskId);
+          
+          console.log('[Attachments] File uploaded successfully:', file.name);
+          
+        } catch (error) {
+          console.error('[Attachments] Error saving attachment to Firestore:', error);
+          uploadItem.innerHTML = `
+            <div style="padding: 0.75rem; background: #ffebee; border-radius: 4px; margin-bottom: 0.5rem; color: #c62828;">
+              <i class="fas fa-exclamation-circle"></i> Failed to save: ${file.name}
+            </div>
+          `;
+          setTimeout(() => uploadItem.remove(), 3000);
+        }
+      }
+    );
+    
+  } catch (error) {
+    console.error('[Attachments] Error uploading file:', error);
+    alert(`Error uploading file: ${error.message}`);
+  }
+}
+
+// Delete a file attachment
+async function deleteFileAttachment(podId, subId, taskId, attachment, index) {
+  try {
+    const confirmed = await showConfirmModal(`Delete "${attachment.name}"?`);
+    if (!confirmed) return;
+    
+    // Delete from Firebase Storage if it has a storagePath
+    if (attachment.storagePath) {
+      try {
+        const storageRef = ref(storage, attachment.storagePath);
+        await deleteObject(storageRef);
+        console.log('[Attachments] File deleted from storage:', attachment.name);
+      } catch (error) {
+        console.warn('[Attachments] Could not delete file from storage:', error);
+        // Continue anyway to remove from Firestore
+      }
+    }
+    
+    // Remove from Firestore
+    const podRef = doc(db, 'pods', podId);
+    const subRef = doc(podRef, 'subprojects', subId);
+    const taskRef = doc(subRef, 'tasks', taskId);
+    
+    const taskSnap = await getDoc(taskRef);
+    if (taskSnap.exists()) {
+      const currentAttachments = taskSnap.data().attachments || [];
+      const updatedAttachments = currentAttachments.filter((_, i) => i !== index);
+      
+      const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+      const currentUserEmail = localStorage.getItem('userEmail') || '';
+      
+      await updateDoc(taskRef, {
+        attachments: updatedAttachments,
+        lastModifiedBy: currentUserName,
+        lastModifiedByEmail: currentUserEmail,
+        lastModifiedAt: Date.now()
+      });
+      
+      // Refresh the list
+      await refreshAttachmentsList(podId, subId, taskId);
+    }
+    
+  } catch (error) {
+    console.error('[Attachments] Error deleting attachment:', error);
+    alert(`Error deleting file: ${error.message}`);
+  }
+}
+
+// Refresh the attachments list in the drawer
+async function refreshAttachmentsList(podId, subId, taskId) {
+  const list = document.getElementById('attachmentsList');
+  if (!list) return;
+  
+  try {
+    const podRef = doc(db, 'pods', podId);
+    const subRef = doc(podRef, 'subprojects', subId);
+    const taskRef = doc(subRef, 'tasks', taskId);
+    const taskSnap = await getDoc(taskRef);
+    
+    if (!taskSnap.exists()) return;
+    
+    const attachments = taskSnap.data().attachments || [];
+    
+    // Clear current list (except upload progress items)
+    const uploadItems = list.querySelectorAll('.attachment-upload-item');
+    list.innerHTML = '';
+    uploadItems.forEach(item => list.appendChild(item));
+    
+    // Render attachments
+    attachments.forEach((att, index) => {
+      const item = document.createElement('div');
+      item.className = 'attachment-item';
+      
+      // Format file size
+      const formatSize = (bytes) => {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+      };
+      
+      // Get file icon based on type
+      const getFileIcon = (type) => {
+        if (type.startsWith('image/')) return 'fa-file-image';
+        if (type.startsWith('video/')) return 'fa-file-video';
+        if (type.startsWith('audio/')) return 'fa-file-audio';
+        if (type.includes('pdf')) return 'fa-file-pdf';
+        if (type.includes('word') || type.includes('document')) return 'fa-file-word';
+        if (type.includes('excel') || type.includes('spreadsheet')) return 'fa-file-excel';
+        if (type.includes('powerpoint') || type.includes('presentation')) return 'fa-file-powerpoint';
+        if (type.includes('zip') || type.includes('rar') || type.includes('archive')) return 'fa-file-archive';
+        return 'fa-file';
+      };
+      
+      const icon = getFileIcon(att.type || '');
+      const size = formatSize(att.size || 0);
+      
+      item.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: #f9f9f9; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid #e0e0e0;">
+          <i class="fas ${icon}" style="color: #2196F3; font-size: 1.5rem; width: 24px; text-align: center;"></i>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 500; font-size: 0.9rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${att.name}">${att.name}</div>
+            <div style="font-size: 0.75rem; color: #666; margin-top: 0.25rem;">${size}${att.uploadedBy ? ` • ${att.uploadedBy}` : ''}</div>
+          </div>
+          <a href="${att.url}" target="_blank" download="${att.name}" style="padding: 0.5rem; color: #2196F3; text-decoration: none; border-radius: 4px; transition: background 0.2s;" title="Download">
+            <i class="fas fa-download"></i>
+          </a>
+          <button class="attachment-delete-btn" data-index="${index}" style="padding: 0.5rem; background: none; border: none; color: #ff3b30; cursor: pointer; border-radius: 4px; transition: background 0.2s;" title="Delete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      `;
+      
+      list.appendChild(item);
+      
+      // Add delete handler
+      const deleteBtn = item.querySelector('.attachment-delete-btn');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => {
+          deleteFileAttachment(podId, subId, taskId, att, index);
+        });
+      }
+    });
+    
+  } catch (error) {
+    console.error('[Attachments] Error refreshing list:', error);
+  }
 }
 
 async function openTaskDrawer({ podId, subId, taskId, title, longDescription = '', attachments = [] }) {
@@ -1951,6 +2215,7 @@ async function openTaskDrawer({ podId, subId, taskId, title, longDescription = '
   
   currentDrawerContext = { podId, subId, taskId };
   document.getElementById('drawerTaskTitle').textContent = title || 'Task Details';
+  
   // Load up-to-date details from Firestore
   try {
     const podRef = doc(db, 'pods', podId);
@@ -1963,15 +2228,13 @@ async function openTaskDrawer({ podId, subId, taskId, title, longDescription = '
       attachments = data.attachments || attachments || [];
     }
   } catch (_) {}
+  
   const desc = document.getElementById('drawerLongDescription');
   if (desc) desc.value = longDescription || '';
-  const list = document.getElementById('attachmentsList');
-  list.innerHTML = '';
-  (attachments || []).forEach(att => {
-    const li = document.createElement('li');
-    li.innerHTML = `<input type="text" value="${att.url || ''}" placeholder="Attachment URL" class="attachment-url"/><input type="text" value="${att.label || ''}" placeholder="Label (optional)" class="attachment-label"/>`;
-    list.appendChild(li);
-  });
+  
+  // Load attachments using the new file-based system
+  await refreshAttachmentsList(podId, subId, taskId);
+  
   drawer.classList.remove('hidden');
 }
 

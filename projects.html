@@ -146,10 +146,19 @@
 
             <div class="projects-drawer-section">
                 <div class="projects-drawer-section-header">
-                    <span>Attachments (URLs)</span>
-                    <button id="addAttachmentBtn" class="projects-drawer-add">+ Add</button>
+                    <span>File Attachments</span>
+                    <label for="attachmentFileInput" class="projects-drawer-add" style="cursor: pointer; margin: 0;">
+                        <i class="fas fa-upload" style="margin-right: 0.5rem;"></i>Upload Files
+                    </label>
+                    <input type="file" id="attachmentFileInput" multiple style="display: none;" accept="*/*" />
                 </div>
-                <ul id="attachmentsList" class="projects-drawer-attachments"></ul>
+                <div id="attachmentsList" class="projects-drawer-attachments" style="margin-top: 0.75rem;">
+                    <!-- Attachments will be populated here -->
+                </div>
+                <div style="margin-top: 0.5rem; padding: 0.75rem; background: #f0f8ff; border-radius: 4px; font-size: 0.85rem; color: #666;">
+                    <i class="fas fa-info-circle" style="color: #2196F3; margin-right: 0.5rem;"></i>
+                    Maximum file size: 10MB per file
+                </div>
             </div>
         </div>
         <div class="projects-drawer-footer">
