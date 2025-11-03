@@ -93,7 +93,35 @@ At the top of the Projects page, you'll see:
 - **Memory**: Efficient - old listeners are cleaned up properly
 - **Battery**: Firestore uses WebSockets for efficient real-time updates
 
+## Notification System
+
+### Single Notification Per Change
+The system is designed to ensure **only one notification** is created per change, even when multiple users have the page open simultaneously.
+
+**How it works:**
+- When you make a change (e.g., assign a task), your browser session creates the notification
+- Other users' browsers detect the change for real-time UI updates but **do not** create duplicate notifications
+- This is accomplished by checking if the current browser session is the one that made the change
+
+**Example:**
+- 3 people have the Projects page open: Alice, Bob, and Carol
+- Alice assigns a task to Bob
+- Alice's browser creates ONE notification for Bob
+- Bob and Carol's browsers see the change (real-time sync) but don't create notifications
+- Result: Bob receives exactly ONE notification ✅
+
 ## Troubleshooting
+
+### Duplicate Notifications?
+
+**Issue**: Receiving multiple notifications for the same change  
+**Cause**: This was an issue in earlier versions where all connected clients created notifications  
+**Solution**: Already fixed! Each change now creates only one notification regardless of how many users are online
+
+If you still see duplicates:
+1. Hard refresh the page (Ctrl+Shift+R or Cmd+Shift+R) to clear cached code
+2. Ensure all team members have refreshed to the latest version
+3. Check browser console for "[Notifications]" messages to verify correct behavior
 
 ### Changes Not Appearing?
 

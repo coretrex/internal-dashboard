@@ -2247,6 +2247,16 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
       newAssignees: newData.assignees
     });
     
+    // CRITICAL: Only create notifications if THIS browser session made the change
+    // This prevents duplicate notifications when multiple users have the page open
+    if (changedByEmail !== currentUserEmail) {
+      console.log('[Notifications] Change was made by another user, skipping notification creation on this client');
+      previousData = { ...newData };
+      return;
+    }
+    
+    console.log('[Notifications] This client made the change, proceeding with notification creation');
+    
     // Check for assignment changes
     const oldAssignees = Array.isArray(previousData.assignees) ? previousData.assignees : [];
     const newAssignees = Array.isArray(newData.assignees) ? newData.assignees : [];
