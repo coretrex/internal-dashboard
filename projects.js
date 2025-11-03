@@ -2151,8 +2151,38 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
     if (previousData.status !== newData.status && previousData.status) {
       changedFields.push({ field: 'Status', old: previousData.status, new: newData.status });
     }
-    if (previousData.longDescription !== newData.longDescription && previousData.longDescription !== undefined) {
-      changedFields.push({ field: 'Description', old: 'Updated', new: 'Updated' });
+    // Check for description changes - detect both additions and updates
+    const oldDesc = (previousData.longDescription || '').trim();
+    const newDesc = (newData.longDescription || '').trim();
+    
+    if (oldDesc !== newDesc) {
+      // Only notify if there's actual content (not just clearing empty -> empty)
+      if (oldDesc.length > 0 || newDesc.length > 0) {
+        if (oldDesc.length === 0 && newDesc.length > 0) {
+          changedFields.push({ field: 'Description', old: 'None', new: 'Added' });
+        } else if (oldDesc.length > 0 && newDesc.length === 0) {
+          changedFields.push({ field: 'Description', old: 'Removed', new: 'None' });
+        } else {
+          changedFields.push({ field: 'Description', old: 'Updated', new: 'Updated' });
+        }
+      }
+    }
+    
+    // Check for attachment changes
+    const oldAttachments = Array.isArray(previousData.attachments) ? previousData.attachments : [];
+    const newAttachments = Array.isArray(newData.attachments) ? newData.attachments : [];
+    
+    if (oldAttachments.length !== newAttachments.length) {
+      const oldCount = oldAttachments.length;
+      const newCount = newAttachments.length;
+      
+      if (oldCount === 0 && newCount > 0) {
+        changedFields.push({ field: 'Attachments', old: 'None', new: `${newCount} added` });
+      } else if (oldCount > 0 && newCount === 0) {
+        changedFields.push({ field: 'Attachments', old: `${oldCount} removed`, new: 'None' });
+      } else {
+        changedFields.push({ field: 'Attachments', old: `${oldCount}`, new: `${newCount}` });
+      }
     }
     
     // If there are changes, notify all assigned users except the person who made the change
