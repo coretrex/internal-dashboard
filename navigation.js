@@ -85,9 +85,13 @@ class Navigation extends HTMLElement {
             // Log out logic
             userInfoDiv.querySelector('.logout-btn').addEventListener('click', async function(e) {
                 e.stopPropagation();
-                // Try Firebase sign out if available
-                if (window.firebase && window.firebase.auth) {
-                    try { await window.firebase.auth().signOut(); } catch (err) {}
+                // Try Firebase sign out using v10 modular syntax
+                try {
+                    const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
+                    const auth = getAuth();
+                    await signOut(auth);
+                } catch (err) {
+                    console.error('Sign out error:', err);
                 }
                 localStorage.clear();
                 window.location.href = 'index.html';

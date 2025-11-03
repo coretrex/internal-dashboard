@@ -92,17 +92,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadingSpinner = document.getElementById("loadingSpinner");
 
     // Check if user is already signed in
+    // Add a small delay to prevent race conditions with logout redirects
+    let authCheckTimeout;
     onAuthStateChanged(auth, async (user) => {
         if (user && !isSigningIn) {
-            // Only handle auth state change if we're not in the middle of signing in
-            try {
-                await handleSuccessfulAuth(user);
-            } catch (error) {
-                if (loginError) {
-                    loginError.classList.add('show');
-                    loginError.innerHTML = `<strong>Authentication Error</strong><br>${error.message}`;
-                }
+            // Clear any pending auth check
+            if (authCheckTimeout) {
+                clearTimeout(authCheckTimeout);
             }
+            
+            // Delay auth check slightly to ensure logout has completed
+            authCheckTimeout = setTimeout(async () => {
+                try {
+                    await handleSuccessfulAuth(user);
+                } catch (error) {
+                    if (loginError) {
+                        loginError.classList.add('show');
+                        loginError.innerHTML = `<strong>Authentication Error</strong><br>${error.message}`;
+                    }
+                }
+            }, 100);
         }
     });
 
