@@ -1933,14 +1933,15 @@ async function createNotification({ userId, type, taskId, taskText, podId, subpr
 // Initialize notification listener for current user
 function initNotificationListener() {
   const currentUserEmail = localStorage.getItem('userEmail') || '';
-  const currentUserId = localStorage.getItem('userId') || currentUserEmail;
+  // Always use email as userId for consistency with notification creation
+  const currentUserId = currentUserEmail || localStorage.getItem('userId');
   
   if (!currentUserId) {
     console.log('[Notifications] No user ID found, skipping notification listener');
     return;
   }
   
-  console.log('[Notifications] Initializing listener for user:', currentUserId);
+  console.log('[Notifications] Initializing listener for user:', currentUserId, '(email:', currentUserEmail, ')');
   
   // Listen for notifications for this user
   const notificationsCol = collection(db, 'notifications');
@@ -2014,13 +2015,24 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
   const unsubscribe = onSnapshot(taskRef, (snapshot) => {
     if (!snapshot.exists()) return;
     
+    const newData = snapshot.data();
+    
     // Skip first snapshot (initial load)
     if (isFirstSnapshot) {
+      console.log('[Notifications] First snapshot for task, skipping notifications:', newData.text);
       isFirstSnapshot = false;
+      // Update previousData so we have the initial state for comparison
+      previousData = { ...newData };
       return;
     }
     
-    const newData = snapshot.data();
+    console.log('[Notifications] Task snapshot received:', {
+      taskId,
+      taskText: newData.text,
+      oldAssignees: previousData.assignees,
+      newAssignees: newData.assignees
+    });
+    
     const currentUserEmail = localStorage.getItem('userEmail') || '';
     const currentUserName = localStorage.getItem('userName') || currentUserEmail;
     
@@ -2037,8 +2049,18 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
     newlyAssigned.forEach(assignee => {
       // Don't notify yourself
       if (assignee.email !== currentUserEmail) {
+        // Use email as userId for consistency (same as what we check in listener)
+        const targetUserId = assignee.email || assignee.id;
+        
+        console.log('[Notifications] Creating assignment notification', {
+          targetUserId,
+          taskText: newData.text,
+          changedBy: currentUserName,
+          assignee
+        });
+        
         createNotification({
-          userId: assignee.id || assignee.email,
+          userId: targetUserId,
           type: 'task_assigned',
           taskId,
           taskText: newData.text || 'Untitled Task',
@@ -2050,6 +2072,8 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
             assignedTo: assignee.name || assignee.email
           }
         });
+      } else {
+        console.log('[Notifications] Skipping self-notification for assignment');
       }
     });
     
@@ -2071,10 +2095,24 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
     
     // If there are changes, notify all assigned users except current user
     if (changedFields.length > 0 && newAssignees.length > 0) {
+      console.log('[Notifications] Task updated, notifying assignees', {
+        changedFields,
+        assigneeCount: newAssignees.length,
+        taskText: newData.text
+      });
+      
       newAssignees.forEach(assignee => {
         if (assignee.email !== currentUserEmail) {
+          // Use email as userId for consistency
+          const targetUserId = assignee.email || assignee.id;
+          
+          console.log('[Notifications] Creating update notification', {
+            targetUserId,
+            changedFields: changedFields.map(f => f.field)
+          });
+          
           createNotification({
-            userId: assignee.id || assignee.email,
+            userId: targetUserId,
             type: 'task_updated',
             taskId,
             taskText: newData.text || 'Untitled Task',
@@ -2114,7 +2152,8 @@ async function openNotificationsModal() {
   if (!modal || !content) return;
   
   const currentUserEmail = localStorage.getItem('userEmail') || '';
-  const currentUserId = localStorage.getItem('userId') || currentUserEmail;
+  // Always use email as userId for consistency
+  const currentUserId = currentUserEmail || localStorage.getItem('userId');
   
   // Show modal
   modal.style.display = 'block';
@@ -2265,7 +2304,8 @@ async function openNotificationsModal() {
 // Mark all notifications as read
 async function markAllNotificationsAsRead() {
   const currentUserEmail = localStorage.getItem('userEmail') || '';
-  const currentUserId = localStorage.getItem('userId') || currentUserEmail;
+  // Always use email as userId for consistency
+  const currentUserId = currentUserEmail || localStorage.getItem('userId');
   
   try {
     const notificationsCol = collection(db, 'notifications');
