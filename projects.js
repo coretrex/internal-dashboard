@@ -2670,18 +2670,29 @@ async function openNotificationsModal() {
         const subprojectId = item.dataset.subprojectId;
         const taskId = item.dataset.taskId;
         
-        // Mark as read
+        // Mark as read immediately - provides visual feedback
         if (notifId) {
-          const notifRef = doc(db, 'notifications', notifId);
-          await updateDoc(notifRef, { read: true });
+          try {
+            const notifRef = doc(db, 'notifications', notifId);
+            await updateDoc(notifRef, { read: true });
+            console.log('[Notifications] Marked notification as read:', notifId);
+            
+            // Update the UI immediately to show it's read
+            item.style.backgroundColor = '#f9f9f9';
+            item.style.borderLeftColor = '#ddd';
+            const unreadDot = item.querySelector('div[style*="width: 8px"]');
+            if (unreadDot) unreadDot.remove();
+          } catch (error) {
+            console.error('[Notifications] Error marking as read:', error);
+          }
         }
         
         // Close the notification modal
         if (modal) modal.style.display = 'none';
         
-        // Navigate to the task
+        // Navigate to the task and highlight it
         if (podId && subprojectId) {
-          console.log('[Notifications] Navigating to task:', { podId, subprojectId, taskId });
+          console.log('[Notifications] Navigating to task and will highlight:', { podId, subprojectId, taskId });
           navigateToTask(podId, subprojectId, taskId);
         }
       });
@@ -2883,43 +2894,69 @@ function navigateToTask(podId, subprojectId, taskId) {
     // 4. Wait a moment for expansion, then scroll to and highlight the task
     setTimeout(() => {
       // Scroll subproject into view first
-      subprojectCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      subprojectCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
       
-      // Find the task row
+      // Find the specific task row by taskId
       if (taskId) {
         // Try to find the task in both incomplete and completed lists
         const taskLists = subprojectCard.querySelectorAll('ul');
         let taskRow = null;
         
         taskLists.forEach(list => {
+          if (taskRow) return; // Already found
           const rows = list.querySelectorAll('li');
           rows.forEach(row => {
-            // We need to match by task ID - we'll need to check the data
-            // For now, we can scroll to the subproject and it will be visible
+            if (row.dataset.taskId === taskId) {
+              taskRow = row;
+            }
           });
         });
         
         // If we found the task, scroll to it and highlight it
         if (taskRow) {
           setTimeout(() => {
+            // Scroll task into view
             taskRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Add temporary highlight
+            
+            // Add prominent highlight with animation
             taskRow.style.backgroundColor = '#fff3cd';
-            taskRow.style.transition = 'background-color 0.3s ease';
-            setTimeout(() => {
-              taskRow.style.backgroundColor = '';
-            }, 2000);
-          }, 300);
+            taskRow.style.boxShadow = '0 0 0 3px rgba(255, 193, 7, 0.5)';
+            taskRow.style.transition = 'all 0.3s ease';
+            
+            // Pulse effect
+            let pulseCount = 0;
+            const pulseInterval = setInterval(() => {
+              pulseCount++;
+              if (pulseCount % 2 === 0) {
+                taskRow.style.backgroundColor = '#fff3cd';
+                taskRow.style.boxShadow = '0 0 0 3px rgba(255, 193, 7, 0.5)';
+              } else {
+                taskRow.style.backgroundColor = '#ffeb3b';
+                taskRow.style.boxShadow = '0 0 0 5px rgba(255, 193, 7, 0.7)';
+              }
+              
+              if (pulseCount >= 6) {
+                clearInterval(pulseInterval);
+                // Fade out the highlight
+                setTimeout(() => {
+                  taskRow.style.backgroundColor = '';
+                  taskRow.style.boxShadow = '';
+                }, 500);
+              }
+            }, 300);
+            
+            console.log('[Notifications] Task highlighted:', taskId);
+          }, 400);
+        } else {
+          console.warn('[Notifications] Task row not found in DOM:', taskId);
+          // Still highlight the subproject card if task not found
+          subprojectCard.style.boxShadow = '0 0 0 3px rgba(33, 150, 243, 0.3)';
+          subprojectCard.style.transition = 'box-shadow 0.3s ease';
+          setTimeout(() => {
+            subprojectCard.style.boxShadow = '';
+          }, 2000);
         }
       }
-      
-      // Add a subtle highlight effect to the subproject card
-      subprojectCard.style.boxShadow = '0 0 0 3px rgba(33, 150, 243, 0.3)';
-      subprojectCard.style.transition = 'box-shadow 0.3s ease';
-      setTimeout(() => {
-        subprojectCard.style.boxShadow = '';
-      }, 2000);
-      
     }, 300);
   } else {
     console.warn('[Notifications] Subproject not found:', subprojectId);

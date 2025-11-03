@@ -51,6 +51,9 @@ onSnapshot(tasksCollection, (snapshot) => {
 At the top of the Projects page, you'll see:
 - 🟢 **"Live"** indicator - Shows the page is actively syncing
 
+In the bottom-left corner:
+- 🔊 **Sound Toggle** button (floating) - Click to mute/unmute task completion sounds
+
 ### Real-Time Indicators in Action
 - Task counts update immediately when tasks are added/removed
 - New tasks appear with a subtle animation
@@ -80,6 +83,7 @@ At the top of the Projects page, you'll see:
 - ✅ The task moves to the completed section for everyone
 - ✅ Task counters update across all screens
 - ✅ Bobby fireworks animation plays on her screen only
+- ✅ Completion sound plays (unless muted via sound toggle)
 
 ## Performance Considerations
 
