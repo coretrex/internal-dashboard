@@ -861,7 +861,18 @@ function initGlobalCompletedSection() {
   const toggleBtn = document.getElementById('toggleGlobalCompleted');
   const globalSection = document.getElementById('globalCompletedSection');
   
-  if (!toggleBtn || !globalSection) return;
+  console.log('[Projects] initGlobalCompletedSection called', { 
+    toggleBtn: !!toggleBtn, 
+    globalSection: !!globalSection 
+  });
+  
+  if (!toggleBtn || !globalSection) {
+    console.error('[Projects] Missing completed section elements!', {
+      toggleBtn: !!toggleBtn,
+      globalSection: !!globalSection
+    });
+    return;
+  }
   
   // Update the toggle button and section visibility
   async function updateGlobalToggle() {
@@ -1552,33 +1563,10 @@ async function loadCompletedTasksInto(podId, subId, completedUl) {
       }
     }
     
-    console.log('[Projects] Loaded completed tasks for subproject:', subId, 'count:', snapshot.size);
+    console.log('[Projects] Loaded completed tasks for subproject:', subId, 'count:', snapshot.size, 'usedFallback:', usedFallback);
     
     // Clear completed list
     completedUl.innerHTML = '';
-    
-    // If using fallback, show a helpful message
-    if (usedFallback) {
-      const indexNotice = document.createElement('li');
-      indexNotice.style.cssText = 'padding: 1rem; background: #fff3cd; border-left: 4px solid #ffc107; margin-bottom: 0.5rem; list-style: none; border-radius: 4px;';
-      indexNotice.innerHTML = `
-        <div style="font-weight: 600; color: #856404; margin-bottom: 0.5rem;">⚠️ First-Time Setup Needed</div>
-        <div style="color: #856404; font-size: 0.9rem; margin-bottom: 0.75rem;">
-          To sort completed tasks by date, a Firestore index is required. This is a one-time setup that takes 2 minutes.
-        </div>
-        <a href="https://console.firebase.google.com/project/coretrex-internal-dashboard/firestore/indexes" 
-           target="_blank" 
-           style="display: inline-block; background: #ffc107; color: #000; padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; font-weight: 600; transition: all 0.2s;"
-           onmouseover="this.style.background='#ffb300'" 
-           onmouseout="this.style.background='#ffc107'">
-          📋 Create Index (opens Firebase Console)
-        </a>
-        <div style="color: #856404; font-size: 0.85rem; margin-top: 0.75rem;">
-          <strong>Steps:</strong> 1) Click link above 2) Find "tasks" collection 3) Click "Create Index" 4) Wait 2 min 5) Refresh
-        </div>
-      `;
-      completedUl.appendChild(indexNotice);
-    }
     
     // Create task elements
     const tasks = [];
