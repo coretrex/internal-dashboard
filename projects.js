@@ -894,23 +894,23 @@ function initSoundToggle() {
   if (!soundToggle) return;
   
   // Get initial mute state from localStorage
-  const isMuted = localStorage.getItem('completionSoundMuted') === 'true';
+  const isMuted = localStorage.getItem('soundsMuted') === 'true';
   
   // Update button appearance based on mute state
   function updateSoundIcon() {
     const icon = soundToggle.querySelector('i');
-    const isMuted = localStorage.getItem('completionSoundMuted') === 'true';
+    const isMuted = localStorage.getItem('soundsMuted') === 'true';
     
     if (isMuted) {
       icon.className = 'fas fa-volume-mute';
       soundToggle.style.color = '#999';
       soundToggle.style.borderColor = '#ccc';
-      soundToggle.title = 'Sound muted - Click to unmute';
+      soundToggle.title = 'All sounds muted - Click to unmute';
     } else {
       icon.className = 'fas fa-volume-up';
       soundToggle.style.color = '#4CAF50';
       soundToggle.style.borderColor = '#4CAF50';
-      soundToggle.title = 'Sound on - Click to mute';
+      soundToggle.title = 'Sounds on - Click to mute all sounds';
     }
   }
   
@@ -919,10 +919,10 @@ function initSoundToggle() {
   
   // Toggle mute on click
   soundToggle.addEventListener('click', (e) => {
-    const currentlyMuted = localStorage.getItem('completionSoundMuted') === 'true';
+    const currentlyMuted = localStorage.getItem('soundsMuted') === 'true';
     const newMutedState = !currentlyMuted;
     
-    localStorage.setItem('completionSoundMuted', String(newMutedState));
+    localStorage.setItem('soundsMuted', String(newMutedState));
     updateSoundIcon();
     
     // Show a subtle feedback animation
@@ -931,7 +931,7 @@ function initSoundToggle() {
       soundToggle.style.transform = 'scale(1)';
     }, 100);
     
-    console.log('[Projects] Completion sound', newMutedState ? 'muted' : 'unmuted');
+    console.log('[Projects] All sounds', newMutedState ? 'muted' : 'unmuted');
   });
   
   // Add hover effect
@@ -1584,7 +1584,7 @@ function partitionTasks(containerEl) {
 // Play completion sound
 function playCompletionSound() {
   // Check if sound is muted
-  const isMuted = localStorage.getItem('completionSoundMuted') === 'true';
+  const isMuted = localStorage.getItem('soundsMuted') === 'true';
   if (isMuted) {
     console.log('[Projects] Completion sound is muted');
     return;
@@ -2805,6 +2805,13 @@ function getTimeAgo(date) {
 
 // Play notification sound
 function playNotificationSound() {
+  // Check if sound is muted
+  const isMuted = localStorage.getItem('soundsMuted') === 'true';
+  if (isMuted) {
+    console.log('[Notifications] Notification sound is muted');
+    return;
+  }
+  
   try {
     const audio = new Audio('notification.mp3');
     audio.volume = 0.3; // Quieter for notifications
