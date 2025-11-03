@@ -589,12 +589,36 @@ function createTaskItem(taskData, podId, subId, taskId) {
       return `<label class="assignee-option"><input type="checkbox" data-user-id="${u.id}" ${checked ? 'checked' : ''}/> <span>${u.name || u.email}</span></label>`;
     }).join('');
   })();
-  function openMenu() { assigneeMulti.querySelector('.assignee-menu').classList.remove('hidden'); }
-  function closeMenu() { assigneeMulti.querySelector('.assignee-menu').classList.add('hidden'); }
+  function openMenu() { 
+    const menu = assigneeMulti.querySelector('.assignee-menu');
+    menu.classList.remove('hidden'); 
+    
+    // Check if menu would be cut off at bottom and open upward if needed
+    const rect = assigneeMulti.getBoundingClientRect();
+    const menuHeight = 250; // Approximate max height of the menu
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    
+    // If not enough space below (less than menu height + 80px for nav), but more space above, open upward
+    if (spaceBelow < menuHeight + 80 && spaceAbove > menuHeight) {
+      menu.classList.add('open-upward');
+    } else {
+      menu.classList.remove('open-upward');
+    }
+  }
+  function closeMenu() { 
+    const menu = assigneeMulti.querySelector('.assignee-menu');
+    menu.classList.add('hidden'); 
+    menu.classList.remove('open-upward');
+  }
   assigneeMulti.addEventListener('click', (e) => {
     const menu = assigneeMulti.querySelector('.assignee-menu');
     if (e.target.tagName === 'INPUT') return; // checkbox click
-    menu.classList.toggle('hidden');
+    if (menu.classList.contains('hidden')) {
+      openMenu();
+    } else {
+      closeMenu();
+    }
   });
   document.addEventListener('click', (e)=>{ if(!assigneeMulti.contains(e.target)) closeMenu(); });
   assigneeMulti.addEventListener('change', async () => {

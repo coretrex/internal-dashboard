@@ -4,6 +4,7 @@
 .projects-body .assignee-display { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size:.9rem; }
 .projects-body .assignee-menu { position:absolute; top:100%; right:0; z-index:1500; background:#fff; border:1px solid #e0e3e7; border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,.12); padding:6px; min-width: 220px; max-height: 240px; overflow:auto; margin-top:6px; }
 .projects-body .assignee-menu.hidden { display:none; }
+.projects-body .assignee-menu.open-upward { top: auto; bottom: 100%; margin-top: 0; margin-bottom: 6px; }
 .projects-body .assignee-option { display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:4px; }
 .projects-body .assignee-option:hover { background:#f7f8fa; }
 .projects-body .task-has-details { color:#4a78c2; font-size:14px; margin-left:8px; display:inline-flex; align-items:center; gap:6px; }
