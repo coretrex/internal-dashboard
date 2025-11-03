@@ -73,28 +73,30 @@ const podToProjects = new Map();
 // Helper function to update task count for a subproject
 function updateTaskCount(subprojectCard) {
   const incompleteUl = subprojectCard.querySelector('ul:not(.completed-list)');
-  const taskCount = incompleteUl ? incompleteUl.querySelectorAll('li').length : 0;
+  // Count only visible tasks (respecting the My Tasks filter)
+  const visibleTasks = incompleteUl ? Array.from(incompleteUl.querySelectorAll('li')).filter(li => {
+    const display = li.style.display;
+    return !display || display !== 'none';
+  }) : [];
+  const taskCount = visibleTasks.length;
   const countSpan = subprojectCard.querySelector('.task-count');
   if (countSpan) {
     countSpan.textContent = taskCount;
     // Hide count if there are no tasks
     countSpan.style.display = taskCount > 0 ? 'inline-flex' : 'none';
     
-    // Check if any tasks are overdue
+    // Check if any visible tasks are overdue
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split('T')[0];
     
     let hasOverdue = false;
-    if (incompleteUl) {
-      const tasks = incompleteUl.querySelectorAll('li');
-      tasks.forEach(taskLi => {
-        const dateInput = taskLi.querySelector('.date-input');
-        if (dateInput && dateInput.value && dateInput.value < todayStr) {
-          hasOverdue = true;
-        }
-      });
-    }
+    visibleTasks.forEach(taskLi => {
+      const dateInput = taskLi.querySelector('.date-input');
+      if (dateInput && dateInput.value && dateInput.value < todayStr) {
+        hasOverdue = true;
+      }
+    });
     
     // Apply overdue class if needed
     if (hasOverdue) {
@@ -131,11 +133,17 @@ function updateKPIs() {
     return !style || !style.includes('display: none');
   });
   
-  // Get incomplete tasks only from visible pods
+  // Get incomplete tasks only from visible pods - only count visible tasks (respecting filter)
   visiblePodsList.forEach(pod => {
     const incompleteTasks = pod.querySelectorAll('.task-list > ul:not(.completed-list) > li');
     
     incompleteTasks.forEach(taskLi => {
+      // Skip hidden tasks (filtered out by My Tasks filter)
+      const display = taskLi.style.display;
+      if (display === 'none') {
+        return;
+      }
+      
       total++;
       
       // Check if task is assigned to current user
@@ -1051,6 +1059,84 @@ function initSoundToggle() {
   });
 }
 
+// Global filter state
+let isMyTasksFilterActive = false;
+
+// Initialize My Tasks filter button
+function initMyTasksFilter() {
+  const filterBtn = document.getElementById('myTasksFilterBtn');
+  if (!filterBtn) return;
+  
+  filterBtn.addEventListener('click', () => {
+    const userName = localStorage.getItem('userName') || '';
+    const userFirstName = userName.split(' ')[0];
+    
+    if (!userFirstName) {
+      alert('Unable to determine current user. Please log in again.');
+      return;
+    }
+    
+    isMyTasksFilterActive = !isMyTasksFilterActive;
+    
+    // Update button appearance
+    if (isMyTasksFilterActive) {
+      filterBtn.classList.add('active');
+      filterBtn.title = 'Show all tasks';
+      console.log('[My Tasks Filter] Showing only tasks assigned to:', userFirstName);
+    } else {
+      filterBtn.classList.remove('active');
+      filterBtn.title = 'Show only tasks assigned to me';
+      console.log('[My Tasks Filter] Showing all tasks');
+    }
+    
+    // Apply filter to all visible tasks
+    applyMyTasksFilter();
+    
+    // Update task counts for all visible subprojects
+    document.querySelectorAll('.subproject-card').forEach(subCard => {
+      updateTaskCount(subCard);
+    });
+    
+    // Update KPIs
+    updateKPIs();
+    
+    // Add a subtle animation
+    filterBtn.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+      filterBtn.style.transform = 'scale(1)';
+    }, 100);
+  });
+}
+
+// Apply My Tasks filter to all visible tasks
+function applyMyTasksFilter() {
+  const userName = localStorage.getItem('userName') || '';
+  const userFirstName = userName.split(' ')[0];
+  
+  const allTaskItems = document.querySelectorAll('.task-list > ul:not(.completed-list) > li');
+  
+  allTaskItems.forEach(taskLi => {
+    const assigneeDisplay = taskLi.querySelector('.assignee-display');
+    
+    if (!assigneeDisplay) {
+      // No assignee found, hide if filtering
+      taskLi.style.display = isMyTasksFilterActive ? 'none' : '';
+      return;
+    }
+    
+    const assigneeText = assigneeDisplay.textContent;
+    
+    if (isMyTasksFilterActive) {
+      // Show only if assigned to current user
+      const isAssignedToMe = assigneeText.includes(userFirstName);
+      taskLi.style.display = isAssignedToMe ? '' : 'none';
+    } else {
+      // Show all tasks
+      taskLi.style.display = '';
+    }
+  });
+}
+
 // Recurring Task Modal Logic
 let currentRecurringTask = null;
 
@@ -1292,6 +1378,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initNotificationsModal();
     initNotificationListener();
     initSoundToggle();
+    initMyTasksFilter();
     // Check if we need to navigate to a task from a notification
     checkPendingNavigation();
   })();
@@ -1511,6 +1598,11 @@ async function loadTasksInto(podId, subId, listEl) {
     const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
     if (subprojectCard) {
       updateTaskCount(subprojectCard);
+    }
+    
+    // Apply My Tasks filter if active
+    if (isMyTasksFilterActive) {
+      applyMyTasksFilter();
     }
     
     // Update KPIs

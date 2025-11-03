@@ -4374,6 +4374,41 @@ body.presence-banner-visible #global-edit-button {
   box-shadow: 0 2px 8px rgba(74,120,194,0.15);
 }
 
+/* My Tasks Filter Button */
+.my-tasks-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.my-tasks-filter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.my-tasks-filter-btn.active {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.my-tasks-filter-btn.active:hover {
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.my-tasks-filter-btn i {
+  font-size: 1.1rem;
+}
+
 .pod-card {
   background: #ffffff; /* light card like Asana */
   border-radius: 16px; /* softer rounded edges */
