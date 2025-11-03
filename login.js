@@ -87,13 +87,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize Firebase first
     await initializeFirebaseApp();
     
-    const loginButton = document.getElementById("loginButton");
+    const googleLoginButton = document.getElementById("googleLoginButton");
     const loginError = document.getElementById("loginError");
-    const loginContainer = document.querySelector('.login-container');
-    const loadingSpinner = document.createElement('div');
-    loadingSpinner.className = 'loading-spinner';
-    loadingSpinner.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
-    loadingSpinner.style.display = 'none';
+    const loadingSpinner = document.getElementById("loadingSpinner");
 
     // Check if user is already signed in
     onAuthStateChanged(auth, async (user) => {
@@ -103,24 +99,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await handleSuccessfulAuth(user);
             } catch (error) {
                 if (loginError) {
-                    loginError.style.display = "block";
+                    loginError.classList.add('show');
                     loginError.innerHTML = `<strong>Authentication Error</strong><br>${error.message}`;
                 }
             }
         }
     });
 
-    if (loginButton) {
-        // Update button text and remove password input
-        loginButton.innerHTML = '<i class="fab fa-google"></i> Sign in with Google';
-        loginButton.style.background = 'linear-gradient(45deg, #4285f4, #34a853)';
-        // Remove password input if it exists
-        const passwordInput = document.getElementById("passwordInput");
-        if (passwordInput) {
-            passwordInput.parentElement.remove();
-        }
-        
-        loginButton.addEventListener("click", async () => {
+    // Handle Google login button
+    if (googleLoginButton) {
+        googleLoginButton.addEventListener("click", async () => {
             // Prevent multiple simultaneous sign-in attempts
             if (isSigningIn) {
                 console.log('Sign-in already in progress...');
@@ -131,14 +119,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 isSigningIn = true;
                 
                 // Show loading spinner and disable button
-                loginButton.style.display = 'none';
-                loginButton.disabled = true;
-                loginContainer.appendChild(loadingSpinner);
-                loadingSpinner.style.display = 'block';
+                googleLoginButton.style.display = 'none';
+                googleLoginButton.disabled = true;
+                if (loadingSpinner) {
+                    loadingSpinner.classList.add('show');
+                }
                 
                 // Clear any previous errors
                 if (loginError) {
-                    loginError.style.display = "none";
+                    loginError.classList.remove('show');
                 }
                 
                 // Check if popups are blocked
@@ -158,12 +147,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (error) {
                 console.error('Sign-in error:', error);
                 // Hide loading spinner and show error
-                loadingSpinner.style.display = 'none';
-                loginButton.style.display = 'block';
-                loginButton.disabled = false;
+                if (loadingSpinner) {
+                    loadingSpinner.classList.remove('show');
+                }
+                googleLoginButton.style.display = 'flex';
+                googleLoginButton.disabled = false;
                 
                 if (loginError) {
-                    loginError.style.display = "block";
+                    loginError.classList.add('show');
                     if (error.code === 'auth/configuration-not-found') {
                         loginError.innerHTML = `
                             <strong>Google Authentication Not Configured</strong><br>
@@ -232,20 +223,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.body.appendChild(signOutButton);
 });
-
-function createEmbers() {
-    const flamesElement = document.querySelector('.flames');
-    if (flamesElement) {
-        for (let i = 0; i < 20; i++) {
-            const ember = document.createElement('div');
-            ember.className = 'ember';
-            ember.style.left = `${Math.random() * 100}%`;
-            ember.style.animationDuration = `${1 + Math.random() * 2}s`;
-            ember.style.animationDelay = `${Math.random() * 2}s`;
-            flamesElement.appendChild(ember);
-        }
-    }
-}
-
-// Call this after the DOM is loaded
-document.addEventListener('DOMContentLoaded', createEmbers); 
