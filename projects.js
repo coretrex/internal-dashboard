@@ -440,8 +440,15 @@ function createTaskItem(taskData, podId, subId, taskId) {
         const podRef = doc(db, 'pods', podId);
         const subRef = doc(podRef, 'subprojects', subId);
         const taskRef = doc(subRef, 'tasks', taskId);
+        const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+        const currentUserEmail = localStorage.getItem('userEmail') || '';
         try {
-          await updateDoc(taskRef, { completed: true });
+          await updateDoc(taskRef, { 
+            completed: true,
+            lastModifiedBy: currentUserName,
+            lastModifiedByEmail: currentUserEmail,
+            lastModifiedAt: Date.now()
+          });
         } catch (e) {
           console.error('[Projects] Error persisting completion:', e);
         }
@@ -529,8 +536,15 @@ function createTaskItem(taskData, podId, subId, taskId) {
         const podRef = doc(db, 'pods', podId);
         const subRef = doc(podRef, 'subprojects', subId);
         const taskRef = doc(subRef, 'tasks', taskId);
+        const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+        const currentUserEmail = localStorage.getItem('userEmail') || '';
         try {
-          await updateDoc(taskRef, { completed: false });
+          await updateDoc(taskRef, { 
+            completed: false,
+            lastModifiedBy: currentUserName,
+            lastModifiedByEmail: currentUserEmail,
+            lastModifiedAt: Date.now()
+          });
         } catch (_) {}
       }
     }
@@ -652,7 +666,14 @@ function createTaskItem(taskData, podId, subId, taskId) {
         const podRef = doc(db, 'pods', podId);
         const subRef = doc(podRef, 'subprojects', subId);
         const taskRef = doc(subRef, 'tasks', taskId);
-        updateDoc(taskRef, { text: next });
+        const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+        const currentUserEmail = localStorage.getItem('userEmail') || '';
+        updateDoc(taskRef, { 
+          text: next,
+          lastModifiedBy: currentUserName,
+          lastModifiedByEmail: currentUserEmail,
+          lastModifiedAt: Date.now()
+        });
       }
     }
 
@@ -670,7 +691,15 @@ function createTaskItem(taskData, podId, subId, taskId) {
       const podRef = doc(db, 'pods', podId);
       const subRef = doc(podRef, 'subprojects', subId);
       const taskRef = doc(subRef, 'tasks', taskId);
-      updateDoc(taskRef, { [field]: value });
+      // Always track who made the change and when
+      const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+      const currentUserEmail = localStorage.getItem('userEmail') || '';
+      updateDoc(taskRef, { 
+        [field]: value,
+        lastModifiedBy: currentUserName,
+        lastModifiedByEmail: currentUserEmail,
+        lastModifiedAt: Date.now()
+      });
     }
   }
   li.querySelector('.delete-btn').addEventListener('click', () => {
@@ -980,7 +1009,14 @@ function initRecurringModal() {
         const podRef = doc(db, 'pods', podId);
         const subRef = doc(podRef, 'subprojects', subId);
         const taskRef = doc(subRef, 'tasks', taskId);
-        await updateDoc(taskRef, { recurring: recurringData });
+        const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+        const currentUserEmail = localStorage.getItem('userEmail') || '';
+        await updateDoc(taskRef, { 
+          recurring: recurringData,
+          lastModifiedBy: currentUserName,
+          lastModifiedByEmail: currentUserEmail,
+          lastModifiedAt: Date.now()
+        });
         
         // Update icon to green immediately
         const recurringBtn = dateInput?.parentElement?.querySelector('.recurring-icon-btn');
@@ -1009,7 +1045,14 @@ function initRecurringModal() {
         const podRef = doc(db, 'pods', podId);
         const subRef = doc(podRef, 'subprojects', subId);
         const taskRef = doc(subRef, 'tasks', taskId);
-        await updateDoc(taskRef, { recurring: null });
+        const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+        const currentUserEmail = localStorage.getItem('userEmail') || '';
+        await updateDoc(taskRef, { 
+          recurring: null,
+          lastModifiedBy: currentUserName,
+          lastModifiedByEmail: currentUserEmail,
+          lastModifiedAt: Date.now()
+        });
         
         // Update icon to grey immediately
         const recurringBtn = dateInput?.parentElement?.querySelector('.recurring-icon-btn');
@@ -1079,6 +1122,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initMyTasksModal();
     initNotificationsModal();
     initNotificationListener();
+    // Check if we need to navigate to a task from a notification
+    checkPendingNavigation();
   })();
 });
 
@@ -1512,7 +1557,15 @@ function initTaskDrawer() {
     const podRef = doc(db, 'pods', podId);
     const subRef = doc(podRef, 'subprojects', subId);
     const taskRef = doc(subRef, 'tasks', taskId);
-    await updateDoc(taskRef, { longDescription, attachments });
+    const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+    const currentUserEmail = localStorage.getItem('userEmail') || '';
+    await updateDoc(taskRef, { 
+      longDescription, 
+      attachments,
+      lastModifiedBy: currentUserName,
+      lastModifiedByEmail: currentUserEmail,
+      lastModifiedAt: Date.now()
+    });
     // refresh the task list to update detail icons
     const container = document.querySelector(`.subproject-card[data-subproject-id="${subId}"] ul`);
     if (container) await loadTasksInto(podId, subId, container);
@@ -2026,15 +2079,20 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
       return;
     }
     
+    // Get who made the change from the task data (not localStorage!)
+    const changedByName = newData.lastModifiedBy || 'Someone';
+    const changedByEmail = newData.lastModifiedByEmail || '';
+    const currentUserEmail = localStorage.getItem('userEmail') || '';
+    
     console.log('[Notifications] Task snapshot received:', {
       taskId,
       taskText: newData.text,
+      changedBy: changedByName,
+      changedByEmail: changedByEmail,
+      currentUserEmail: currentUserEmail,
       oldAssignees: previousData.assignees,
       newAssignees: newData.assignees
     });
-    
-    const currentUserEmail = localStorage.getItem('userEmail') || '';
-    const currentUserName = localStorage.getItem('userName') || currentUserEmail;
     
     // Check for assignment changes
     const oldAssignees = Array.isArray(previousData.assignees) ? previousData.assignees : [];
@@ -2047,15 +2105,15 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
     
     // Create notifications for newly assigned users
     newlyAssigned.forEach(assignee => {
-      // Don't notify yourself
-      if (assignee.email !== currentUserEmail) {
+      // Don't notify yourself OR the person who made the change
+      if (assignee.email !== currentUserEmail && assignee.email !== changedByEmail) {
         // Use email as userId for consistency (same as what we check in listener)
         const targetUserId = assignee.email || assignee.id;
         
         console.log('[Notifications] Creating assignment notification', {
           targetUserId,
           taskText: newData.text,
-          changedBy: currentUserName,
+          changedBy: changedByName,
           assignee
         });
         
@@ -2067,13 +2125,17 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
           podId,
           subprojectId: subId,
           changeType: 'assigned',
-          changedBy: currentUserName,
+          changedBy: changedByName,
           changes: {
             assignedTo: assignee.name || assignee.email
           }
         });
       } else {
-        console.log('[Notifications] Skipping self-notification for assignment');
+        console.log('[Notifications] Skipping self-notification for assignment', {
+          assigneeEmail: assignee.email,
+          currentUserEmail,
+          changedByEmail
+        });
       }
     });
     
@@ -2093,21 +2155,24 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
       changedFields.push({ field: 'Description', old: 'Updated', new: 'Updated' });
     }
     
-    // If there are changes, notify all assigned users except current user
+    // If there are changes, notify all assigned users except the person who made the change
     if (changedFields.length > 0 && newAssignees.length > 0) {
       console.log('[Notifications] Task updated, notifying assignees', {
         changedFields,
         assigneeCount: newAssignees.length,
-        taskText: newData.text
+        taskText: newData.text,
+        changedBy: changedByName
       });
       
       newAssignees.forEach(assignee => {
-        if (assignee.email !== currentUserEmail) {
+        // Don't notify the person who made the change
+        if (assignee.email !== changedByEmail) {
           // Use email as userId for consistency
           const targetUserId = assignee.email || assignee.id;
           
           console.log('[Notifications] Creating update notification', {
             targetUserId,
+            changedBy: changedByName,
             changedFields: changedFields.map(f => f.field)
           });
           
@@ -2119,9 +2184,11 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
             podId,
             subprojectId: subId,
             changeType: 'updated',
-            changedBy: currentUserName,
+            changedBy: changedByName,
             changes: { fields: changedFields }
           });
+        } else {
+          console.log('[Notifications] Skipping notification for person who made the change:', changedByName);
         }
       });
     }
@@ -2167,10 +2234,33 @@ async function openNotificationsModal() {
       notificationsCol,
       where('userId', '==', currentUserId),
       orderBy('timestamp', 'desc'),
-      limit(50)
+      limit(10) // Only show last 10 notifications
     );
     
     const snapshot = await getDocs(q);
+    
+    // Delete any notifications beyond the 10 most recent
+    const allNotificationsQuery = query(
+      notificationsCol,
+      where('userId', '==', currentUserId),
+      orderBy('timestamp', 'desc')
+    );
+    const allSnapshot = await getDocs(allNotificationsQuery);
+    
+    // If more than 10, delete the excess
+    if (allSnapshot.size > 10) {
+      const toDelete = [];
+      allSnapshot.forEach((doc, index) => {
+        if (index >= 10) {
+          toDelete.push(deleteDoc(doc.ref));
+        }
+      });
+      
+      if (toDelete.length > 0) {
+        await Promise.all(toDelete);
+        console.log(`[Notifications] Deleted ${toDelete.length} old notifications`);
+      }
+    }
     
     if (snapshot.empty) {
       content.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">No notifications yet.</div>';
@@ -2200,8 +2290,16 @@ async function openNotificationsModal() {
       }
       
       html += `
-        <div class="notification-item ${isUnread ? 'notification-unread' : ''}" data-notification-id="${notifDoc.id}" style="background: ${isUnread ? '#f0f8ff' : '#f9f9f9'}; padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; border-left: 4px solid ${isUnread ? '#2196F3' : '#ddd'}; cursor: pointer; transition: all 0.2s;">
-          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+        <div class="notification-item ${isUnread ? 'notification-unread' : ''}" 
+             data-notification-id="${notifDoc.id}" 
+             data-pod-id="${notif.podId}" 
+             data-subproject-id="${notif.subprojectId}" 
+             data-task-id="${notif.taskId}"
+             style="background: ${isUnread ? '#f0f8ff' : '#f9f9f9'}; padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; border-left: 4px solid ${isUnread ? '#2196F3' : '#ddd'}; cursor: pointer; transition: all 0.2s; position: relative;">
+          <button class="notification-delete-btn" data-notification-id="${notifDoc.id}" style="position: absolute; top: 0.5rem; right: 0.5rem; background: none; border: none; color: #999; cursor: pointer; font-size: 1.1rem; padding: 0.25rem 0.5rem; border-radius: 4px; transition: all 0.2s; line-height: 1; z-index: 10;" title="Delete notification">
+            <i class="fas fa-times"></i>
+          </button>
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem; padding-right: 1.5rem;">
             <div style="flex: 1;">
               <div style="font-size: 0.95rem; margin-bottom: 0.25rem; color: #333;">
                 ${changeText}
@@ -2227,24 +2325,82 @@ async function openNotificationsModal() {
               `).join('')}
             </div>
           ` : ''}
+          <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #eee; font-size: 0.85rem; color: #2196F3; text-align: center;">
+            <i class="fas fa-arrow-right" style="margin-right: 0.5rem;"></i>Click to view task
+          </div>
         </div>
       `;
     });
     
     content.innerHTML = html;
     
-    // Add click handlers to mark as read
+    // Add click handlers for delete buttons
+    content.querySelectorAll('.notification-delete-btn').forEach(deleteBtn => {
+      deleteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation(); // Prevent triggering the notification click
+        
+        const notifId = deleteBtn.dataset.notificationId;
+        if (!notifId) return;
+        
+        // Add fade-out animation
+        const notifItem = deleteBtn.closest('.notification-item');
+        if (notifItem) {
+          notifItem.style.opacity = '0';
+          notifItem.style.transform = 'translateX(20px)';
+          notifItem.style.transition = 'all 0.3s ease';
+          
+          // Wait for animation then delete
+          setTimeout(async () => {
+            try {
+              const notifRef = doc(db, 'notifications', notifId);
+              await deleteDoc(notifRef);
+              console.log('[Notifications] Deleted notification:', notifId);
+              
+              // Remove from DOM
+              notifItem.remove();
+              
+              // Check if there are any notifications left
+              const remainingItems = content.querySelectorAll('.notification-item');
+              if (remainingItems.length === 0) {
+                content.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">No notifications yet.</div>';
+              }
+            } catch (error) {
+              console.error('[Notifications] Error deleting notification:', error);
+              // Restore opacity if delete failed
+              notifItem.style.opacity = '1';
+              notifItem.style.transform = 'translateX(0)';
+            }
+          }, 300);
+        }
+      });
+    });
+    
+    // Add click handlers to navigate to task and mark as read
     content.querySelectorAll('.notification-item').forEach(item => {
-      item.addEventListener('click', async () => {
+      item.addEventListener('click', async (e) => {
+        // Don't navigate if clicking the delete button
+        if (e.target.closest('.notification-delete-btn')) {
+          return;
+        }
+        
         const notifId = item.dataset.notificationId;
+        const podId = item.dataset.podId;
+        const subprojectId = item.dataset.subprojectId;
+        const taskId = item.dataset.taskId;
+        
+        // Mark as read
         if (notifId) {
           const notifRef = doc(db, 'notifications', notifId);
           await updateDoc(notifRef, { read: true });
-          item.classList.remove('notification-unread');
-          item.style.background = '#f9f9f9';
-          item.style.borderLeftColor = '#ddd';
-          const badge = item.querySelector('div[style*="background: #2196F3"]');
-          if (badge) badge.remove();
+        }
+        
+        // Close the notification modal
+        if (modal) modal.style.display = 'none';
+        
+        // Navigate to the task
+        if (podId && subprojectId) {
+          console.log('[Notifications] Navigating to task:', { podId, subprojectId, taskId });
+          navigateToTask(podId, subprojectId, taskId);
         }
       });
     });
@@ -2357,8 +2513,7 @@ function getTimeAgo(date) {
 // Play notification sound
 function playNotificationSound() {
   try {
-    // Use a subtle notification sound (same as task completion but quieter)
-    const audio = new Audio('complete.mp3');
+    const audio = new Audio('notification.mp3');
     audio.volume = 0.3; // Quieter for notifications
     audio.play().catch(e => {
       console.log('[Notifications] Could not play sound:', e);
@@ -2402,11 +2557,158 @@ function showBrowserNotification() {
   }
 }
 
+// Navigate to a specific task
+function navigateToTask(podId, subprojectId, taskId) {
+  // Check if we're on the projects page
+  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+  
+  if (currentPage !== 'projects.html') {
+    // Store navigation intent and redirect to projects page
+    sessionStorage.setItem('navigateToTask', JSON.stringify({ podId, subprojectId, taskId }));
+    window.location.href = 'projects.html';
+    return;
+  }
+  
+  // We're already on projects page - navigate to the task
+  console.log('[Notifications] Showing task in UI:', { podId, subprojectId, taskId });
+  
+  // 1. Show only the target pod
+  showOnlyPod(podId);
+  
+  // 2. Update the top links to highlight the correct pod
+  const linksBar = document.getElementById('projectsTopLinks');
+  if (linksBar) {
+    linksBar.querySelectorAll('a').forEach(link => {
+      if (link.dataset.podId === podId) {
+        link.classList.add('active');
+      } else {
+        link.classList.remove('active');
+      }
+    });
+  }
+  
+  // 3. Find and expand the subproject
+  const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subprojectId}"]`);
+  if (subprojectCard) {
+    const taskContent = subprojectCard.querySelector('.task-list');
+    const expandControl = subprojectCard.querySelector('.expand-control');
+    
+    // Expand if not already expanded
+    if (taskContent && taskContent.classList.contains('hidden')) {
+      expandControl?.click();
+    }
+    
+    // 4. Wait a moment for expansion, then scroll to and highlight the task
+    setTimeout(() => {
+      // Scroll subproject into view first
+      subprojectCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      
+      // Find the task row
+      if (taskId) {
+        // Try to find the task in both incomplete and completed lists
+        const taskLists = subprojectCard.querySelectorAll('ul');
+        let taskRow = null;
+        
+        taskLists.forEach(list => {
+          const rows = list.querySelectorAll('li');
+          rows.forEach(row => {
+            // We need to match by task ID - we'll need to check the data
+            // For now, we can scroll to the subproject and it will be visible
+          });
+        });
+        
+        // If we found the task, scroll to it and highlight it
+        if (taskRow) {
+          setTimeout(() => {
+            taskRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Add temporary highlight
+            taskRow.style.backgroundColor = '#fff3cd';
+            taskRow.style.transition = 'background-color 0.3s ease';
+            setTimeout(() => {
+              taskRow.style.backgroundColor = '';
+            }, 2000);
+          }, 300);
+        }
+      }
+      
+      // Add a subtle highlight effect to the subproject card
+      subprojectCard.style.boxShadow = '0 0 0 3px rgba(33, 150, 243, 0.3)';
+      subprojectCard.style.transition = 'box-shadow 0.3s ease';
+      setTimeout(() => {
+        subprojectCard.style.boxShadow = '';
+      }, 2000);
+      
+    }, 300);
+  } else {
+    console.warn('[Notifications] Subproject not found:', subprojectId);
+  }
+  
+  // Update the page header
+  const pod = podInfo.find(p => p.id === podId);
+  if (pod) {
+    setProjectsHeader(pod.title, pod.icon);
+  }
+}
+
+// Check for pending navigation on page load
+function checkPendingNavigation() {
+  const pendingNav = sessionStorage.getItem('navigateToTask');
+  if (pendingNav) {
+    sessionStorage.removeItem('navigateToTask');
+    try {
+      const { podId, subprojectId, taskId } = JSON.parse(pendingNav);
+      // Wait for page to fully load before navigating
+      setTimeout(() => {
+        navigateToTask(podId, subprojectId, taskId);
+      }, 1000);
+    } catch (e) {
+      console.error('[Notifications] Error parsing pending navigation:', e);
+    }
+  }
+}
+
+// Delete all notifications for current user
+async function deleteAllNotifications() {
+  const currentUserEmail = localStorage.getItem('userEmail') || '';
+  const currentUserId = currentUserEmail || localStorage.getItem('userId');
+  
+  if (!confirm('Are you sure you want to delete all notifications? This cannot be undone.')) {
+    return;
+  }
+  
+  try {
+    const notificationsCol = collection(db, 'notifications');
+    const q = query(
+      notificationsCol,
+      where('userId', '==', currentUserId)
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    const deletePromises = snapshot.docs.map(notifDoc => {
+      const notifRef = doc(db, 'notifications', notifDoc.id);
+      return deleteDoc(notifRef);
+    });
+    
+    await Promise.all(deletePromises);
+    
+    console.log(`[Notifications] Deleted all ${deletePromises.length} notifications`);
+    
+    // Refresh the modal to show empty state
+    await openNotificationsModal();
+    
+  } catch (error) {
+    console.error('[Notifications] Error deleting all notifications:', error);
+    alert('Error deleting notifications. Please try again.');
+  }
+}
+
 // Initialize notification modal event listeners
 function initNotificationsModal() {
   const closeBtn = document.getElementById('closeNotificationsModal');
   const modal = document.getElementById('notificationsModal');
   const markAllReadBtn = document.getElementById('markAllReadBtn');
+  const deleteAllBtn = document.getElementById('deleteAllNotificationsBtn');
   
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {
@@ -2416,6 +2718,10 @@ function initNotificationsModal() {
   
   if (markAllReadBtn) {
     markAllReadBtn.addEventListener('click', markAllNotificationsAsRead);
+  }
+  
+  if (deleteAllBtn) {
+    deleteAllBtn.addEventListener('click', deleteAllNotifications);
   }
   
   // Close modal when clicking outside
@@ -2434,7 +2740,16 @@ function initNotificationsModal() {
     if (bell) {
       bell.addEventListener('click', (e) => {
         e.stopPropagation();
-        openNotificationsModal();
+        
+        // Check if we're on the projects page
+        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        if (currentPage !== 'projects.html') {
+          // Redirect to projects page to view notifications
+          window.location.href = 'projects.html';
+        } else {
+          // Open modal if we're already on projects page
+          openNotificationsModal();
+        }
       });
     }
   }, 500);

@@ -172,3 +172,4 @@ Possible improvements for future versions:
 - Notification archiving
 - Search/filter in notification panel
 
+

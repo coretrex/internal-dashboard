@@ -5793,3 +5793,14 @@ body.presence-banner-visible #global-edit-button {
     }
 }
 
+/* Notification delete button */
+.notification-delete-btn:hover {
+    background: rgba(255, 0, 0, 0.1) !important;
+    color: #ff3b30 !important;
+    transform: scale(1.1);
+}
+
+.notification-delete-btn:active {
+    transform: scale(0.95);
+}
+
