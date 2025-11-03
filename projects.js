@@ -431,6 +431,18 @@ function createTaskItem(taskData, podId, subId, taskId) {
       // Play completion sound
       playCompletionSound();
       
+      // Persist completion status to Firestore FIRST before creating recurring task
+      if (podId && subId && taskId) {
+        const podRef = doc(db, 'pods', podId);
+        const subRef = doc(podRef, 'subprojects', subId);
+        const taskRef = doc(subRef, 'tasks', taskId);
+        try {
+          await updateDoc(taskRef, { completed: true });
+        } catch (e) {
+          console.error('[Projects] Error persisting completion:', e);
+        }
+      }
+      
       // Fetch latest task data from Firestore to check for recurring settings
       let latestTaskData = taskData;
       if (podId && subId && taskId) {
@@ -507,16 +519,16 @@ function createTaskItem(taskData, podId, subId, taskId) {
       if (subprojectCard) updateTaskCount(subprojectCard);
       // Update KPIs
       updateKPIs();
-    }
-    // Persist then reload to ensure proper placement and dedupe
-    if (podId && subId && taskId) {
-      const podRef = doc(db, 'pods', podId);
-      const subRef = doc(podRef, 'subprojects', subId);
-      const taskRef = doc(subRef, 'tasks', taskId);
-      try {
-        await updateDoc(taskRef, { completed: checkbox.checked });
-      } catch (_) {}
-      // Do NOT reload lists here; we already moved the item. A later full reload (e.g., expanding again) will reconcile.
+      
+      // Persist unchecked status
+      if (podId && subId && taskId) {
+        const podRef = doc(db, 'pods', podId);
+        const subRef = doc(podRef, 'subprojects', subId);
+        const taskRef = doc(subRef, 'tasks', taskId);
+        try {
+          await updateDoc(taskRef, { completed: false });
+        } catch (_) {}
+      }
     }
   }
 
