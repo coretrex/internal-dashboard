@@ -178,5 +178,19 @@
             </div>
         </div>
     </div>
+
+    <!-- Notifications Modal -->
+    <div id="notificationsModal" class="modal" style="display:none;">
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 700px; max-height: 80vh; background-color: #fefefe; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1001; display: flex; flex-direction: column;">
+            <span class="close" id="closeNotificationsModal" style="position: absolute; right: 1.5rem; top: 1rem; font-size: 2rem; z-index: 10; cursor: pointer; color: #666;">&times;</span>
+            <div style="padding: 2rem 2rem 1rem 2rem; border-bottom: 1px solid #eee; flex-shrink: 0;">
+                <h2 style="margin: 0 0 0.5rem 0;">Notifications</h2>
+                <button id="markAllReadBtn" style="background: none; border: none; color: #2196F3; font-size: 0.9rem; cursor: pointer; padding: 0.5rem 0; text-decoration: underline;">Mark all as read</button>
+            </div>
+            <div id="notificationsContent" style="overflow-y: auto; overflow-x: hidden; padding: 1rem 2rem; flex: 1; min-height: 200px;">
+                <!-- Notifications will be populated here -->
+            </div>
+        </div>
+    </div>
 </body>
 </html>

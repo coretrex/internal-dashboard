@@ -39,6 +39,10 @@ class Navigation extends HTMLElement {
             const userInfoDiv = document.createElement('div');
             userInfoDiv.className = 'user-info-widget';
             userInfoDiv.innerHTML = `
+                <div class="notification-bell-container" id="notificationBell" style="position: relative; cursor: pointer; margin-right: 8px;">
+                    <i class="fas fa-bell" style="font-size: 1.3rem; color: #fff;"></i>
+                    <span class="notification-badge" id="notificationBadge" style="display: none; position: absolute; top: -8px; right: -8px; background: #ff3b30; color: white; border-radius: 50%; min-width: 20px; height: 20px; font-size: 0.7rem; font-weight: bold; align-items: center; justify-content: center; border: 2px solid rgba(30, 34, 44, 0.92); padding: 2px 4px; box-shadow: 0 2px 6px rgba(255, 59, 48, 0.4);">0</span>
+                </div>
                 <img src="${userPhoto}" alt="User Photo" class="user-photo">
                 <span class="welcome-message">Welcome, <strong>${firstName}!</strong></span>
                 <div class="user-dropdown" style="display:none; position:absolute; top:60px; right:0; background:#23272f; color:white; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,0.18); min-width:120px; z-index:1300;">

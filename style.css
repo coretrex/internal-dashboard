@@ -5727,3 +5727,69 @@ body.presence-banner-visible #global-edit-button {
     }
 }
 
+/* ============ NOTIFICATION SYSTEM STYLES ============ */
+
+/* Bell pulse animation */
+@keyframes bellPulse {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.15) rotate(-10deg); }
+    50% { transform: scale(1.15) rotate(10deg); }
+    75% { transform: scale(1.15) rotate(-10deg); }
+    100% { transform: scale(1); }
+}
+
+/* Notification bell container */
+.notification-bell-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.notification-bell-container:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.notification-bell-container:active {
+    transform: scale(0.95);
+}
+
+/* Notification badge */
+.notification-badge {
+    animation: fadeInScale 0.3s ease;
+}
+
+@keyframes fadeInScale {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Notification item hover effect */
+.notification-item:hover {
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Unread notification indicator pulse */
+.notification-unread {
+    animation: notificationGlow 2s ease-in-out infinite;
+}
+
+@keyframes notificationGlow {
+    0%, 100% {
+        box-shadow: 0 0 0 rgba(33, 150, 243, 0);
+    }
+    50% {
+        box-shadow: 0 0 12px rgba(33, 150, 243, 0.3);
+    }
+}
+

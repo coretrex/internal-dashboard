@@ -12,6 +12,10 @@ import {
   deleteDoc,
   query,
   orderBy,
+  onSnapshot,
+  where,
+  limit,
+  Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 let app, db;
@@ -1073,6 +1077,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initGlobalCompletedSection();
     initRecurringModal();
     initMyTasksModal();
+    initNotificationsModal();
+    initNotificationListener();
   })();
 });
 
@@ -1179,6 +1185,19 @@ async function loadTasksInto(podId, subId, listEl) {
         listEl.appendChild(li);
       }
     }
+    
+    // Set up change listener for notifications
+    setupTaskChangeListener(podId, subId, d.id, {
+      text: d.text,
+      completed: d.completed,
+      assignee: d.assignee,
+      assignees: d.assignees,
+      dueDate: d.dueDate,
+      status: d.status,
+      longDescription: d.longDescription,
+      attachments: d.attachments,
+      recurring: d.recurring
+    });
   });
   // Defensive sweep: ensure completed rows reside in completed list
   enforceCompletedHidden(listEl.parentElement, /*doNotHide*/ true);
@@ -1878,4 +1897,505 @@ function initMyTasksModal() {
       }
     });
   }
+}
+
+// ============ NOTIFICATION SYSTEM ============
+
+let notificationListener = null;
+let taskChangeListeners = new Map(); // Map of taskId -> unsubscribe function
+
+// Create a notification in Firestore
+async function createNotification({ userId, type, taskId, taskText, podId, subprojectId, changeType, changedBy, changes = {} }) {
+  try {
+    const notificationsCol = collection(db, 'notifications');
+    const notification = {
+      userId,
+      type, // 'task_assigned', 'task_updated'
+      taskId,
+      taskText: taskText || 'Untitled Task',
+      podId,
+      subprojectId,
+      changeType, // 'assigned', 'updated', 'status_changed', 'date_changed', etc.
+      changedBy,
+      changes,
+      read: false,
+      createdAt: Timestamp.now(),
+      timestamp: Date.now()
+    };
+    
+    await addDoc(notificationsCol, notification);
+    console.log('[Notifications] Created notification:', notification);
+  } catch (error) {
+    console.error('[Notifications] Error creating notification:', error);
+  }
+}
+
+// Initialize notification listener for current user
+function initNotificationListener() {
+  const currentUserEmail = localStorage.getItem('userEmail') || '';
+  const currentUserId = localStorage.getItem('userId') || currentUserEmail;
+  
+  if (!currentUserId) {
+    console.log('[Notifications] No user ID found, skipping notification listener');
+    return;
+  }
+  
+  console.log('[Notifications] Initializing listener for user:', currentUserId);
+  
+  // Listen for notifications for this user
+  const notificationsCol = collection(db, 'notifications');
+  const q = query(
+    notificationsCol,
+    where('userId', '==', currentUserId),
+    orderBy('timestamp', 'desc')
+  );
+  
+  let previousUnreadCount = 0;
+  
+  notificationListener = onSnapshot(q, (snapshot) => {
+    const unreadCount = snapshot.docs.filter(d => !d.data().read).length;
+    
+    // Play sound if new unread notification arrived
+    if (unreadCount > previousUnreadCount) {
+      playNotificationSound();
+      // Show browser notification if permission granted
+      showBrowserNotification();
+    }
+    
+    updateNotificationBadge(unreadCount);
+    previousUnreadCount = unreadCount;
+    
+    console.log('[Notifications] Updated - Total:', snapshot.docs.length, 'Unread:', unreadCount);
+  }, (error) => {
+    console.error('[Notifications] Listener error:', error);
+  });
+}
+
+// Update notification badge in the UI
+function updateNotificationBadge(count) {
+  const badge = document.getElementById('notificationBadge');
+  const bell = document.getElementById('notificationBell');
+  
+  if (badge) {
+    if (count > 0) {
+      badge.textContent = count > 99 ? '99+' : count;
+      badge.style.display = 'flex';
+      
+      // Add pulse animation for new notifications
+      if (bell) {
+        bell.style.animation = 'none';
+        setTimeout(() => {
+          bell.style.animation = 'bellPulse 0.5s ease-in-out';
+        }, 10);
+      }
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+
+// Track task changes to generate notifications
+function setupTaskChangeListener(podId, subId, taskId, taskData) {
+  // Clean up existing listener if present
+  if (taskChangeListeners.has(taskId)) {
+    const oldUnsubscribe = taskChangeListeners.get(taskId);
+    if (oldUnsubscribe) oldUnsubscribe();
+    taskChangeListeners.delete(taskId);
+  }
+  
+  const podRef = doc(db, 'pods', podId);
+  const subRef = doc(podRef, 'subprojects', subId);
+  const taskRef = doc(subRef, 'tasks', taskId);
+  
+  // Store the previous state
+  let previousData = { ...taskData };
+  let isFirstSnapshot = true; // Skip the first snapshot to avoid false notifications on load
+  
+  const unsubscribe = onSnapshot(taskRef, (snapshot) => {
+    if (!snapshot.exists()) return;
+    
+    // Skip first snapshot (initial load)
+    if (isFirstSnapshot) {
+      isFirstSnapshot = false;
+      return;
+    }
+    
+    const newData = snapshot.data();
+    const currentUserEmail = localStorage.getItem('userEmail') || '';
+    const currentUserName = localStorage.getItem('userName') || currentUserEmail;
+    
+    // Check for assignment changes
+    const oldAssignees = Array.isArray(previousData.assignees) ? previousData.assignees : [];
+    const newAssignees = Array.isArray(newData.assignees) ? newData.assignees : [];
+    
+    // Find newly assigned users
+    const newlyAssigned = newAssignees.filter(newA => 
+      !oldAssignees.some(oldA => oldA.id === newA.id)
+    );
+    
+    // Create notifications for newly assigned users
+    newlyAssigned.forEach(assignee => {
+      // Don't notify yourself
+      if (assignee.email !== currentUserEmail) {
+        createNotification({
+          userId: assignee.id || assignee.email,
+          type: 'task_assigned',
+          taskId,
+          taskText: newData.text || 'Untitled Task',
+          podId,
+          subprojectId: subId,
+          changeType: 'assigned',
+          changedBy: currentUserName,
+          changes: {
+            assignedTo: assignee.name || assignee.email
+          }
+        });
+      }
+    });
+    
+    // Check for other changes that should notify assigned users
+    const changedFields = [];
+    
+    if (previousData.text !== newData.text && previousData.text) {
+      changedFields.push({ field: 'Task Name', old: previousData.text, new: newData.text });
+    }
+    if (previousData.dueDate !== newData.dueDate) {
+      changedFields.push({ field: 'Due Date', old: previousData.dueDate || 'None', new: newData.dueDate || 'None' });
+    }
+    if (previousData.status !== newData.status && previousData.status) {
+      changedFields.push({ field: 'Status', old: previousData.status, new: newData.status });
+    }
+    if (previousData.longDescription !== newData.longDescription && previousData.longDescription !== undefined) {
+      changedFields.push({ field: 'Description', old: 'Updated', new: 'Updated' });
+    }
+    
+    // If there are changes, notify all assigned users except current user
+    if (changedFields.length > 0 && newAssignees.length > 0) {
+      newAssignees.forEach(assignee => {
+        if (assignee.email !== currentUserEmail) {
+          createNotification({
+            userId: assignee.id || assignee.email,
+            type: 'task_updated',
+            taskId,
+            taskText: newData.text || 'Untitled Task',
+            podId,
+            subprojectId: subId,
+            changeType: 'updated',
+            changedBy: currentUserName,
+            changes: { fields: changedFields }
+          });
+        }
+      });
+    }
+    
+    // Update previous data for next comparison
+    previousData = { ...newData };
+  }, (error) => {
+    console.error('[Notifications] Task listener error:', error);
+  });
+  
+  taskChangeListeners.set(taskId, unsubscribe);
+}
+
+// Clean up all task listeners (call when needed)
+function cleanupTaskListeners() {
+  taskChangeListeners.forEach((unsubscribe, taskId) => {
+    if (unsubscribe) unsubscribe();
+  });
+  taskChangeListeners.clear();
+  console.log('[Notifications] Cleaned up all task listeners');
+}
+
+// Open notifications modal
+async function openNotificationsModal() {
+  const modal = document.getElementById('notificationsModal');
+  const content = document.getElementById('notificationsContent');
+  
+  if (!modal || !content) return;
+  
+  const currentUserEmail = localStorage.getItem('userEmail') || '';
+  const currentUserId = localStorage.getItem('userId') || currentUserEmail;
+  
+  // Show modal
+  modal.style.display = 'block';
+  
+  // Load notifications
+  content.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">Loading notifications...</div>';
+  
+  try {
+    const notificationsCol = collection(db, 'notifications');
+    const q = query(
+      notificationsCol,
+      where('userId', '==', currentUserId),
+      orderBy('timestamp', 'desc'),
+      limit(50)
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      content.innerHTML = '<div style="text-align: center; padding: 2rem; color: #666;">No notifications yet.</div>';
+      return;
+    }
+    
+    let html = '';
+    
+    snapshot.forEach(notifDoc => {
+      const notif = notifDoc.data();
+      const isUnread = !notif.read;
+      const timestamp = notif.createdAt?.toDate?.() || new Date(notif.timestamp);
+      const timeAgo = getTimeAgo(timestamp);
+      
+      // Get pod and subproject names
+      const podData = podInfo.find(p => p.id === notif.podId);
+      const podTitle = podData ? podData.title : notif.podId;
+      
+      let changeText = '';
+      if (notif.changeType === 'assigned') {
+        changeText = `<strong>${notif.changedBy}</strong> assigned you to a task`;
+      } else if (notif.changeType === 'updated' && notif.changes?.fields) {
+        const fields = notif.changes.fields.map(f => f.field).join(', ');
+        changeText = `<strong>${notif.changedBy}</strong> updated ${fields}`;
+      } else {
+        changeText = `<strong>${notif.changedBy}</strong> made changes`;
+      }
+      
+      html += `
+        <div class="notification-item ${isUnread ? 'notification-unread' : ''}" data-notification-id="${notifDoc.id}" style="background: ${isUnread ? '#f0f8ff' : '#f9f9f9'}; padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; border-left: 4px solid ${isUnread ? '#2196F3' : '#ddd'}; cursor: pointer; transition: all 0.2s;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+            <div style="flex: 1;">
+              <div style="font-size: 0.95rem; margin-bottom: 0.25rem; color: #333;">
+                ${changeText}
+              </div>
+              <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem; color: #000;">
+                "${notif.taskText}"
+              </div>
+              <div style="color: #666; font-size: 0.85rem;">
+                ${podTitle} • ${timeAgo}
+              </div>
+            </div>
+            ${isUnread ? '<div style="width: 8px; height: 8px; background: #2196F3; border-radius: 50%; margin-left: 0.5rem; margin-top: 0.25rem;"></div>' : ''}
+          </div>
+          ${notif.changes?.fields ? `
+            <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(33, 150, 243, 0.05); border-radius: 4px; font-size: 0.85rem;">
+              <strong>Changes:</strong>
+              ${notif.changes.fields.map(f => `
+                <div style="margin-top: 0.25rem; color: #555;">
+                  <span style="color: #2196F3;">${f.field}:</span> 
+                  ${f.old !== 'Updated' ? `<span style="text-decoration: line-through; opacity: 0.6;">${f.old}</span> → ` : ''}
+                  <span style="font-weight: 500;">${f.new}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    });
+    
+    content.innerHTML = html;
+    
+    // Add click handlers to mark as read
+    content.querySelectorAll('.notification-item').forEach(item => {
+      item.addEventListener('click', async () => {
+        const notifId = item.dataset.notificationId;
+        if (notifId) {
+          const notifRef = doc(db, 'notifications', notifId);
+          await updateDoc(notifRef, { read: true });
+          item.classList.remove('notification-unread');
+          item.style.background = '#f9f9f9';
+          item.style.borderLeftColor = '#ddd';
+          const badge = item.querySelector('div[style*="background: #2196F3"]');
+          if (badge) badge.remove();
+        }
+      });
+    });
+    
+  } catch (error) {
+    console.error('[Notifications] Error loading notifications:', error);
+    
+    // Check if it's an index error
+    if (error.message && error.message.includes('index')) {
+      // Extract the index creation URL from the error
+      const indexUrlMatch = error.message.match(/https:\/\/console\.firebase\.google\.com[^\s]+/);
+      const indexUrl = indexUrlMatch ? indexUrlMatch[0] : null;
+      
+      content.innerHTML = `
+        <div style="padding: 2rem; text-align: center;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">🔧</div>
+          <h3 style="color: #2196F3; margin-bottom: 1rem;">One-Time Setup Required</h3>
+          <p style="color: #666; margin-bottom: 1.5rem; line-height: 1.6;">
+            The notification system needs a Firestore index to work.<br/>
+            This is a <strong>one-time setup</strong> that takes about 2 minutes.
+          </p>
+          
+          <div style="background: #f0f8ff; border: 2px solid #2196F3; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; text-align: left;">
+            <h4 style="color: #2196F3; margin-bottom: 0.75rem;">📋 Steps to Fix:</h4>
+            <ol style="color: #333; line-height: 1.8; margin-left: 1.5rem;">
+              <li>Click the button below to open Firebase Console</li>
+              <li>Click <strong>"Create Index"</strong> button</li>
+              <li>Wait 1-2 minutes for it to build</li>
+              <li>Come back and refresh this page</li>
+            </ol>
+          </div>
+          
+          ${indexUrl ? `
+            <a href="${indexUrl}" target="_blank" style="display: inline-block; background: #2196F3; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-bottom: 1rem; transition: all 0.2s; box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);" onmouseover="this.style.background='#1976D2'" onmouseout="this.style.background='#2196F3'">
+              🚀 Create Index in Firebase
+            </a>
+            <br/>
+          ` : ''}
+          
+          <p style="color: #999; font-size: 0.85rem; margin-top: 1rem;">
+            Need help? Check the NOTIFICATIONS_GUIDE.md file
+          </p>
+        </div>
+      `;
+    } else {
+      // Generic error
+      content.innerHTML = `
+        <div style="text-align: center; padding: 2rem; color: #ff6b6b;">
+          <p style="margin-bottom: 0.5rem;">Error loading notifications.</p>
+          <p style="font-size: 0.85rem; color: #999;">${error.message || 'Unknown error'}</p>
+        </div>
+      `;
+    }
+  }
+}
+
+// Mark all notifications as read
+async function markAllNotificationsAsRead() {
+  const currentUserEmail = localStorage.getItem('userEmail') || '';
+  const currentUserId = localStorage.getItem('userId') || currentUserEmail;
+  
+  try {
+    const notificationsCol = collection(db, 'notifications');
+    const q = query(
+      notificationsCol,
+      where('userId', '==', currentUserId),
+      where('read', '==', false)
+    );
+    
+    const snapshot = await getDocs(q);
+    
+    const updatePromises = snapshot.docs.map(notifDoc => {
+      const notifRef = doc(db, 'notifications', notifDoc.id);
+      return updateDoc(notifRef, { read: true });
+    });
+    
+    await Promise.all(updatePromises);
+    
+    // Refresh the modal
+    await openNotificationsModal();
+    
+  } catch (error) {
+    console.error('[Notifications] Error marking all as read:', error);
+  }
+}
+
+// Helper function to format time ago
+function getTimeAgo(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  
+  let interval = seconds / 31536000;
+  if (interval > 1) return Math.floor(interval) + ' year' + (Math.floor(interval) > 1 ? 's' : '') + ' ago';
+  
+  interval = seconds / 2592000;
+  if (interval > 1) return Math.floor(interval) + ' month' + (Math.floor(interval) > 1 ? 's' : '') + ' ago';
+  
+  interval = seconds / 86400;
+  if (interval > 1) return Math.floor(interval) + ' day' + (Math.floor(interval) > 1 ? 's' : '') + ' ago';
+  
+  interval = seconds / 3600;
+  if (interval > 1) return Math.floor(interval) + ' hour' + (Math.floor(interval) > 1 ? 's' : '') + ' ago';
+  
+  interval = seconds / 60;
+  if (interval > 1) return Math.floor(interval) + ' minute' + (Math.floor(interval) > 1 ? 's' : '') + ' ago';
+  
+  return 'Just now';
+}
+
+// Play notification sound
+function playNotificationSound() {
+  try {
+    // Use a subtle notification sound (same as task completion but quieter)
+    const audio = new Audio('complete.mp3');
+    audio.volume = 0.3; // Quieter for notifications
+    audio.play().catch(e => {
+      console.log('[Notifications] Could not play sound:', e);
+    });
+  } catch (e) {
+    console.log('[Notifications] Error creating audio:', e);
+  }
+}
+
+// Show browser notification
+function showBrowserNotification() {
+  // Check if browser supports notifications
+  if (!('Notification' in window)) {
+    console.log('[Notifications] Browser does not support notifications');
+    return;
+  }
+  
+  // Request permission if not already granted
+  if (Notification.permission === 'granted') {
+    // Show notification
+    new Notification('CoreTrex - New Task Update', {
+      body: 'You have a new task notification',
+      icon: 'CORETREX_LOGO.png',
+      badge: 'CORETREX_LOGO.png',
+      tag: 'coretrex-notification',
+      requireInteraction: false
+    });
+  } else if (Notification.permission !== 'denied') {
+    // Request permission
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        new Notification('CoreTrex - New Task Update', {
+          body: 'You have a new task notification',
+          icon: 'CORETREX_LOGO.png',
+          badge: 'CORETREX_LOGO.png',
+          tag: 'coretrex-notification',
+          requireInteraction: false
+        });
+      }
+    });
+  }
+}
+
+// Initialize notification modal event listeners
+function initNotificationsModal() {
+  const closeBtn = document.getElementById('closeNotificationsModal');
+  const modal = document.getElementById('notificationsModal');
+  const markAllReadBtn = document.getElementById('markAllReadBtn');
+  
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      if (modal) modal.style.display = 'none';
+    });
+  }
+  
+  if (markAllReadBtn) {
+    markAllReadBtn.addEventListener('click', markAllNotificationsAsRead);
+  }
+  
+  // Close modal when clicking outside
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+  }
+  
+  // Set up click handler for notification bell (will be in navigation)
+  // We need to wait for the navigation to be rendered
+  setTimeout(() => {
+    const bell = document.getElementById('notificationBell');
+    if (bell) {
+      bell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openNotificationsModal();
+      });
+    }
+  }, 500);
 }
