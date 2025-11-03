@@ -844,7 +844,7 @@ let currentRecurringTask = null;
 function calculateNextRecurringDate(currentDueDate, recurringData) {
   if (!currentDueDate || !recurringData) return null;
   
-  const currentDate = new Date(currentDueDate);
+  const currentDate = new Date(currentDueDate + 'T00:00:00'); // Parse in local timezone
   if (isNaN(currentDate.getTime())) return null;
   
   const frequency = recurringData.frequency;
@@ -866,12 +866,15 @@ function calculateNextRecurringDate(currentDueDate, recurringData) {
       const currentDay = currentDate.getDay();
       
       // Find next occurrence in the cycle
+      // IMPORTANT: We need to find the NEXT occurrence, not the current day
       let nextOccurrenceDay = null;
+      let daysToAdd = 0;
       
-      // First, check if there's a selected day later in the current week
+      // First, check if there's a selected day later in the current week (after today)
       for (const day of sortedDays) {
         if (day > currentDay) {
           nextOccurrenceDay = day;
+          daysToAdd = day - currentDay;
           break;
         }
       }
@@ -880,13 +883,16 @@ function calculateNextRecurringDate(currentDueDate, recurringData) {
       if (nextOccurrenceDay === null) {
         nextOccurrenceDay = sortedDays[0];
         // Calculate days to add (go to next week)
-        const daysToAdd = (7 - currentDay) + nextOccurrenceDay;
-        nextDate.setDate(nextDate.getDate() + daysToAdd);
-      } else {
-        // Add days to get to next occurrence this week
-        const daysToAdd = nextOccurrenceDay - currentDay;
-        nextDate.setDate(nextDate.getDate() + daysToAdd);
+        // If current day is same as the recurring day, add full 7 days
+        // Otherwise, calculate days remaining in week + days into next week
+        if (currentDay === nextOccurrenceDay) {
+          daysToAdd = 7;
+        } else {
+          daysToAdd = (7 - currentDay) + nextOccurrenceDay;
+        }
       }
+      
+      nextDate.setDate(nextDate.getDate() + daysToAdd);
     }
   } else if (frequency === 'monthly') {
     // Add 1 month, keeping the same day
