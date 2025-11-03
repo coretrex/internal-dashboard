@@ -22,6 +22,10 @@ let app, db;
 let cachedUsers = null; // [{id, name, email, photoURL}]
 // Track tasks that were just marked completed to prevent flicker reappearance
 const pendingCompletedTaskIds = new Set();
+// Store real-time listeners for cleanup
+const subprojectListeners = new Map(); // podId -> unsubscribe function
+const taskListeners = new Map(); // `${podId}_${subId}` -> unsubscribe function
+
 async function initializeFirebaseApp() {
   const firebaseInstance = await initializeFirebase();
   app = firebaseInstance.app;
@@ -368,6 +372,8 @@ function createSubProjectElement(subTitle, podId, subprojectId) {
 
 function createTaskItem(taskData, podId, subId, taskId) {
   const li = document.createElement('li');
+  // Store task ID as data attribute for real-time updates
+  li.dataset.taskId = taskId;
   const safe = (v) => (v == null ? '' : v);
   const statusLower = (taskData.status || 'Open').toLowerCase();
   const isCompleted = taskData.completed;
@@ -1139,143 +1145,290 @@ async function ensureDefaultPods() {
 }
 
 async function loadSubprojectsInto(podId, containerEl) {
-  containerEl.innerHTML = '';
+  // Clean up existing listener if present
+  if (subprojectListeners.has(podId)) {
+    const oldUnsubscribe = subprojectListeners.get(podId);
+    if (oldUnsubscribe) oldUnsubscribe();
+    subprojectListeners.delete(podId);
+  }
+  
   const podRef = doc(db, 'pods', podId);
   const subCol = collection(podRef, 'subprojects');
-  const subs = await getDocs(subCol);
-  const projects = [];
-  subs.forEach(s => {
-    const data = s.data();
-    const name = data.name || 'Untitled';
-    const subEl = createSubProjectElement(name, podId, s.id);
-    containerEl.appendChild(subEl);
-    registerSubproject(podId, name, subEl, s.id);
-    projects.push({ id: s.id, name, el: subEl, order: typeof data.order === 'number' ? data.order : Number.MAX_SAFE_INTEGER, createdAt: data.createdAt || 0 });
+  
+  // Use onSnapshot for real-time updates
+  const unsubscribe = onSnapshot(subCol, (snapshot) => {
+    console.log('[Projects] Subprojects snapshot received for pod:', podId, 'count:', snapshot.size);
+    
+    // Track existing subproject elements
+    const existingSubprojects = new Map();
+    containerEl.querySelectorAll('.subproject-card').forEach(el => {
+      const subId = el.dataset.subprojectId;
+      if (subId) existingSubprojects.set(subId, el);
+    });
+    
+    const projects = [];
+    snapshot.forEach(s => {
+      const data = s.data();
+      const name = data.name || 'Untitled';
+      
+      // Check if element already exists
+      let subEl = existingSubprojects.get(s.id);
+      if (subEl) {
+        // Update existing element if name changed
+        const titleSpan = subEl.querySelector('.subproject-title');
+        if (titleSpan && titleSpan.textContent !== name) {
+          titleSpan.textContent = name;
+          subEl.dataset.projectName = name;
+        }
+        existingSubprojects.delete(s.id);
+      } else {
+        // Create new element for new subproject
+        subEl = createSubProjectElement(name, podId, s.id);
+        registerSubproject(podId, name, subEl, s.id);
+        console.log('[Projects] New subproject detected:', name);
+      }
+      
+      projects.push({ 
+        id: s.id, 
+        name, 
+        el: subEl, 
+        order: typeof data.order === 'number' ? data.order : Number.MAX_SAFE_INTEGER, 
+        createdAt: data.createdAt || 0 
+      });
+    });
+    
+    // Remove deleted subprojects
+    existingSubprojects.forEach((el) => {
+      console.log('[Projects] Subproject deleted, removing from UI');
+      el.remove();
+    });
+    
+    // Sort by saved order first, then createdAt
+    projects.sort((a, b) => (a.order - b.order) || (a.createdAt - b.createdAt));
+    
+    // Re-append in sorted order
+    containerEl.innerHTML = '';
+    projects.forEach(p => {
+      containerEl.appendChild(p.el);
+      // Load tasks with real-time listener (only if not already loaded)
+      const taskUl = p.el.querySelector('ul');
+      if (taskUl) {
+        loadTasksInto(podId, p.id, taskUl);
+      }
+    });
+    
+    // Update KPIs after subproject changes
+    updateKPIs();
   });
-  // Sort by saved order first, then createdAt
-  projects.sort((a, b) => (a.order - b.order) || (a.createdAt - b.createdAt));
-  // Re-append in sorted order
-  projects.forEach(p => containerEl.appendChild(p.el));
-  // Load tasks for each subproject
-  for (const p of projects) {
-    await loadTasksInto(podId, p.id, p.el.querySelector('ul'));
-  }
+  
+  // Store unsubscribe function
+  subprojectListeners.set(podId, unsubscribe);
 }
 
 async function loadTasksInto(podId, subId, listEl) {
-  listEl.innerHTML = '';
+  const listenerKey = `${podId}_${subId}`;
+  
+  // Clean up existing listener if present
+  if (taskListeners.has(listenerKey)) {
+    const oldUnsubscribe = taskListeners.get(listenerKey);
+    if (oldUnsubscribe) oldUnsubscribe();
+    taskListeners.delete(listenerKey);
+  }
+  
   const completedUl = listEl.parentElement?.querySelector('.completed-list');
-  if (completedUl) completedUl.innerHTML = '';
+  
   const podRef = doc(db, 'pods', podId);
   const subRef = doc(podRef, 'subprojects', subId);
   const tasksCol = collection(subRef, 'tasks');
-  let tasks;
-  try {
-    tasks = await getDocsFromServer(tasksCol);
-  } catch (_) {
-    tasks = await getDocs(tasksCol);
-  }
-  const items = [];
-  tasks.forEach(t => {
-    const data = t.data();
-    items.push({
-      id: t.id,
-      text: data.text || 'Untitled',
-      completed: !!data.completed,
-      assignee: data.assignee || '',
-      assignees: Array.isArray(data.assignees) ? data.assignees : [],
-      dueDate: data.dueDate || '',
-      status: data.status || 'Open',
-      longDescription: data.longDescription || '',
-      attachments: data.attachments || [],
-      recurring: data.recurring || null
+  
+  // Use onSnapshot for real-time updates
+  const unsubscribe = onSnapshot(tasksCol, (snapshot) => {
+    console.log('[Projects] Tasks snapshot received for subproject:', subId, 'count:', snapshot.size);
+    
+    // Track existing task elements by task ID
+    const existingTasks = new Map();
+    if (listEl) {
+      listEl.querySelectorAll('li').forEach(li => {
+        // We need to find the task ID somehow - we'll store it as data attribute
+        const taskId = li.dataset?.taskId;
+        if (taskId) existingTasks.set(taskId, li);
+      });
+    }
+    if (completedUl) {
+      completedUl.querySelectorAll('li').forEach(li => {
+        const taskId = li.dataset?.taskId;
+        if (taskId) existingTasks.set(taskId, li);
+      });
+    }
+    
+    const items = [];
+    snapshot.forEach(t => {
+      const data = t.data();
+      items.push({
+        id: t.id,
+        text: data.text || 'Untitled',
+        completed: !!data.completed,
+        assignee: data.assignee || '',
+        assignees: Array.isArray(data.assignees) ? data.assignees : [],
+        dueDate: data.dueDate || '',
+        status: data.status || 'Open',
+        longDescription: data.longDescription || '',
+        attachments: data.attachments || [],
+        recurring: data.recurring || null
+      });
     });
-  });
-  // Sort by due date ascending (empty due dates at bottom)
-  function parseDate(s) {
-    if (!s) return null;
-    const d = new Date(s);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  items.sort((a, b) => {
-    const da = parseDate(a.dueDate);
-    const db = parseDate(b.dueDate);
-    if (da && db) return da - db;
-    if (da && !db) return -1;
-    if (!da && db) return 1;
-    return 0;
-  });
-  items.forEach(d => {
-    const li = createTaskItem({
-      text: d.text,
-      completed: d.completed,
-      assignee: d.assignee,
-      assignees: d.assignees,
-      dueDate: d.dueDate,
-      status: d.status,
-      longDescription: d.longDescription,
-      attachments: d.attachments,
-      recurring: d.recurring
-    }, podId, subId, d.id);
-    // Tasks that are completed go to completed list
-    if (d.completed) {
-      if (completedUl) {
-        completedUl.appendChild(li);
-        console.log('[Projects] Appended completed task to completed list', { podId, subId, taskId: d.id });
+    
+    // Sort by due date ascending (empty due dates at bottom)
+    function parseDate(s) {
+      if (!s) return null;
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    items.sort((a, b) => {
+      const da = parseDate(a.dueDate);
+      const db = parseDate(b.dueDate);
+      if (da && db) return da - db;
+      if (da && !db) return -1;
+      if (!da && db) return 1;
+      return 0;
+    });
+    
+    // Clear lists
+    if (listEl) listEl.innerHTML = '';
+    if (completedUl) completedUl.innerHTML = '';
+    
+    items.forEach(d => {
+      // Check if task element already exists
+      let li = existingTasks.get(d.id);
+      if (li) {
+        // Update existing task element
+        updateTaskElement(li, d, podId, subId);
+        existingTasks.delete(d.id);
+      } else {
+        // Create new task element
+        li = createTaskItem({
+          text: d.text,
+          completed: d.completed,
+          assignee: d.assignee,
+          assignees: d.assignees,
+          dueDate: d.dueDate,
+          status: d.status,
+          longDescription: d.longDescription,
+          attachments: d.attachments,
+          recurring: d.recurring
+        }, podId, subId, d.id);
+        
+        // Set up change listener for notifications
+        setupTaskChangeListener(podId, subId, d.id, {
+          text: d.text,
+          completed: d.completed,
+          assignee: d.assignee,
+          assignees: d.assignees,
+          dueDate: d.dueDate,
+          status: d.status,
+          longDescription: d.longDescription,
+          attachments: d.attachments,
+          recurring: d.recurring
+        });
       }
-    } else {
-      // Incomplete tasks go to the main active list
-      // Skip rendering items we just marked complete but server hasn't caught up yet
-      if (!pendingCompletedTaskIds.has(d.id)) {
-        listEl.appendChild(li);
+      
+      // Tasks that are completed go to completed list
+      if (d.completed) {
+        if (completedUl) {
+          completedUl.appendChild(li);
+        }
+      } else {
+        // Incomplete tasks go to the main active list
+        // Skip rendering items we just marked complete but server hasn't caught up yet
+        if (!pendingCompletedTaskIds.has(d.id)) {
+          if (listEl) listEl.appendChild(li);
+        }
+      }
+    });
+    
+    // Remove deleted tasks
+    existingTasks.forEach((li) => {
+      console.log('[Projects] Task deleted, removing from UI');
+      li.remove();
+    });
+    
+    // Defensive sweep: ensure completed rows reside in completed list
+    if (listEl.parentElement) {
+      enforceCompletedHidden(listEl.parentElement, /*doNotHide*/ true);
+      partitionTasks(listEl.parentElement);
+    }
+    
+    // Ensure completed list is hidden by default after loading
+    if (completedUl) {
+      // Keep hidden state if it was already hidden
+      if (!completedUl.classList.contains('hidden')) {
+        // Only set to hidden on first load
+        const isFirstLoad = completedUl.dataset.initialized !== 'true';
+        if (isFirstLoad) {
+          completedUl.classList.add('hidden');
+          completedUl.dataset.initialized = 'true';
+        }
       }
     }
     
-    // Set up change listener for notifications
-    setupTaskChangeListener(podId, subId, d.id, {
-      text: d.text,
-      completed: d.completed,
-      assignee: d.assignee,
-      assignees: d.assignees,
-      dueDate: d.dueDate,
-      status: d.status,
-      longDescription: d.longDescription,
-      attachments: d.attachments,
-      recurring: d.recurring
-    });
+    updateCompletedToggleText(listEl);
+    
+    // Update task count for this subproject
+    const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
+    if (subprojectCard) {
+      updateTaskCount(subprojectCard);
+    }
+    
+    // Update KPIs
+    updateKPIs();
   });
-  // Defensive sweep: ensure completed rows reside in completed list
-  enforceCompletedHidden(listEl.parentElement, /*doNotHide*/ true);
-  // Ensure partitioning is correct on load - run multiple times to catch edge cases
-  partitionTasks(listEl.parentElement);
-  // Run again after a tiny delay to ensure all "Done" tasks are caught
-  setTimeout(() => {
-    partitionTasks(listEl.parentElement);
-    enforceCompletedHidden(listEl.parentElement, /*doNotHide*/ true);
-  }, 50);
   
-  // Ensure completed list is hidden by default after loading
-  const comp = listEl.parentElement?.querySelector('.completed-list');
-  if (comp) {
-    // Always hide completed list by default on load (user can toggle to show)
-    comp.classList.add('hidden');
-    console.log('[Projects] Completed list visibility after load', {
-      podId,
-      subId,
-      hidden: comp.classList.contains('hidden'),
-      count: comp.querySelectorAll('li').length
-    });
-  }
-  updateCompletedToggleText(listEl);
-  
-  // Update task count for this subproject
-  const subprojectCard = document.querySelector(`.subproject-card[data-subproject-id="${subId}"]`);
-  if (subprojectCard) {
-    updateTaskCount(subprojectCard);
+  // Store unsubscribe function
+  taskListeners.set(listenerKey, unsubscribe);
+}
+
+// Helper function to update existing task element with new data
+function updateTaskElement(li, taskData, podId, subId) {
+  // Update task text
+  const textSpan = li.querySelector('.task-text');
+  if (textSpan && textSpan.textContent !== taskData.text) {
+    textSpan.textContent = taskData.text;
   }
   
-  // Update KPIs
-  updateKPIs();
+  // Update checkbox
+  const checkbox = li.querySelector('.task-toggle');
+  if (checkbox && checkbox.checked !== taskData.completed) {
+    checkbox.checked = taskData.completed;
+    textSpan.classList.toggle('task-completed', checkbox.checked);
+  }
+  
+  // Update assignee display
+  const assigneeDisplay = li.querySelector('.assignee-display');
+  if (assigneeDisplay) {
+    const displayText = Array.isArray(taskData.assignees) && taskData.assignees.length 
+      ? taskData.assignees.map(a => a.name || a.email).join(', ')
+      : (taskData.assignee || 'Unassigned');
+    if (assigneeDisplay.textContent !== displayText) {
+      assigneeDisplay.textContent = displayText;
+    }
+  }
+  
+  // Update due date
+  const dateInput = li.querySelector('.date-input');
+  if (dateInput && dateInput.value !== taskData.dueDate) {
+    dateInput.value = taskData.dueDate || '';
+  }
+  
+  // Update status
+  const statusSelect = li.querySelector('.status-select');
+  if (statusSelect && statusSelect.value !== taskData.status) {
+    statusSelect.value = taskData.status || 'Open';
+    // Trigger style update
+    const event = new Event('change');
+    statusSelect.dispatchEvent(event);
+  }
+  
+  console.log('[Projects] Updated task element:', taskData.text);
 }
 
 function refreshTopLinksSelection(podId, projectName) {
@@ -2232,14 +2385,37 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
   taskChangeListeners.set(taskId, unsubscribe);
 }
 
-// Clean up all task listeners (call when needed)
+// Clean up all task change listeners (for notifications)
 function cleanupTaskListeners() {
   taskChangeListeners.forEach((unsubscribe, taskId) => {
     if (unsubscribe) unsubscribe();
   });
   taskChangeListeners.clear();
-  console.log('[Notifications] Cleaned up all task listeners');
+  console.log('[Notifications] Cleaned up all task change listeners');
 }
+
+// Clean up all real-time listeners
+function cleanupAllRealTimeListeners() {
+  // Clean up subproject listeners
+  subprojectListeners.forEach((unsubscribe, podId) => {
+    if (unsubscribe) unsubscribe();
+  });
+  subprojectListeners.clear();
+  
+  // Clean up task listeners
+  taskListeners.forEach((unsubscribe, key) => {
+    if (unsubscribe) unsubscribe();
+  });
+  taskListeners.clear();
+  
+  console.log('[Projects] Cleaned up all real-time listeners');
+}
+
+// Clean up listeners when page is unloaded
+window.addEventListener('beforeunload', () => {
+  cleanupAllRealTimeListeners();
+  cleanupTaskListeners();
+});
 
 // Open notifications modal
 async function openNotificationsModal() {
