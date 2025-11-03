@@ -888,6 +888,64 @@ function initGlobalCompletedSection() {
   window.updateGlobalCompletedToggle = updateGlobalToggle;
 }
 
+// Initialize sound toggle button
+function initSoundToggle() {
+  const soundToggle = document.getElementById('soundToggle');
+  if (!soundToggle) return;
+  
+  // Get initial mute state from localStorage
+  const isMuted = localStorage.getItem('completionSoundMuted') === 'true';
+  
+  // Update button appearance based on mute state
+  function updateSoundIcon() {
+    const icon = soundToggle.querySelector('i');
+    const isMuted = localStorage.getItem('completionSoundMuted') === 'true';
+    
+    if (isMuted) {
+      icon.className = 'fas fa-volume-mute';
+      soundToggle.style.color = '#999';
+      soundToggle.style.borderColor = '#ccc';
+      soundToggle.title = 'Sound muted - Click to unmute';
+    } else {
+      icon.className = 'fas fa-volume-up';
+      soundToggle.style.color = '#4CAF50';
+      soundToggle.style.borderColor = '#4CAF50';
+      soundToggle.title = 'Sound on - Click to mute';
+    }
+  }
+  
+  // Set initial state
+  updateSoundIcon();
+  
+  // Toggle mute on click
+  soundToggle.addEventListener('click', (e) => {
+    const currentlyMuted = localStorage.getItem('completionSoundMuted') === 'true';
+    const newMutedState = !currentlyMuted;
+    
+    localStorage.setItem('completionSoundMuted', String(newMutedState));
+    updateSoundIcon();
+    
+    // Show a subtle feedback animation
+    soundToggle.style.transform = 'scale(0.9)';
+    setTimeout(() => {
+      soundToggle.style.transform = 'scale(1)';
+    }, 100);
+    
+    console.log('[Projects] Completion sound', newMutedState ? 'muted' : 'unmuted');
+  });
+  
+  // Add hover effect
+  soundToggle.addEventListener('mouseenter', () => {
+    soundToggle.style.transform = 'scale(1.05)';
+    soundToggle.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+  });
+  
+  soundToggle.addEventListener('mouseleave', () => {
+    soundToggle.style.transform = 'scale(1)';
+    soundToggle.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+  });
+}
+
 // Recurring Task Modal Logic
 let currentRecurringTask = null;
 
@@ -1128,6 +1186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMyTasksModal();
     initNotificationsModal();
     initNotificationListener();
+    initSoundToggle();
     // Check if we need to navigate to a task from a notification
     checkPendingNavigation();
   })();
@@ -1524,6 +1583,13 @@ function partitionTasks(containerEl) {
 
 // Play completion sound
 function playCompletionSound() {
+  // Check if sound is muted
+  const isMuted = localStorage.getItem('completionSoundMuted') === 'true';
+  if (isMuted) {
+    console.log('[Projects] Completion sound is muted');
+    return;
+  }
+  
   try {
     const audio = new Audio('complete.mp3');
     audio.volume = 0.5; // Set volume to 50% to avoid being too loud
