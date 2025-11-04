@@ -4540,6 +4540,11 @@ body.presence-banner-visible #global-edit-button {
 .projects-body .task-list ul { list-style:none; padding:0; margin:0; display:block; }
 .projects-body .task-header { display:grid; grid-template-columns: var(--task-grid); gap:6px; padding:10px 10px; color:#5f6368; font-weight:700; font-size:.9rem; border-bottom:1px solid #edf0f3; align-items:center; background:#f5f6f7; border-radius:8px; }
 .projects-body .task-header > div:first-child { padding-left:0; grid-column: 1 / span 2; }
+.projects-body .sortable-header { display: flex; align-items: center; gap: 6px; transition: all 0.2s; }
+.projects-body .sortable-header:hover { color: #2196F3; }
+.projects-body .sort-icon { font-size: 0.8rem; color: #ccc; opacity: 0.5; transition: all 0.2s; }
+.projects-body .sort-icon.active { color: #2196F3; opacity: 1; }
+.projects-body .sortable-header:hover .sort-icon { opacity: 0.8; }
 .projects-body .task-list li { display:grid; grid-template-columns: var(--task-grid); align-items:center; gap:6px; position:relative; padding:10px 10px; width:100%; margin:1px 0; border-bottom:1px solid #e9eaee; }
 /* CRITICAL: Hide any tasks with status "Done" from the active/incomplete list ONLY (not completed-list) */
 .projects-body .task-list > ul:not(.completed-list) > li.task-done-status,

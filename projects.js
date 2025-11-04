@@ -63,6 +63,9 @@ const podInfo = [
 // In-memory registry of subprojects keyed by pod id
 const podToProjects = new Map();
 
+// Store sorting state for each subproject: { subprojectId: { column: 'dueDate'|'assignee'|'status', direction: 'asc'|'desc' } }
+const subprojectSortState = new Map();
+
 // Helper function to update task count for a subproject
 function updateTaskCount(subprojectCard) {
   const incompleteUl = subprojectCard.querySelector('ul:not(.completed-list)');
@@ -261,11 +264,55 @@ function createSubProjectElement(subTitle, podId, subprojectId) {
   headerRow.className = 'task-header';
   headerRow.innerHTML = `
     <div>Task Description</div>
-    <div>Assignee</div>
-    <div>Due date</div>
-    <div>Status</div>
+    <div class="sortable-header" data-column="assignee" style="cursor: pointer; user-select: none;">
+      Assignee <i class="fas fa-sort sort-icon"></i>
+    </div>
+    <div class="sortable-header" data-column="dueDate" style="cursor: pointer; user-select: none;">
+      Due date <i class="fas fa-sort-up sort-icon active"></i>
+    </div>
+    <div class="sortable-header" data-column="status" style="cursor: pointer; user-select: none;">
+      Status <i class="fas fa-sort sort-icon"></i>
+    </div>
   `;
   taskContent.appendChild(headerRow);
+  
+  // Initialize default sort state (by due date ascending)
+  if (subprojectId && !subprojectSortState.has(subprojectId)) {
+    subprojectSortState.set(subprojectId, { column: 'dueDate', direction: 'asc' });
+  }
+  
+  // Add click handlers for sortable headers
+  headerRow.querySelectorAll('.sortable-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const column = header.dataset.column;
+      const currentState = subprojectSortState.get(subprojectId) || { column: 'dueDate', direction: 'asc' };
+      
+      // Toggle direction if same column, otherwise default to ascending
+      let newDirection = 'asc';
+      if (currentState.column === column) {
+        newDirection = currentState.direction === 'asc' ? 'desc' : 'asc';
+      }
+      
+      // Update sort state
+      subprojectSortState.set(subprojectId, { column, direction: newDirection });
+      
+      // Update sort icons
+      headerRow.querySelectorAll('.sortable-header').forEach(h => {
+        const icon = h.querySelector('.sort-icon');
+        if (h.dataset.column === column) {
+          icon.className = `fas fa-sort-${newDirection === 'asc' ? 'up' : 'down'} sort-icon active`;
+        } else {
+          icon.className = 'fas fa-sort sort-icon';
+        }
+      });
+      
+      // Re-sort tasks
+      const taskUl = wrapper.querySelector('ul:not(.completed-list)');
+      if (taskUl) {
+        loadTasksInto(podId, subprojectId, taskUl);
+      }
+    });
+  });
   // Tasks list
   const taskUl = document.createElement('ul');
   taskContent.appendChild(taskUl);
@@ -1628,6 +1675,20 @@ async function loadSubprojectsInto(podId, containerEl) {
       if (taskUl) {
         loadTasksInto(podId, p.id, taskUl);
       }
+      
+      // Restore sort icon state for this subproject
+      const sortState = subprojectSortState.get(p.id) || { column: 'dueDate', direction: 'asc' };
+      const headerRow = p.el.querySelector('.task-header');
+      if (headerRow) {
+        headerRow.querySelectorAll('.sortable-header').forEach(h => {
+          const icon = h.querySelector('.sort-icon');
+          if (h.dataset.column === sortState.column) {
+            icon.className = `fas fa-sort-${sortState.direction === 'asc' ? 'up' : 'down'} sort-icon active`;
+          } else {
+            icon.className = 'fas fa-sort sort-icon';
+          }
+        });
+      }
     });
     
     // Update KPIs after subproject changes
@@ -1688,19 +1749,42 @@ async function loadTasksInto(podId, subId, listEl) {
       });
     });
     
-    // Sort by due date ascending (empty due dates at bottom)
+    // Get sort state for this subproject (default to due date ascending)
+    const sortState = subprojectSortState.get(subId) || { column: 'dueDate', direction: 'asc' };
+    
+    // Sort by the selected column and direction
     function parseDate(s) {
       if (!s) return null;
       const d = new Date(s);
       return isNaN(d.getTime()) ? null : d;
     }
+    
     items.sort((a, b) => {
-      const da = parseDate(a.dueDate);
-      const db = parseDate(b.dueDate);
-      if (da && db) return da - db;
-      if (da && !db) return -1;
-      if (!da && db) return 1;
-      return 0;
+      let compareResult = 0;
+      
+      if (sortState.column === 'dueDate') {
+        const da = parseDate(a.dueDate);
+        const db = parseDate(b.dueDate);
+        if (da && db) compareResult = da - db;
+        else if (da && !db) compareResult = -1;
+        else if (!da && db) compareResult = 1;
+        else compareResult = 0;
+      } else if (sortState.column === 'assignee') {
+        const assigneeA = (Array.isArray(a.assignees) && a.assignees.length 
+          ? a.assignees.map(x => x.name || x.email).join(', ')
+          : (a.assignee || 'Unassigned')).toLowerCase();
+        const assigneeB = (Array.isArray(b.assignees) && b.assignees.length 
+          ? b.assignees.map(x => x.name || x.email).join(', ')
+          : (b.assignee || 'Unassigned')).toLowerCase();
+        compareResult = assigneeA.localeCompare(assigneeB);
+      } else if (sortState.column === 'status') {
+        const statusA = (a.status || 'Open').toLowerCase();
+        const statusB = (b.status || 'Open').toLowerCase();
+        compareResult = statusA.localeCompare(statusB);
+      }
+      
+      // Apply direction (multiply by -1 for descending)
+      return sortState.direction === 'asc' ? compareResult : -compareResult;
     });
     
     // Clear incomplete list only
