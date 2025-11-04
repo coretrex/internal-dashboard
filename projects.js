@@ -66,6 +66,12 @@ const podToProjects = new Map();
 // Store sorting state for each subproject: { subprojectId: { column: 'dueDate'|'assignee'|'status', direction: 'asc'|'desc' } }
 const subprojectSortState = new Map();
 
+// Timer state
+let timerInterval = null;
+let timerSeconds = 0;
+let timerPaused = false;
+let currentTimerTask = null;
+
 // Helper function to update task count for a subproject
 function updateTaskCount(subprojectCard) {
   const incompleteUl = subprojectCard.querySelector('ul:not(.completed-list)');
@@ -436,6 +442,11 @@ function createTaskItem(taskData, podId, subId, taskId) {
       <span class="task-text">${safe(taskData.text)}</span>
       ${isRecurring ? `<span class=\"recurring-badge\" title=\"This task repeats ${taskData.recurring.frequency}\"><i class=\"fas fa-rotate\"></i></span>` : ''}
       ${hasDesc || hasAtch ? `<span class=\"task-comment-indicator\" title=\"This task has additional details\"><i class=\"fas fa-comment-dots\"></i></span>` : ''}
+      <div class="task-timer-buttons">
+        <button class="task-timer-btn" data-minutes="10" title="Start 10 minute timer">10m</button>
+        <button class="task-timer-btn" data-minutes="30" title="Start 30 minute timer">30m</button>
+        <button class="task-timer-btn" data-minutes="60" title="Start 60 minute timer">60m</button>
+      </div>
     </div>
     <div class="task-assignee">
       <div class="assignee-multiselect" tabindex="0">
@@ -799,7 +810,448 @@ function createTaskItem(taskData, podId, subId, taskId) {
       updateKPIs();
     });
   });
+  
+  // Timer button handlers
+  li.querySelectorAll('.task-timer-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const minutes = parseInt(btn.dataset.minutes);
+      startTaskTimer(taskData.text, minutes, podId, subId, taskId, taskData.longDescription, taskData.attachments);
+    });
+  });
+  
   return li;
+}
+
+// Timer functions
+async function startTaskTimer(taskName, minutes, podId, subId, taskId, longDescription = '', attachments = []) {
+  // Fetch fresh task data from Firestore to ensure we have latest description and attachments
+  if (podId && subId && taskId) {
+    try {
+      const podRef = doc(db, 'pods', podId);
+      const subRef = doc(podRef, 'subprojects', subId);
+      const taskRef = doc(subRef, 'tasks', taskId);
+      const taskSnap = await getDoc(taskRef);
+      
+      if (taskSnap.exists()) {
+        const taskData = taskSnap.data();
+        longDescription = taskData.longDescription || '';
+        attachments = taskData.attachments || [];
+      }
+    } catch (error) {
+      console.error('Error fetching task data for timer:', error);
+    }
+  }
+  
+  // Store current task info
+  currentTimerTask = { taskName, podId, subId, taskId, longDescription, attachments: attachments || [] };
+  
+  // Set timer duration
+  timerSeconds = minutes * 60;
+  timerPaused = false;
+  
+  // Show timer modal
+  const timerModal = document.getElementById('taskTimerModal');
+  if (timerModal) {
+    timerModal.style.display = 'flex';
+    document.getElementById('timerTaskName').textContent = taskName;
+    updateTimerDisplay();
+    
+    // Update long description textarea - prepare for editing
+    const descContainer = document.getElementById('timerDescriptionContainer');
+    const descTextarea = document.getElementById('timerDescriptionTextarea');
+    if (descContainer && descTextarea) {
+      descTextarea.value = longDescription || '';
+    }
+    
+    // Update attachments - prepare for editing
+    renderTimerAttachments();
+    
+    // Hide details section by default
+    const detailsSection = document.getElementById('timerDetailsSection');
+    if (detailsSection) {
+      detailsSection.style.display = 'none';
+    }
+    
+    // Reset toggle button
+    const toggleBtn = document.getElementById('toggleTimerDetailsBtn');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Show Details';
+    }
+    
+    // Update stats
+    updateTimerStats();
+    
+    // Start countdown
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      if (!timerPaused && timerSeconds > 0) {
+        timerSeconds--;
+        updateTimerDisplay();
+        
+        // Play alarm when timer reaches 0
+        if (timerSeconds === 0) {
+          playTimerAlarm();
+          stopTaskTimer();
+        }
+      }
+    }, 1000);
+  }
+}
+
+// Render attachments in timer modal
+function renderTimerAttachments() {
+  if (!currentTimerTask) return;
+  
+  const attachmentsList = document.getElementById('timerAttachmentsList');
+  if (!attachmentsList) return;
+  
+  const attachments = currentTimerTask.attachments || [];
+  
+  if (attachments.length === 0) {
+    attachmentsList.innerHTML = '<div style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem; padding: 8px 0;">No attachments yet</div>';
+    return;
+  }
+  
+  attachmentsList.innerHTML = attachments.map((att, index) => {
+    const icon = getFileIcon(att.type || '');
+    const downloadUrl = att.data ? att.data : (att.url || '#');
+    return `
+      <div class="timer-attachment-item">
+        <i class="fas ${icon} file-icon"></i>
+        <a href="${downloadUrl}" download="${att.name}" target="_blank">${att.name}</a>
+        <button class="timer-attachment-delete" data-index="${index}">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    `;
+  }).join('');
+  
+  // Add delete handlers
+  attachmentsList.querySelectorAll('.timer-attachment-delete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const index = parseInt(btn.dataset.index);
+      await deleteTimerAttachment(index);
+    });
+  });
+}
+
+// Save description from timer
+async function saveTimerDescription() {
+  if (!currentTimerTask) return;
+  
+  const { podId, subId, taskId } = currentTimerTask;
+  const descTextarea = document.getElementById('timerDescriptionTextarea');
+  
+  if (!podId || !subId || !taskId || !descTextarea) return;
+  
+  const newDescription = descTextarea.value;
+  
+  try {
+    const podRef = doc(db, 'pods', podId);
+    const subRef = doc(podRef, 'subprojects', subId);
+    const taskRef = doc(subRef, 'tasks', taskId);
+    
+    const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+    const currentUserEmail = localStorage.getItem('userEmail') || '';
+    
+    await updateDoc(taskRef, {
+      longDescription: newDescription,
+      lastModifiedBy: currentUserName,
+      lastModifiedByEmail: currentUserEmail,
+      lastModifiedAt: Date.now()
+    });
+    
+    // Update current task info
+    currentTimerTask.longDescription = newDescription;
+    
+    // Visual feedback
+    const saveBtn = document.getElementById('timerSaveDescriptionBtn');
+    if (saveBtn) {
+      const originalText = saveBtn.innerHTML;
+      saveBtn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+      setTimeout(() => {
+        saveBtn.innerHTML = originalText;
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('Error saving description:', error);
+    alert('Failed to save description');
+  }
+}
+
+// Delete attachment from timer
+async function deleteTimerAttachment(index) {
+  if (!currentTimerTask) return;
+  
+  const { podId, subId, taskId } = currentTimerTask;
+  if (!podId || !subId || !taskId) return;
+  
+  try {
+    const attachments = [...(currentTimerTask.attachments || [])];
+    attachments.splice(index, 1);
+    
+    const podRef = doc(db, 'pods', podId);
+    const subRef = doc(podRef, 'subprojects', subId);
+    const taskRef = doc(subRef, 'tasks', taskId);
+    
+    const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+    const currentUserEmail = localStorage.getItem('userEmail') || '';
+    
+    await updateDoc(taskRef, {
+      attachments,
+      lastModifiedBy: currentUserName,
+      lastModifiedByEmail: currentUserEmail,
+      lastModifiedAt: Date.now()
+    });
+    
+    // Update current task info
+    currentTimerTask.attachments = attachments;
+    
+    // Re-render
+    renderTimerAttachments();
+  } catch (error) {
+    console.error('Error deleting attachment:', error);
+    alert('Failed to delete attachment');
+  }
+}
+
+// Add attachment from timer
+async function addTimerAttachment(files) {
+  if (!currentTimerTask || !files || files.length === 0) return;
+  
+  const { podId, subId, taskId } = currentTimerTask;
+  if (!podId || !subId || !taskId) return;
+  
+  try {
+    const attachments = [...(currentTimerTask.attachments || [])];
+    
+    // Convert files to base64 and add to attachments
+    for (const file of files) {
+      const base64 = await fileToBase64(file);
+      attachments.push({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        data: base64,
+        uploadedAt: Date.now()
+      });
+    }
+    
+    const podRef = doc(db, 'pods', podId);
+    const subRef = doc(podRef, 'subprojects', subId);
+    const taskRef = doc(subRef, 'tasks', taskId);
+    
+    const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+    const currentUserEmail = localStorage.getItem('userEmail') || '';
+    
+    await updateDoc(taskRef, {
+      attachments,
+      lastModifiedBy: currentUserName,
+      lastModifiedByEmail: currentUserEmail,
+      lastModifiedAt: Date.now()
+    });
+    
+    // Update current task info
+    currentTimerTask.attachments = attachments;
+    
+    // Re-render
+    renderTimerAttachments();
+  } catch (error) {
+    console.error('Error adding attachment:', error);
+    alert('Failed to add attachment');
+  }
+}
+
+// Helper function to convert file to base64
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Helper function to get file icon
+function getFileIcon(type) {
+  if (type.startsWith('image/')) return 'fa-file-image';
+  if (type.startsWith('video/')) return 'fa-file-video';
+  if (type.startsWith('audio/')) return 'fa-file-audio';
+  if (type.includes('pdf')) return 'fa-file-pdf';
+  if (type.includes('word') || type.includes('document')) return 'fa-file-word';
+  if (type.includes('excel') || type.includes('spreadsheet')) return 'fa-file-excel';
+  if (type.includes('powerpoint') || type.includes('presentation')) return 'fa-file-powerpoint';
+  if (type.includes('zip') || type.includes('rar') || type.includes('archive')) return 'fa-file-archive';
+  return 'fa-file';
+}
+
+function updateTimerDisplay() {
+  const minutes = Math.floor(timerSeconds / 60);
+  const seconds = timerSeconds % 60;
+  const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  
+  const timerDisplay = document.getElementById('timerDisplay');
+  if (timerDisplay) {
+    timerDisplay.textContent = display;
+  }
+}
+
+function stopTaskTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  
+  const timerModal = document.getElementById('taskTimerModal');
+  if (timerModal) {
+    timerModal.style.display = 'none';
+  }
+  
+  timerSeconds = 0;
+  timerPaused = false;
+  currentTimerTask = null;
+}
+
+function pauseTaskTimer() {
+  timerPaused = !timerPaused;
+  const pauseBtn = document.getElementById('pauseTimerBtn');
+  if (pauseBtn) {
+    pauseBtn.textContent = timerPaused ? 'Resume Timer' : 'Pause Timer';
+  }
+}
+
+async function completeTaskFromTimer() {
+  if (!currentTimerTask) return;
+  
+  const { podId, subId, taskId } = currentTimerTask;
+  
+  // Mark task as complete in Firestore
+  if (podId && subId && taskId) {
+    const podRef = doc(db, 'pods', podId);
+    const subRef = doc(podRef, 'subprojects', subId);
+    const taskRef = doc(subRef, 'tasks', taskId);
+    const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+    const currentUserEmail = localStorage.getItem('userEmail') || '';
+    
+    try {
+      await updateDoc(taskRef, { 
+        completed: true,
+        lastModifiedBy: currentUserName,
+        lastModifiedByEmail: currentUserEmail,
+        lastModifiedAt: Date.now()
+      });
+      
+      // Play completion sound and show firework
+      playCompletionSound();
+      
+      // Stop timer
+      stopTaskTimer();
+      
+      // Update UI
+      updateKPIs();
+    } catch (e) {
+      console.error('[Timer] Error completing task:', e);
+    }
+  }
+}
+
+function updateTimerStats() {
+  // Get stats from the page
+  const totalTasks = document.getElementById('kpiTotal')?.textContent || '0';
+  const onHoldTasks = document.querySelectorAll('.status-select[value="On-Hold"]').length;
+  const completedTasks = document.querySelectorAll('.completed-list li').length;
+  
+  const statsDiv = document.getElementById('timerStats');
+  if (statsDiv) {
+    statsDiv.innerHTML = `Tasks: ${totalTasks} &nbsp;&nbsp; On-Hold: ${onHoldTasks} &nbsp;&nbsp; Completed: ${completedTasks}`;
+  }
+}
+
+function playTimerAlarm() {
+  // Check if sound is muted
+  const isMuted = localStorage.getItem('soundsMuted') === 'true';
+  if (isMuted) {
+    console.log('[Timer] Alarm sound is muted');
+    return;
+  }
+  
+  try {
+    const audio = new Audio('Alarm.mp3');
+    audio.volume = 0.6;
+    audio.play().catch(e => {
+      console.log('[Timer] Could not play alarm sound:', e);
+    });
+  } catch (e) {
+    console.log('[Timer] Error creating alarm audio:', e);
+  }
+}
+
+function initTimerModal() {
+  const stopBtn = document.getElementById('stopTimerBtn');
+  const pauseBtn = document.getElementById('pauseTimerBtn');
+  const doneBtn = document.getElementById('doneTimerBtn');
+  const soundBtn = document.getElementById('timerSoundBtn');
+  const saveDescBtn = document.getElementById('timerSaveDescriptionBtn');
+  const addAttachBtn = document.getElementById('timerAddAttachmentBtn');
+  const attachInput = document.getElementById('timerAttachmentInput');
+  const toggleDetailsBtn = document.getElementById('toggleTimerDetailsBtn');
+  
+  if (stopBtn) {
+    stopBtn.addEventListener('click', stopTaskTimer);
+  }
+  
+  if (pauseBtn) {
+    pauseBtn.addEventListener('click', pauseTaskTimer);
+  }
+  
+  if (doneBtn) {
+    doneBtn.addEventListener('click', completeTaskFromTimer);
+  }
+  
+  if (soundBtn) {
+    soundBtn.addEventListener('click', () => {
+      const currentlyMuted = localStorage.getItem('soundsMuted') === 'true';
+      localStorage.setItem('soundsMuted', String(!currentlyMuted));
+      
+      // Update icon
+      const icon = soundBtn.querySelector('i');
+      if (icon) {
+        icon.className = currentlyMuted ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+      }
+    });
+  }
+  
+  if (saveDescBtn) {
+    saveDescBtn.addEventListener('click', saveTimerDescription);
+  }
+  
+  if (addAttachBtn && attachInput) {
+    addAttachBtn.addEventListener('click', () => {
+      attachInput.click();
+    });
+    
+    attachInput.addEventListener('change', async (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        await addTimerAttachment(Array.from(e.target.files));
+        e.target.value = ''; // Reset input
+      }
+    });
+  }
+  
+  if (toggleDetailsBtn) {
+    toggleDetailsBtn.addEventListener('click', () => {
+      const detailsSection = document.getElementById('timerDetailsSection');
+      if (detailsSection) {
+        const isHidden = detailsSection.style.display === 'none';
+        detailsSection.style.display = isHidden ? 'flex' : 'none';
+        toggleDetailsBtn.innerHTML = isHidden 
+          ? '<i class="fas fa-chevron-up"></i> Hide Details' 
+          : '<i class="fas fa-chevron-down"></i> Show Details';
+      }
+    });
+  }
 }
 
 function renderPods() {
@@ -1588,6 +2040,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initNotificationListener();
     initSoundToggle();
     initMyTasksFilter();
+    initTimerModal();
     // Check if we need to navigate to a task from a notification
     checkPendingNavigation();
   })();

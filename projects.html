@@ -231,5 +231,53 @@
             </div>
         </div>
     </div>
+
+    <!-- Task Timer Modal -->
+    <div id="taskTimerModal" class="task-timer-modal" style="display:none;">
+        <div class="task-timer-content">
+            <div class="task-timer-header">
+                <h2>Working on: <span id="timerTaskName">Task</span></h2>
+            </div>
+            
+            <div class="task-timer-display" id="timerDisplay">00:00</div>
+            
+            <button id="toggleTimerDetailsBtn" class="toggle-timer-details-btn">
+                <i class="fas fa-chevron-down"></i> Show Details
+            </button>
+            
+            <div class="task-timer-details" id="timerDetailsSection" style="display:none;">
+                <div class="timer-description-container" id="timerDescriptionContainer">
+                    <textarea id="timerDescriptionTextarea" class="timer-description-textarea" placeholder="Add a description..."></textarea>
+                    <button id="timerSaveDescriptionBtn" class="timer-save-description-btn">
+                        <i class="fas fa-save"></i> Save Description
+                    </button>
+                </div>
+                
+                <div id="timerAttachmentsContainer" class="timer-attachments">
+                    <div class="timer-attachments-header">
+                        <span class="timer-attachments-title">Attachments</span>
+                        <button id="timerAddAttachmentBtn" class="timer-add-attachment-btn">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                        <input type="file" id="timerAttachmentInput" style="display:none;" multiple>
+                    </div>
+                    <div id="timerAttachmentsList"></div>
+                </div>
+            </div>
+            
+            <div class="task-timer-controls">
+                <button id="stopTimerBtn" class="timer-control-btn stop-btn">Stop Timer</button>
+                <button id="pauseTimerBtn" class="timer-control-btn pause-btn">Pause Timer</button>
+                <button id="doneTimerBtn" class="timer-control-btn done-btn">Done</button>
+                <button id="timerSoundBtn" class="timer-sound-btn" title="Toggle sound">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+            </div>
+            
+            <div class="task-timer-stats" id="timerStats">
+                Tasks: 0 &nbsp;&nbsp; On-Hold: 0 &nbsp;&nbsp; Completed: 0
+            </div>
+        </div>
+    </div>
 </body>
 </html>

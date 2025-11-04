@@ -4555,8 +4555,8 @@ body.presence-banner-visible #global-edit-button {
 .projects-body .task-list .completed-list:not(.hidden) > li { display: grid !important; }
 .projects-body .task-list li:hover { background:#f7f8fa; border-radius:8px; }
 .projects-body .task-checkbox-cell { display:flex; align-items:center; justify-content:center; }
-.projects-body .task-name-cell { display:flex; align-items:center; gap: 6px; }
-.projects-body .task-name-cell .task-text { line-height: 1.1; }
+.projects-body .task-name-cell { display:flex; align-items:center; gap: 6px; width: 100%; }
+.projects-body .task-name-cell .task-text { line-height: 1.1; flex-shrink: 0; }
 
 .recurring-badge {
   display: inline-flex;
@@ -6042,5 +6042,476 @@ body.presence-banner-visible #global-edit-button {
 
 .notification-delete-btn:active {
     transform: scale(0.95);
+}
+
+/* Task Timer Buttons */
+.task-timer-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  opacity: 1;
+}
+
+.task-timer-btn {
+  background: #e9ecef;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.task-timer-btn:hover {
+  background: #dee2e6;
+  border-color: #ced4da;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+
+/* Task Timer Modal */
+.task-timer-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.task-timer-content {
+  background: transparent;
+  border-radius: 0;
+  padding: 3rem;
+  box-shadow: none;
+  text-align: center;
+  min-width: 600px;
+  animation: slideUpScale 0.4s ease;
+}
+
+@keyframes slideUpScale {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.task-timer-header h2 {
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 300;
+  margin: 0 0 1rem 0;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.task-timer-header h2 span {
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.task-timer-display {
+  font-size: 6rem;
+  font-weight: 700;
+  color: white;
+  margin: 1rem 0 1rem 0;
+  font-family: 'Poppins', monospace;
+  letter-spacing: 0.1em;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+}
+
+.toggle-timer-details-btn {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  margin: 0 auto 1rem auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-timer-details-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.toggle-timer-details-btn:active {
+  transform: translateY(0);
+}
+
+.toggle-timer-details-btn i {
+  font-size: 0.8rem;
+  transition: transform 0.2s;
+}
+
+.task-timer-details {
+  max-width: 1000px;
+  margin: 0 auto 1rem auto;
+  text-align: left;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.timer-long-description {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.timer-description-textarea {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  color: white;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  width: 100%;
+  min-height: 80px;
+  max-height: 150px;
+  resize: vertical;
+  font-family: inherit;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.timer-description-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.timer-description-textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.timer-attachments {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  flex: 1;
+  min-width: 0;
+}
+
+.timer-attachments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.timer-attachments-title {
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.timer-attachments #timerAttachmentsList {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.timer-attachments #timerAttachmentsList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.timer-attachments #timerAttachmentsList::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.timer-attachments #timerAttachmentsList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.timer-attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  color: white;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timer-attachment-item:last-child {
+  border-bottom: none;
+}
+
+.timer-attachment-item i.file-icon {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.1rem;
+  width: 20px;
+  text-align: center;
+}
+
+.timer-attachment-item a {
+  color: white;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: color 0.2s;
+  flex: 1;
+}
+
+.timer-attachment-item a:hover {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: underline;
+}
+
+.timer-attachment-delete {
+  background: rgba(220, 38, 38, 0.3);
+  border: 1px solid rgba(220, 38, 38, 0.5);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s;
+}
+
+.timer-attachment-delete:hover {
+  background: rgba(220, 38, 38, 0.5);
+  border-color: rgba(220, 38, 38, 0.7);
+}
+
+.timer-add-attachment-btn {
+  background: rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timer-add-attachment-btn:hover {
+  background: rgba(16, 185, 129, 0.5);
+  border-color: rgba(16, 185, 129, 0.7);
+}
+
+.timer-save-description-btn {
+  background: rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: white;
+  padding: 6px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.timer-save-description-btn:hover {
+  background: rgba(16, 185, 129, 0.5);
+  border-color: rgba(16, 185, 129, 0.7);
+  transform: translateY(-1px);
+}
+
+.timer-description-container {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.task-timer-controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  align-items: center;
+  margin: 1rem 0 1rem 0;
+}
+
+.timer-control-btn {
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.timer-control-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.timer-control-btn:active {
+  transform: translateY(0);
+}
+
+.stop-btn {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+}
+
+.stop-btn:hover {
+  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+}
+
+.pause-btn {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+}
+
+.pause-btn:hover {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+}
+
+.done-btn {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+}
+
+.done-btn:hover {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+}
+
+.timer-sound-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+  font-size: 1.2rem;
+  margin-left: 1rem;
+}
+
+.timer-sound-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.1);
+}
+
+.task-timer-stats {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  font-weight: 500;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+@media (max-width: 768px) {
+  .task-timer-content {
+    min-width: auto;
+    width: 90%;
+    padding: 2rem;
+  }
+  
+  .task-timer-display {
+    font-size: 5rem;
+  }
+  
+  .task-timer-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .toggle-timer-details-btn {
+    font-size: 0.85rem;
+    padding: 6px 16px;
+  }
+  
+  .task-timer-details {
+    max-width: 95%;
+    flex-direction: column;
+  }
+  
+  .timer-description-container,
+  .timer-attachments {
+    width: 100%;
+  }
+  
+  .timer-description-textarea {
+    font-size: 0.85rem;
+    padding: 0.65rem 0.85rem;
+    min-height: 70px;
+    max-height: 120px;
+  }
+  
+  .timer-attachment-item {
+    font-size: 0.85rem;
+  }
+  
+  .timer-attachment-item a {
+    font-size: 0.8rem;
+  }
+  
+  .timer-save-description-btn {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .timer-add-attachment-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+  }
+  
+  .timer-attachment-delete {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+  }
+  
+  .task-timer-controls {
+    flex-wrap: wrap;
+  }
+  
+  .timer-control-btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+  }
 }
 
