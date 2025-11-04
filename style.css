@@ -4341,13 +4341,21 @@ body.presence-banner-visible #global-edit-button {
   margin: 0 auto;
 }
 
+/* Top navigation container */
+.projects-top-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  margin: 6px 0 14px 0;
+}
+
 /* Top links (centered filters) */
 .projects-top-links {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 18px;
-  margin: 6px 0 14px 0;
 }
 .projects-top-links a {
   color: #4a78c2; /* subtle blue */
@@ -4374,39 +4382,52 @@ body.presence-banner-visible #global-edit-button {
   box-shadow: 0 2px 8px rgba(74,120,194,0.15);
 }
 
-/* My Tasks Filter Button */
+/* My Tasks Filter Button - Smaller, separated */
 .my-tasks-filter-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 12px;
-  font-size: 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+  position: relative;
+}
+
+/* Visual separator before My Tasks button */
+.my-tasks-filter-btn::before {
+  content: '';
+  position: absolute;
+  left: -1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 20px;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, #ddd 20%, #ddd 80%, transparent);
 }
 
 .my-tasks-filter-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
 }
 
 .my-tasks-filter-btn.active {
   background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.25);
 }
 
 .my-tasks-filter-btn.active:hover {
-  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.35);
 }
 
 .my-tasks-filter-btn i {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
 }
 
 .pod-card {
@@ -4488,7 +4509,8 @@ body.presence-banner-visible #global-edit-button {
    Scope all Projects styles under .projects-body so other pages are untouched
    ============================== */
 .projects-body .projects-grid { display: grid; grid-template-columns: 1fr; gap: 18px; max-width: 1600px; width: 95%; margin: 0 auto; }
-.projects-body .projects-top-links { display:flex; justify-content:center; align-items:center; gap:18px; margin:6px 0 14px 0; }
+.projects-body .projects-top-nav { display:flex; justify-content:center; align-items:center; gap:2rem; margin:6px 0 14px 0; }
+.projects-body .projects-top-links { display:flex; justify-content:center; align-items:center; gap:18px; }
 .projects-body .projects-top-links a { color:#4a78c2; text-decoration:none; font-weight:700; font-size:1.05rem; padding:6px 10px; border-radius:8px; transition: color .2s, background .2s; display:inline-flex; align-items:center; gap:8px; }
 .projects-body .projects-top-links a i { font-size:1rem; }
 .projects-body .projects-top-links a:hover { color:#2b63c7; background:rgba(74,120,194,.08); }
