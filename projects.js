@@ -2303,21 +2303,26 @@ async function openTaskDrawer({ podId, subId, taskId, title, longDescription = '
 // ============ MY TASKS FUNCTIONALITY ============
 
 // Function to load tasks with optional user and project filters from visible tasks on the page
-function loadMyTasks(filterUser = null, filterProject = null) {
+function loadMyTasks(filterUser = null, filterProject = null, dateFilter = null) {
   const myTasksList = [];
   
   // If no filter specified, use current user
-  if (filterUser === null) {
+  if (filterUser === null && !dateFilter) {
     const userName = localStorage.getItem('userName') || '';
     filterUser = userName.split(' ')[0];
   }
   
-  console.log('[My Tasks] Filtering by user:', filterUser || 'All Users', 'project:', filterProject || 'All Projects');
+  console.log('[My Tasks] Filtering by user:', filterUser || 'All Users', 'project:', filterProject || 'All Projects', 'date:', dateFilter || 'All Dates');
   
   // Get ALL pod cards (not just visible ones) to allow filtering across all projects
   const allPods = Array.from(document.querySelectorAll('.pod-card'));
   
   console.log('[My Tasks] Checking all pods:', allPods.length);
+  
+  // Get today's date for date filtering
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split('T')[0];
   
   allPods.forEach(podCard => {
     const podId = podCard.dataset.podId;
@@ -2343,14 +2348,30 @@ function loadMyTasks(filterUser = null, filterProject = null) {
       const tasks = taskList.querySelectorAll('li');
       
       tasks.forEach(taskLi => {
+        // Skip hidden tasks (filtered out by My Tasks filter)
+        const display = taskLi.style.display;
+        if (display === 'none') {
+          return;
+        }
+        
         const assigneeDisplay = taskLi.querySelector('.assignee-display');
         const taskText = taskLi.querySelector('.task-text')?.textContent || 'Untitled Task';
         const dateInput = taskLi.querySelector('.date-input');
         const statusSelect = taskLi.querySelector('.status-select');
         
-        if (!assigneeDisplay) return;
+        const assigneeText = assigneeDisplay?.textContent || 'Unassigned';
+        const dueDate = dateInput?.value || '';
         
-        const assigneeText = assigneeDisplay.textContent;
+        // Apply date filter if specified
+        if (dateFilter === 'dueToday') {
+          if (dueDate !== todayStr) {
+            return; // Skip if not due today
+          }
+        } else if (dateFilter === 'overdue') {
+          if (!dueDate || dueDate >= todayStr) {
+            return; // Skip if not overdue
+          }
+        }
         
         // Check if this task matches the user filter
         // If filterUser is empty string, show all tasks
@@ -2358,13 +2379,19 @@ function loadMyTasks(filterUser = null, filterProject = null) {
         const userMatches = !filterUser || assigneeText.includes(filterUser);
         
         if (userMatches) {
-          console.log('[My Tasks] Match found:', taskText, 'assignee:', assigneeText, 'pod:', podTitle);
+          // Get taskId from the task list item's data attribute
+          const taskId = taskLi.dataset?.taskId || null;
+          
+          console.log('[My Tasks] Match found:', taskText, 'assignee:', assigneeText, 'pod:', podTitle, 'due:', dueDate, 'taskId:', taskId);
           
           myTasksList.push({
+            podId,
             podTitle,
+            subprojectId: subId,
             subTitle,
+            taskId,
             text: taskText,
-            dueDate: dateInput?.value || '',
+            dueDate: dueDate,
             status: statusSelect?.value || 'Open',
             assignee: assigneeText
           });
@@ -2387,17 +2414,23 @@ function loadMyTasks(filterUser = null, filterProject = null) {
 }
 
 // Function to render tasks in the modal
-function renderTasksInModal(filterUser = null, filterProject = null) {
+function renderTasksInModal(filterUser = null, filterProject = null, dateFilter = null, modalTitle = 'Tasks') {
   const content = document.getElementById('myTasksContent');
+  const modalTitleEl = document.querySelector('#myTasksModal h2');
   
   if (!content) {
     console.error('Content element not found');
     return;
   }
   
+  // Update modal title if provided
+  if (modalTitleEl && modalTitle) {
+    modalTitleEl.textContent = modalTitle;
+  }
+  
   try {
     console.log('[My Tasks] Loading tasks...');
-    const myTasks = loadMyTasks(filterUser, filterProject);
+    const myTasks = loadMyTasks(filterUser, filterProject, dateFilter);
     console.log('[My Tasks] Found tasks:', myTasks.length, myTasks);
     
     if (myTasks.length === 0) {
@@ -2407,7 +2440,12 @@ function renderTasksInModal(filterUser = null, filterProject = null) {
         const podData = podInfo.find(p => p.id === filterProject);
         projectName = podData ? podData.title : filterProject;
       }
-      if (filterUser && filterProject) {
+      
+      if (dateFilter === 'dueToday') {
+        filterText = 'tasks due today';
+      } else if (dateFilter === 'overdue') {
+        filterText = 'overdue tasks';
+      } else if (filterUser && filterProject) {
         filterText = `tasks assigned to <strong>${filterUser}</strong> in project <strong>${projectName}</strong>`;
       } else if (filterUser) {
         filterText = `tasks assigned to <strong>${filterUser}</strong>`;
@@ -2431,8 +2469,18 @@ function renderTasksInModal(filterUser = null, filterProject = null) {
       const borderColor = isOverdue ? '#ff6b6b' : '#2196F3';
       const statusColor = getStatusColor(task.status);
       
+      // Only make clickable if we have navigation data
+      const isClickable = task.podId && task.subprojectId && task.taskId;
+      const cursorStyle = isClickable ? 'cursor: pointer;' : '';
+      const hoverStyle = isClickable ? 'transition: all 0.2s;' : '';
+      
       html += `
-        <div style="background: #f9f9f9; padding: 1rem; border-radius: 8px; border-left: 4px solid ${borderColor}; margin-bottom: 0.75rem;">
+        <div class="modal-task-item" 
+             data-pod-id="${task.podId || ''}" 
+             data-subproject-id="${task.subprojectId || ''}" 
+             data-task-id="${task.taskId || ''}"
+             style="background: #f9f9f9; padding: 1rem; border-radius: 8px; border-left: 4px solid ${borderColor}; margin-bottom: 0.75rem; ${cursorStyle} ${hoverStyle}"
+             ${isClickable ? 'title="Click to view task in project"' : ''}>
           <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
             <div style="flex: 1;">
               <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 0.25rem; color: #000;">
@@ -2464,11 +2512,57 @@ function renderTasksInModal(filterUser = null, filterProject = null) {
               </span>
             </div>
           </div>
+          ${isClickable ? `
+            <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #eee; font-size: 0.85rem; color: #2196F3; text-align: center;">
+              <i class="fas fa-arrow-right" style="margin-right: 0.5rem;"></i>Click to view task
+            </div>
+          ` : ''}
         </div>
       `;
     });
     
     content.innerHTML = html;
+    
+    // Add click handlers to task items
+    if (content) {
+      const taskItems = content.querySelectorAll('.modal-task-item');
+      taskItems.forEach(item => {
+        const podId = item.dataset.podId;
+        const subprojectId = item.dataset.subprojectId;
+        const taskId = item.dataset.taskId;
+        
+        if (podId && subprojectId && taskId) {
+          item.addEventListener('click', () => {
+            // Close the modal first
+            const modal = document.getElementById('myTasksModal');
+            if (modal) {
+              modal.style.display = 'none';
+            }
+            
+            // Navigate to the task
+            console.log('[My Tasks] Navigating to task:', { podId, subprojectId, taskId });
+            navigateToTask(podId, subprojectId, taskId);
+          });
+          
+          // Add hover effect
+          item.addEventListener('mouseenter', () => {
+            if (podId && subprojectId && taskId) {
+              item.style.backgroundColor = '#f0f8ff';
+              item.style.transform = 'translateX(4px)';
+              item.style.boxShadow = '0 2px 8px rgba(33, 150, 243, 0.2)';
+            }
+          });
+          
+          item.addEventListener('mouseleave', () => {
+            if (podId && subprojectId && taskId) {
+              item.style.backgroundColor = '#f9f9f9';
+              item.style.transform = 'translateX(0)';
+              item.style.boxShadow = '';
+            }
+          });
+        }
+      });
+    }
     
   } catch (error) {
     console.error('[My Tasks] Error rendering tasks:', error);
@@ -2542,14 +2636,20 @@ function populateProjectFilter() {
 }
 
 // Function to open the My Tasks modal
-async function openMyTasksModal() {
+async function openMyTasksModal(dateFilter = null, modalTitle = 'Tasks') {
   const modal = document.getElementById('myTasksModal');
   const userFilter = document.getElementById('taskUserFilter');
   const projectFilter = document.getElementById('taskProjectFilter');
+  const modalTitleEl = document.querySelector('#myTasksModal h2');
   
   if (!modal) {
     console.error('Modal element not found');
     return;
+  }
+  
+  // Update modal title
+  if (modalTitleEl) {
+    modalTitleEl.textContent = modalTitle;
   }
   
   // Populate user filter dropdown
@@ -2558,16 +2658,27 @@ async function openMyTasksModal() {
   // Populate project filter dropdown
   populateProjectFilter();
   
-  // Set user dropdown to current user by default
-  if (userFilter) {
-    const userName = localStorage.getItem('userName') || '';
-    const userFirstName = userName.split(' ')[0];
-    userFilter.value = userFirstName;
-  }
-  
-  // Set project dropdown to "All Projects" by default
-  if (projectFilter) {
-    projectFilter.value = '';
+  // If date filter is set, hide user filter and show only project filter
+  // Otherwise, show both filters
+  const filterContainer = document.querySelector('#myTasksModal > div > div:first-child');
+  if (filterContainer && dateFilter) {
+    // For date filters, set user filter to "All Users" and project to "All Projects"
+    if (userFilter) userFilter.value = '';
+    if (projectFilter) projectFilter.value = '';
+  } else {
+    // Set user dropdown to current user by default for My Tasks
+    if (userFilter && !dateFilter) {
+      const userName = localStorage.getItem('userName') || '';
+      const userFirstName = userName.split(' ')[0];
+      userFilter.value = userFirstName;
+    } else if (userFilter) {
+      userFilter.value = '';
+    }
+    
+    // Set project dropdown to "All Projects" by default
+    if (projectFilter) {
+      projectFilter.value = '';
+    }
   }
   
   // Show modal
@@ -2575,9 +2686,21 @@ async function openMyTasksModal() {
   
   // Render tasks with current filters
   renderTasksInModal(
-    userFilter ? userFilter.value : null,
-    projectFilter ? projectFilter.value : null
+    userFilter ? userFilter.value || null : null,
+    projectFilter ? projectFilter.value || null : null,
+    dateFilter,
+    modalTitle
   );
+}
+
+// Function to open modal for tasks due today
+async function openDueTodayModal() {
+  await openMyTasksModal('dueToday', 'Tasks Due Today');
+}
+
+// Function to open modal for overdue tasks
+async function openOverdueModal() {
+  await openMyTasksModal('overdue', 'Overdue Tasks');
 }
 
 // Helper function to get status color
@@ -2617,8 +2740,16 @@ function initMyTasksModal() {
     userFilter.addEventListener('change', (e) => {
       const userFilterValue = e.target.value;
       const projectFilterValue = projectFilter ? projectFilter.value : '';
+      const modalTitleEl = document.querySelector('#myTasksModal h2');
+      const modalTitle = modalTitleEl ? modalTitleEl.textContent : 'Tasks';
+      
+      // Determine date filter from modal title
+      let dateFilter = null;
+      if (modalTitle === 'Tasks Due Today') dateFilter = 'dueToday';
+      else if (modalTitle === 'Overdue Tasks') dateFilter = 'overdue';
+      
       console.log('[My Tasks] User filter changed to:', userFilterValue || 'All Users');
-      renderTasksInModal(userFilterValue || '', projectFilterValue || '');
+      renderTasksInModal(userFilterValue || '', projectFilterValue || '', dateFilter, modalTitle);
     });
   }
   
@@ -2627,9 +2758,29 @@ function initMyTasksModal() {
     projectFilter.addEventListener('change', (e) => {
       const userFilterValue = userFilter ? userFilter.value : '';
       const projectFilterValue = e.target.value;
+      const modalTitleEl = document.querySelector('#myTasksModal h2');
+      const modalTitle = modalTitleEl ? modalTitleEl.textContent : 'Tasks';
+      
+      // Determine date filter from modal title
+      let dateFilter = null;
+      if (modalTitle === 'Tasks Due Today') dateFilter = 'dueToday';
+      else if (modalTitle === 'Overdue Tasks') dateFilter = 'overdue';
+      
       console.log('[My Tasks] Project filter changed to:', projectFilterValue || 'All Projects');
-      renderTasksInModal(userFilterValue || '', projectFilterValue || '');
+      renderTasksInModal(userFilterValue || '', projectFilterValue || '', dateFilter, modalTitle);
     });
+  }
+  
+  // Add click handlers for Due Today and Overdue KPIs
+  const dueTodayKpi = document.getElementById('dueTodayKpi');
+  const overdueKpi = document.getElementById('overdueKpi');
+  
+  if (dueTodayKpi) {
+    dueTodayKpi.addEventListener('click', openDueTodayModal);
+  }
+  
+  if (overdueKpi) {
+    overdueKpi.addEventListener('click', openOverdueModal);
   }
   
   // Close modal when clicking outside
