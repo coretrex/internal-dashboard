@@ -4901,6 +4901,168 @@ body.presence-banner-visible #global-edit-button {
   background: #2b63c7;
 }
 
+/* New Task Modal - Super Modern Minimal Design */
+.new-task-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4000;
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.new-task-modal[style*="display: flex"],
+.new-task-modal[style*="display:flex"] {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.new-task-modal-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  animation: slideUpFade 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.new-task-input {
+  font-family: "Poppins", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 500;
+  padding: 1.25rem 2rem;
+  border: none;
+  background: #ffffff;
+  color: #202124;
+  border-radius: 16px;
+  outline: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 
+              0 0 0 2px rgba(255, 255, 255, 0.1);
+  width: 500px;
+  max-width: 85vw;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.new-task-input::placeholder {
+  color: #9aa0a6;
+  font-weight: 400;
+}
+
+.new-task-input:focus {
+  box-shadow: 0 12px 48px rgba(74, 120, 194, 0.3),
+              0 0 0 3px rgba(74, 120, 194, 0.4);
+  transform: translateY(-2px);
+}
+
+.new-task-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.95rem;
+  font-weight: 500;
+  white-space: nowrap;
+  animation: fadeInRight 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.new-task-hint kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Poppins", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  line-height: 1;
+  min-width: 28px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.new-task-hint-divider {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.8rem;
+}
+
+.new-task-hint-enter,
+.new-task-hint-esc {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .new-task-modal-wrapper {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .new-task-input {
+    font-size: 1.25rem;
+    width: 90vw;
+  }
+  
+  .new-task-hint {
+    font-size: 0.85rem;
+  }
+}
+
+/* Sparkle animation for new tasks */
+@keyframes sparkleFloat {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(0) scale(0.5);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(-5px) scale(1);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(-10px) scale(1.1) rotate(15deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-20px) scale(0.8) rotate(30deg);
+  }
+}
+
 .projects-body .drop-indicator { height:2px; background:#4a78c2; border-radius:2px; margin:6px 0; }
 
 /* Global Completed Tasks Section */

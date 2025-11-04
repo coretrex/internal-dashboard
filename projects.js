@@ -306,18 +306,11 @@ function createSubProjectElement(subTitle, podId, subprojectId) {
   // Add task interaction (only visible when expanded)
   addTaskBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    const text = 'New Task';
     const subId = wrapper.dataset.subprojectId;
     if (!subId) return;
-    const podRef = doc(db, 'pods', podId);
-    const subRef = doc(podRef, 'subprojects', subId);
-    const tasksCol = collection(subRef, 'tasks');
-    await addDoc(tasksCol, { text: text, completed: false, createdAt: Date.now(), assignee: '', dueDate: '', status: 'Open' });
-    // Reload tasks to maintain sorted order
-    await loadTasksInto(podId, subId, taskUl);
-    updateCompletedToggleText(taskUl);
-    // ensure open to show the new task
-    if (taskContent.classList.contains('hidden')) header.querySelector('.expand-control').click();
+    
+    // Open the new task modal instead of directly creating
+    openNewTaskModal(podId, subId, taskUl, taskContent, header);
   });
   // Rename subproject handled via double-click on title (inline editor below)
   // Inline rename on double-click
@@ -1358,6 +1351,181 @@ function openRecurringModal(podId, subId, taskId, dateInput, recurringData = nul
   modal.classList.remove('hidden');
 }
 
+// ============ NEW TASK MODAL ============
+
+let currentNewTaskContext = null;
+
+function initNewTaskModal() {
+  const modal = document.getElementById('newTaskModal');
+  const input = document.getElementById('newTaskInput');
+  
+  if (!modal || !input) return;
+  
+  // Close modal handlers
+  const closeModal = () => {
+    modal.style.display = 'none';
+    currentNewTaskContext = null;
+    input.value = '';
+  };
+  
+  // Click outside to close (on the blurred background)
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+  
+  // Create task handler
+  const createTask = async () => {
+    if (!currentNewTaskContext) return;
+    
+    const taskName = input.value.trim();
+    if (!taskName) {
+      input.focus();
+      return;
+    }
+    
+    const { podId, subId, taskUl, taskContent, header } = currentNewTaskContext;
+    
+    try {
+      // Create task in Firestore
+      const podRef = doc(db, 'pods', podId);
+      const subRef = doc(podRef, 'subprojects', subId);
+      const tasksCol = collection(subRef, 'tasks');
+      const taskDoc = await addDoc(tasksCol, { 
+        text: taskName, 
+        completed: false, 
+        createdAt: Date.now(), 
+        assignee: '', 
+        dueDate: '', 
+        status: 'Open' 
+      });
+      
+      // Store the new task ID for highlighting
+      const newTaskId = taskDoc.id;
+      
+      // Reload tasks to maintain sorted order
+      await loadTasksInto(podId, subId, taskUl);
+      updateCompletedToggleText(taskUl);
+      
+      // Ensure task list is open to show the new task
+      if (taskContent.classList.contains('hidden')) {
+        header.querySelector('.expand-control').click();
+      }
+      
+      // Close the modal
+      closeModal();
+      
+      console.log('[New Task] Created task:', taskName, 'with ID:', newTaskId);
+      
+      // Highlight the newly created task after a brief delay (to ensure it's rendered)
+      setTimeout(() => {
+        highlightNewTask(newTaskId);
+      }, 300);
+      
+    } catch (error) {
+      console.error('[New Task] Error creating task:', error);
+      alert('Error creating task. Please try again.');
+    }
+  };
+  
+  // Keyboard shortcuts
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      createTask();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeModal();
+    }
+  });
+}
+
+function openNewTaskModal(podId, subId, taskUl, taskContent, header) {
+  const modal = document.getElementById('newTaskModal');
+  const input = document.getElementById('newTaskInput');
+  
+  if (!modal || !input) return;
+  
+  // Store context
+  currentNewTaskContext = { podId, subId, taskUl, taskContent, header };
+  
+  // Clear input
+  input.value = '';
+  
+  // Show modal
+  modal.style.display = 'flex';
+  
+  // Auto-focus the input after animation starts
+  setTimeout(() => {
+    input.focus();
+  }, 100);
+}
+
+// Highlight a newly created task
+function highlightNewTask(taskId) {
+  // Find the task element by its data-task-id attribute
+  const taskElement = document.querySelector(`li[data-task-id="${taskId}"]`);
+  
+  if (!taskElement) {
+    console.warn('[New Task] Could not find task element to highlight:', taskId);
+    return;
+  }
+  
+  // Scroll the task into view smoothly
+  taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  
+  // Apply highlight animation
+  taskElement.style.transition = 'all 0.3s ease';
+  taskElement.style.backgroundColor = '#e3f2fd';
+  taskElement.style.boxShadow = '0 0 0 4px rgba(33, 150, 243, 0.3)';
+  taskElement.style.transform = 'scale(1.02)';
+  
+  // Create a sparkle effect
+  const sparkle = document.createElement('div');
+  sparkle.innerHTML = '✨';
+  sparkle.style.position = 'absolute';
+  sparkle.style.left = '-30px';
+  sparkle.style.top = '50%';
+  sparkle.style.transform = 'translateY(-50%)';
+  sparkle.style.fontSize = '1.5rem';
+  sparkle.style.animation = 'sparkleFloat 1.5s ease-out forwards';
+  sparkle.style.pointerEvents = 'none';
+  
+  taskElement.style.position = 'relative';
+  taskElement.appendChild(sparkle);
+  
+  // Pulse effect
+  let pulseCount = 0;
+  const pulseInterval = setInterval(() => {
+    pulseCount++;
+    if (pulseCount % 2 === 0) {
+      taskElement.style.backgroundColor = '#e3f2fd';
+      taskElement.style.boxShadow = '0 0 0 4px rgba(33, 150, 243, 0.3)';
+    } else {
+      taskElement.style.backgroundColor = '#bbdefb';
+      taskElement.style.boxShadow = '0 0 0 6px rgba(33, 150, 243, 0.4)';
+    }
+    
+    if (pulseCount >= 4) {
+      clearInterval(pulseInterval);
+      // Fade out the highlight
+      setTimeout(() => {
+        taskElement.style.backgroundColor = '';
+        taskElement.style.boxShadow = '';
+        taskElement.style.transform = '';
+        
+        // Remove sparkle after animation
+        setTimeout(() => {
+          if (sparkle.parentNode) {
+            sparkle.remove();
+          }
+        }, 500);
+      }, 300);
+    }
+  }, 300);
+  
+  console.log('[New Task] Highlighting task:', taskId);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   (async () => {
     await initializeFirebaseApp();
@@ -1367,6 +1535,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTaskDrawer();
     initGlobalCompletedSection();
     initRecurringModal();
+    initNewTaskModal();
     initMyTasksModal();
     initNotificationsModal();
     initNotificationListener();
