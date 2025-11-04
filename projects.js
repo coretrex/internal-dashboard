@@ -17,15 +17,9 @@ import {
   limit,
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import {
-  getStorage,
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-  deleteObject
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+// Removed Firebase Storage imports - using base64 storage in Firestore instead
 
-let app, db, storage;
+let app, db;
 let cachedUsers = null; // [{id, name, email, photoURL}]
 // Track tasks that were just marked completed to prevent flicker reappearance
 const pendingCompletedTaskIds = new Set();
@@ -37,7 +31,6 @@ async function initializeFirebaseApp() {
   const firebaseInstance = await initializeFirebase();
   app = firebaseInstance.app;
   db = firebaseInstance.db;
-  storage = getStorage(app);
 }
 
 async function loadAssignableUsers() {
@@ -2055,21 +2048,15 @@ function initTaskDrawer() {
   });
 }
 
-// Upload a file attachment to Firebase Storage
+// Upload a file attachment - Simple base64 storage in Firestore (no CORS needed!)
 async function uploadFileAttachment(file, podId, subId, taskId) {
   try {
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    // Validate file size (max 500KB to stay within Firestore limits)
+    const maxSize = 500 * 1024; // 500KB
     if (file.size > maxSize) {
-      alert(`File "${file.name}" is too large. Maximum size is 10MB.`);
+      alert(`File "${file.name}" is too large. Maximum size is 500KB.`);
       return;
     }
-    
-    // Create a unique file path in Firebase Storage
-    const timestamp = Date.now();
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const storagePath = `task-attachments/${podId}/${subId}/${taskId}/${timestamp}_${sanitizedFileName}`;
-    const storageRef = ref(storage, storagePath);
     
     // Add uploading indicator to the list
     const list = document.getElementById('attachmentsList');
@@ -2079,90 +2066,81 @@ async function uploadFileAttachment(file, podId, subId, taskId) {
       <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: #f0f8ff; border-radius: 4px; margin-bottom: 0.5rem;">
         <i class="fas fa-spinner fa-spin" style="color: #2196F3;"></i>
         <span style="flex: 1; font-size: 0.9rem;">${file.name}</span>
-        <span class="upload-progress" style="font-size: 0.85rem; color: #666;">0%</span>
+        <span style="font-size: 0.85rem; color: #666;">Processing...</span>
       </div>
     `;
     list.appendChild(uploadItem);
     
-    // Start upload
-    const uploadTask = uploadBytesResumable(storageRef, file);
-    
-    // Track progress
-    uploadTask.on('state_changed',
-      (snapshot) => {
-        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        const progressSpan = uploadItem.querySelector('.upload-progress');
-        if (progressSpan) {
-          progressSpan.textContent = Math.round(progress) + '%';
-        }
-      },
-      (error) => {
-        console.error('[Attachments] Upload error:', error);
+    // Convert file to base64
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const base64Data = e.target.result;
+        
+        // Add to Firestore
+        const podRef = doc(db, 'pods', podId);
+        const subRef = doc(podRef, 'subprojects', subId);
+        const taskRef = doc(subRef, 'tasks', taskId);
+        
+        // Get current attachments
+        const taskSnap = await getDoc(taskRef);
+        const currentAttachments = taskSnap.exists() ? (taskSnap.data().attachments || []) : [];
+        
+        // Add new attachment with base64 data
+        const newAttachment = {
+          name: file.name,
+          data: base64Data, // Store base64 data directly
+          size: file.size,
+          type: file.type,
+          uploadedAt: Date.now(),
+          uploadedBy: localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown'
+        };
+        
+        const updatedAttachments = [...currentAttachments, newAttachment];
+        
+        const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+        const currentUserEmail = localStorage.getItem('userEmail') || '';
+        
+        await updateDoc(taskRef, {
+          attachments: updatedAttachments,
+          lastModifiedBy: currentUserName,
+          lastModifiedByEmail: currentUserEmail,
+          lastModifiedAt: Date.now()
+        });
+        
+        // Replace upload indicator with actual file item
+        uploadItem.remove();
+        await refreshAttachmentsList(podId, subId, taskId);
+        
+        console.log('[Attachments] File uploaded successfully:', file.name);
+        
+      } catch (error) {
+        console.error('[Attachments] Error saving attachment:', error);
         uploadItem.innerHTML = `
           <div style="padding: 0.75rem; background: #ffebee; border-radius: 4px; margin-bottom: 0.5rem; color: #c62828;">
-            <i class="fas fa-exclamation-circle"></i> Failed to upload: ${file.name}
+            <i class="fas fa-exclamation-circle"></i> Failed to save: ${file.name}
+            <div style="font-size: 0.8rem; margin-top: 0.25rem; opacity: 0.8;">${error.message || 'Unknown error'}</div>
           </div>
         `;
-        setTimeout(() => uploadItem.remove(), 3000);
-      },
-      async () => {
-        // Upload complete - get download URL
-        try {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          
-          // Add to Firestore
-          const podRef = doc(db, 'pods', podId);
-          const subRef = doc(podRef, 'subprojects', subId);
-          const taskRef = doc(subRef, 'tasks', taskId);
-          
-          // Get current attachments
-          const taskSnap = await getDoc(taskRef);
-          const currentAttachments = taskSnap.exists() ? (taskSnap.data().attachments || []) : [];
-          
-          // Add new attachment
-          const newAttachment = {
-            name: file.name,
-            url: downloadURL,
-            storagePath: storagePath,
-            size: file.size,
-            type: file.type,
-            uploadedAt: Date.now(),
-            uploadedBy: localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown'
-          };
-          
-          const updatedAttachments = [...currentAttachments, newAttachment];
-          
-          const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
-          const currentUserEmail = localStorage.getItem('userEmail') || '';
-          
-          await updateDoc(taskRef, {
-            attachments: updatedAttachments,
-            lastModifiedBy: currentUserName,
-            lastModifiedByEmail: currentUserEmail,
-            lastModifiedAt: Date.now()
-          });
-          
-          // Replace upload indicator with actual file item
-          uploadItem.remove();
-          await refreshAttachmentsList(podId, subId, taskId);
-          
-          console.log('[Attachments] File uploaded successfully:', file.name);
-          
-        } catch (error) {
-          console.error('[Attachments] Error saving attachment to Firestore:', error);
-          uploadItem.innerHTML = `
-            <div style="padding: 0.75rem; background: #ffebee; border-radius: 4px; margin-bottom: 0.5rem; color: #c62828;">
-              <i class="fas fa-exclamation-circle"></i> Failed to save: ${file.name}
-            </div>
-          `;
-          setTimeout(() => uploadItem.remove(), 3000);
-        }
+        setTimeout(() => uploadItem.remove(), 5000);
       }
-    );
+    };
+    
+    reader.onerror = () => {
+      uploadItem.innerHTML = `
+        <div style="padding: 0.75rem; background: #ffebee; border-radius: 4px; margin-bottom: 0.5rem; color: #c62828;">
+          <i class="fas fa-exclamation-circle"></i> Failed to read file: ${file.name}
+        </div>
+      `;
+      setTimeout(() => uploadItem.remove(), 5000);
+    };
+    
+    // Read file as base64
+    reader.readAsDataURL(file);
     
   } catch (error) {
     console.error('[Attachments] Error uploading file:', error);
-    alert(`Error uploading file: ${error.message}`);
+    alert(`Error uploading file: ${error.message || 'Unknown error'}`);
   }
 }
 
@@ -2172,19 +2150,7 @@ async function deleteFileAttachment(podId, subId, taskId, attachment, index) {
     const confirmed = await showConfirmModal(`Delete "${attachment.name}"?`);
     if (!confirmed) return;
     
-    // Delete from Firebase Storage if it has a storagePath
-    if (attachment.storagePath) {
-      try {
-        const storageRef = ref(storage, attachment.storagePath);
-        await deleteObject(storageRef);
-        console.log('[Attachments] File deleted from storage:', attachment.name);
-      } catch (error) {
-        console.warn('[Attachments] Could not delete file from storage:', error);
-        // Continue anyway to remove from Firestore
-      }
-    }
-    
-    // Remove from Firestore
+    // Remove from Firestore (base64 data is stored directly, no storage to delete)
     const podRef = doc(db, 'pods', podId);
     const subRef = doc(podRef, 'subprojects', subId);
     const taskRef = doc(subRef, 'tasks', taskId);
@@ -2262,6 +2228,10 @@ async function refreshAttachmentsList(podId, subId, taskId) {
       const icon = getFileIcon(att.type || '');
       const size = formatSize(att.size || 0);
       
+      // Create download link - use base64 data if available, otherwise use url (for backward compatibility)
+      const downloadUrl = att.data ? att.data : (att.url || '#');
+      const downloadAttr = att.data ? 'download' : 'target="_blank"';
+      
       item.innerHTML = `
         <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: #f9f9f9; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid #e0e0e0;">
           <i class="fas ${icon}" style="color: #2196F3; font-size: 1.5rem; width: 24px; text-align: center;"></i>
@@ -2269,7 +2239,7 @@ async function refreshAttachmentsList(podId, subId, taskId) {
             <div style="font-weight: 500; font-size: 0.9rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${att.name}">${att.name}</div>
             <div style="font-size: 0.75rem; color: #666; margin-top: 0.25rem;">${size}${att.uploadedBy ? ` • ${att.uploadedBy}` : ''}</div>
           </div>
-          <a href="${att.url}" target="_blank" download="${att.name}" style="padding: 0.5rem; color: #2196F3; text-decoration: none; border-radius: 4px; transition: background 0.2s;" title="Download">
+          <a href="${downloadUrl}" ${downloadAttr} download="${att.name}" style="padding: 0.5rem; color: #2196F3; text-decoration: none; border-radius: 4px; transition: background 0.2s;" title="Download">
             <i class="fas fa-download"></i>
           </a>
           <button class="attachment-delete-btn" data-index="${index}" style="padding: 0.5rem; background: none; border: none; color: #ff3b30; cursor: pointer; border-radius: 4px; transition: background 0.2s;" title="Delete">
