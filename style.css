@@ -4676,10 +4676,25 @@ body.presence-banner-visible #global-edit-button {
   letter-spacing: 0.5px;
 }
 
-/* Overdue block - very subtle red background */
-.projects-kpi-overdue {
-  background: #f5d0cb !important;
-  border-color: #f5d0cb !important;
+/* Overdue block - subtle red background */
+.projects-kpi-overdue,
+.projects-kpi-overdue.projects-kpi-clickable {
+  background: #ffebee !important;
+  border-color: #ffcdd2 !important;
+}
+
+.projects-kpi-overdue:hover,
+.projects-kpi-overdue.projects-kpi-clickable:hover {
+  background: #ffcdd2 !important;
+  border-color: #ef9a9a !important;
+}
+
+.projects-kpi-overdue .projects-kpi-value {
+  color: #c62828;
+}
+
+.projects-kpi-overdue .projects-kpi-label {
+  color: #d32f2f;
 }
 
 /* Total tasks block - soft blue background */
