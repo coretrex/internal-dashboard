@@ -425,6 +425,42 @@ function createSubProjectElement(subTitle, podId, subprojectId) {
   return wrapper;
 }
 
+// Helper function to parse time string (HH:MM) into hour and minute
+function parseTime(timeStr) {
+  if (!timeStr) return { hour: 9, minute: 0 };
+  const parts = timeStr.split(':');
+  return {
+    hour: parseInt(parts[0]) || 9,
+    minute: parseInt(parts[1]) || 0
+  };
+}
+
+// Helper function to format time for display (HH:MM -> "9:30 AM" or "14:30")
+function formatTimeDisplay(timeStr) {
+  if (!timeStr) return '';
+  const { hour, minute } = parseTime(timeStr);
+  const h = hour % 12 || 12;
+  const ampm = hour < 12 ? 'AM' : 'PM';
+  const m = minute.toString().padStart(2, '0');
+  return `${h}:${m} ${ampm}`;
+}
+
+// Helper function to create time string from hour and minute
+function createTimeString(hour, minute) {
+  return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+}
+
+// Helper function to format date as month/day (e.g., "12/25" or "Jan 25")
+function formatDateDisplay(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr + 'T00:00:00');
+  if (isNaN(date.getTime())) return '';
+  const month = date.getMonth() + 1; // 1-12
+  const day = date.getDate();
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${monthNames[month - 1]} ${day}`;
+}
+
 function createTaskItem(taskData, podId, subId, taskId) {
   const li = document.createElement('li');
   // Store task ID as data attribute for real-time updates
@@ -454,8 +490,39 @@ function createTaskItem(taskData, podId, subId, taskId) {
         <div class="assignee-menu hidden"></div>
       </div>
     </div>
-    <div class="task-date">
-      <input class="task-input date-input" type="date" value="${safe(taskData.dueDate)}" />
+    <div class="task-date ${taskData.dueTime ? 'has-time-set' : ''}">
+      <input class="task-input date-input" type="date" value="${safe(taskData.dueDate)}" style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;" />
+      ${taskData.dueDate ? `<span class="date-display" style="cursor: pointer; user-select: none;">${formatDateDisplay(taskData.dueDate)}</span>` : ''}
+      ${taskData.dueTime ? `
+        <span class="time-display" data-time="${safe(taskData.dueTime)}">${formatTimeDisplay(taskData.dueTime)}</span>
+        <button class="time-icon-btn has-time" type="button" title="Change time">
+          <i class="fas fa-clock"></i>
+        </button>
+      ` : `
+        <button class="time-icon-btn" type="button" title="Set time">
+          <i class="fas fa-clock"></i>
+        </button>
+      `}
+      <div class="time-picker-container" style="display: none;">
+        <div class="time-picker">
+          <div class="time-picker-section">
+            <label>Hour</label>
+            <input type="range" class="time-hour-slider" min="0" max="23" value="${taskData.dueTime ? parseTime(taskData.dueTime).hour : 9}" />
+            <span class="time-hour-display">${taskData.dueTime ? (() => { const h = parseTime(taskData.dueTime).hour; const dh = h % 12 || 12; const ampm = h < 12 ? 'AM' : 'PM'; return `${dh} ${ampm}`; })() : '9 AM'}</span>
+          </div>
+          <div class="time-picker-section">
+            <label>Minute</label>
+            <div class="time-minute-buttons">
+              <button class="time-minute-btn ${taskData.dueTime && parseTime(taskData.dueTime).minute === 0 ? 'active' : ''}" data-minute="0">:00</button>
+              <button class="time-minute-btn ${taskData.dueTime && parseTime(taskData.dueTime).minute === 30 ? 'active' : ''}" data-minute="30">:30</button>
+            </div>
+          </div>
+          <div class="time-picker-actions">
+            <button class="time-picker-clear" type="button">Clear</button>
+            <button class="time-picker-save" type="button">Save</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="task-status">
       <select class="task-select status-select">
@@ -475,6 +542,14 @@ function createTaskItem(taskData, podId, subId, taskId) {
   const textSpan = li.querySelector('.task-text');
   const assigneeMulti = li.querySelector('.assignee-multiselect');
   const dateInput = li.querySelector('.date-input');
+  const timeIconBtn = li.querySelector('.time-icon-btn');
+  const timeDisplay = li.querySelector('.time-display');
+  const timePickerContainer = li.querySelector('.time-picker-container');
+  const timeHourSlider = li.querySelector('.time-hour-slider');
+  const timeHourDisplay = li.querySelector('.time-hour-display');
+  const timeMinuteButtons = li.querySelectorAll('.time-minute-btn');
+  const timePickerSave = li.querySelector('.time-picker-save');
+  const timePickerClear = li.querySelector('.time-picker-clear');
   const statusSelect = li.querySelector('.status-select');
   async function handleCompletionToggle(isCompleted) {
     // Capture row position BEFORE checkbox hides the row via CSS
@@ -553,6 +628,7 @@ function createTaskItem(taskData, podId, subId, taskId) {
             assignee: latestTaskData.assignee || '',
             assignees: latestTaskData.assignees || [],
             dueDate: nextDueDate,
+            dueTime: latestTaskData.dueTime || '',
             status: latestTaskData.status || 'Open',
             longDescription: latestTaskData.longDescription || '',
             attachments: latestTaskData.attachments || [],
@@ -690,10 +766,181 @@ function createTaskItem(taskData, podId, subId, taskId) {
     quickSave('assignees', selected);
     if (selected.length) quickSave('assignee', selected[0].name || selected[0].email); else quickSave('assignee', '');
   });
+  // Update date display when date changes
+  const dateDisplay = li.querySelector('.date-display');
+  
+  function updateDateDisplay() {
+    if (dateInput.value) {
+      if (dateDisplay) {
+        dateDisplay.textContent = formatDateDisplay(dateInput.value);
+        dateDisplay.style.display = 'inline';
+      } else {
+        const newDateDisplay = document.createElement('span');
+        newDateDisplay.className = 'date-display';
+        newDateDisplay.textContent = formatDateDisplay(dateInput.value);
+        newDateDisplay.style.cursor = 'pointer';
+        newDateDisplay.style.userSelect = 'none';
+        // Insert after the hidden date input
+        dateInput.insertAdjacentElement('afterend', newDateDisplay);
+        // Make date display clickable to open date picker
+        newDateDisplay.addEventListener('click', () => {
+          dateInput.showPicker ? dateInput.showPicker() : dateInput.click();
+        });
+      }
+    } else {
+      if (dateDisplay) {
+        dateDisplay.remove();
+      }
+    }
+  }
+  
+  // Make date display clickable to open date picker
+  if (dateDisplay) {
+    dateDisplay.addEventListener('click', () => {
+      dateInput.showPicker ? dateInput.showPicker() : dateInput.click();
+    });
+  }
+  
   dateInput.addEventListener('change', () => {
     quickSave('dueDate', dateInput.value);
+    updateDateDisplay();
     updateKPIs();
   });
+  
+  // Initialize date display
+  updateDateDisplay();
+  
+  // Initialize time picker
+  let currentHour = taskData.dueTime ? parseTime(taskData.dueTime).hour : 9;
+  let currentMinute = taskData.dueTime ? parseTime(taskData.dueTime).minute : 0;
+  
+  // Close time picker when clicking outside (only for this specific task)
+  const closeTimePicker = (e) => {
+    if (timePickerContainer && timePickerContainer.style.display !== 'none' && 
+        !timePickerContainer.contains(e.target) && 
+        !timeIconBtn?.contains(e.target)) {
+      timePickerContainer.style.display = 'none';
+      document.removeEventListener('click', closeTimePicker);
+    }
+  };
+  
+  // Update hour display as slider moves
+  if (timeHourSlider && timeHourDisplay) {
+    timeHourSlider.addEventListener('input', () => {
+      currentHour = parseInt(timeHourSlider.value);
+      const displayHour = currentHour % 12 || 12;
+      const ampm = currentHour < 12 ? 'AM' : 'PM';
+      timeHourDisplay.textContent = `${displayHour} ${ampm}`;
+    });
+  }
+  
+  // Handle minute button clicks
+  timeMinuteButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      timeMinuteButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMinute = parseInt(btn.dataset.minute);
+    });
+  });
+  
+  // Save time
+  if (timePickerSave) {
+    timePickerSave.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const timeString = createTimeString(currentHour, currentMinute);
+      quickSave('dueTime', timeString);
+      
+      // Update UI to show time display
+      if (timeDisplay) {
+        timeDisplay.textContent = formatTimeDisplay(timeString);
+        timeDisplay.setAttribute('data-time', timeString);
+        timeDisplay.style.display = 'inline';
+      } else {
+        // Create time display if it doesn't exist
+        const newTimeDisplay = document.createElement('span');
+        newTimeDisplay.className = 'time-display';
+        newTimeDisplay.textContent = formatTimeDisplay(timeString);
+        newTimeDisplay.setAttribute('data-time', timeString);
+        dateInput.insertAdjacentElement('afterend', newTimeDisplay);
+      }
+      
+      // Add class to date cell to hide calendar icon
+      const dateCell = dateInput.parentElement;
+      if (dateCell) {
+        dateCell.classList.add('has-time-set');
+      }
+      
+      if (timeIconBtn) {
+        timeIconBtn.classList.add('has-time');
+        timeIconBtn.title = `Time: ${formatTimeDisplay(timeString)}`;
+      }
+      
+      timePickerContainer.style.display = 'none';
+      document.removeEventListener('click', closeTimePicker);
+    });
+  }
+  
+  // Clear time
+  if (timePickerClear) {
+    timePickerClear.addEventListener('click', (e) => {
+      e.stopPropagation();
+      quickSave('dueTime', '');
+      
+      // Remove time display
+      if (timeDisplay) {
+        timeDisplay.remove();
+      }
+      
+      // Remove class from date cell to show calendar icon again
+      const dateCell = dateInput.parentElement;
+      if (dateCell) {
+        dateCell.classList.remove('has-time-set');
+      }
+      
+      if (timeIconBtn) {
+        timeIconBtn.classList.remove('has-time');
+        timeIconBtn.title = 'Set time';
+      }
+      
+      timePickerContainer.style.display = 'none';
+      document.removeEventListener('click', closeTimePicker);
+    });
+  }
+  
+  // Toggle time picker visibility when clock icon is clicked
+  if (timeIconBtn) {
+    timeIconBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (timePickerContainer.style.display === 'none') {
+        timePickerContainer.style.display = 'flex';
+        // Reset to current time or default
+        if (taskData.dueTime) {
+          const parsed = parseTime(taskData.dueTime);
+          currentHour = parsed.hour;
+          currentMinute = parsed.minute;
+        } else {
+          currentHour = 9;
+          currentMinute = 0;
+        }
+        if (timeHourSlider) {
+          timeHourSlider.value = currentHour;
+          const displayHour = currentHour % 12 || 12;
+          const ampm = currentHour < 12 ? 'AM' : 'PM';
+          if (timeHourDisplay) timeHourDisplay.textContent = `${displayHour} ${ampm}`;
+        }
+        timeMinuteButtons.forEach(btn => {
+          btn.classList.toggle('active', parseInt(btn.dataset.minute) === currentMinute);
+        });
+        // Add listener to close when clicking outside
+        setTimeout(() => {
+          document.addEventListener('click', closeTimePicker);
+        }, 0);
+      } else {
+        timePickerContainer.style.display = 'none';
+        document.removeEventListener('click', closeTimePicker);
+      }
+    });
+  }
   
   // Add recurring icon button next to date input
   const dateCell = dateInput.parentElement;
@@ -788,6 +1035,10 @@ function createTaskItem(taskData, podId, subId, taskId) {
         lastModifiedBy: currentUserName,
         lastModifiedByEmail: currentUserEmail,
         lastModifiedAt: Date.now()
+      }).then(() => {
+        console.log('[Projects] Saved', field, '=', value, 'for task', taskId);
+      }).catch((error) => {
+        console.error('[Projects] Error saving', field, ':', error);
       });
     }
   }
@@ -1895,6 +2146,7 @@ function initNewTaskModal() {
         createdAt: Date.now(), 
         assignee: '', 
         dueDate: '', 
+        dueTime: '',
         status: 'Open' 
       });
       
@@ -2195,6 +2447,7 @@ async function loadTasksInto(podId, subId, listEl) {
         assignee: data.assignee || '',
         assignees: Array.isArray(data.assignees) ? data.assignees : [],
         dueDate: data.dueDate || '',
+        dueTime: data.dueTime || '',
         status: data.status || 'Open',
         longDescription: data.longDescription || '',
         attachments: data.attachments || [],
@@ -2258,6 +2511,7 @@ async function loadTasksInto(podId, subId, listEl) {
           assignee: d.assignee,
           assignees: d.assignees,
           dueDate: d.dueDate,
+          dueTime: d.dueTime,
           status: d.status,
           longDescription: d.longDescription,
           attachments: d.attachments,
@@ -2271,6 +2525,7 @@ async function loadTasksInto(podId, subId, listEl) {
           assignee: d.assignee,
           assignees: d.assignees,
           dueDate: d.dueDate,
+          dueTime: d.dueTime,
           status: d.status,
           longDescription: d.longDescription,
           attachments: d.attachments,
@@ -2391,6 +2646,7 @@ async function loadCompletedTasksInto(podId, subId, completedUl) {
         assignee: data.assignee || '',
         assignees: Array.isArray(data.assignees) ? data.assignees : [],
         dueDate: data.dueDate || '',
+        dueTime: data.dueTime || '',
         status: data.status || 'Open',
         longDescription: data.longDescription || '',
         attachments: data.attachments || [],
@@ -2461,9 +2717,86 @@ function updateTaskElement(li, taskData, podId, subId) {
   
   // Update due date
   const dateInput = li.querySelector('.date-input');
+  const dateDisplay = li.querySelector('.date-display');
+  
   if (dateInput && dateInput.value !== taskData.dueDate) {
     dateInput.value = taskData.dueDate || '';
+    
+    // Update or create date display
+    if (taskData.dueDate) {
+      if (dateDisplay) {
+        dateDisplay.textContent = formatDateDisplay(taskData.dueDate);
+        dateDisplay.style.display = 'inline';
+      } else {
+        const newDateDisplay = document.createElement('span');
+        newDateDisplay.className = 'date-display';
+        newDateDisplay.textContent = formatDateDisplay(taskData.dueDate);
+        newDateDisplay.style.cursor = 'pointer';
+        newDateDisplay.style.userSelect = 'none';
+        dateInput.insertAdjacentElement('afterend', newDateDisplay);
+        // Make date display clickable
+        newDateDisplay.addEventListener('click', () => {
+          dateInput.showPicker ? dateInput.showPicker() : dateInput.click();
+        });
+      }
+    } else {
+      if (dateDisplay) {
+        dateDisplay.remove();
+      }
+    }
   }
+  
+  // Update due time
+  const timeIconBtn = li.querySelector('.time-icon-btn');
+  const timeDisplay = li.querySelector('.time-display');
+  
+    if (taskData.dueTime) {
+      // Time is set - ensure display is visible
+      if (timeDisplay) {
+        timeDisplay.textContent = formatTimeDisplay(taskData.dueTime);
+        timeDisplay.setAttribute('data-time', taskData.dueTime);
+        timeDisplay.style.display = 'inline';
+      } else {
+        // Create time display if it doesn't exist
+        const newTimeDisplay = document.createElement('span');
+        newTimeDisplay.className = 'time-display';
+        newTimeDisplay.textContent = formatTimeDisplay(taskData.dueTime);
+        newTimeDisplay.setAttribute('data-time', taskData.dueTime);
+        const dateInput = li.querySelector('.date-input');
+        if (dateInput) {
+          dateInput.insertAdjacentElement('afterend', newTimeDisplay);
+        }
+      }
+      
+      // Add class to date cell to hide calendar icon
+      const dateInput = li.querySelector('.date-input');
+      const dateCell = dateInput?.parentElement;
+      if (dateCell) {
+        dateCell.classList.add('has-time-set');
+      }
+      
+      if (timeIconBtn) {
+        timeIconBtn.classList.add('has-time');
+        timeIconBtn.title = `Time: ${formatTimeDisplay(taskData.dueTime)}`;
+      }
+    } else {
+      // No time set - remove display if it exists
+      if (timeDisplay) {
+        timeDisplay.remove();
+      }
+      
+      // Remove class from date cell to show calendar icon again
+      const dateInput = li.querySelector('.date-input');
+      const dateCell = dateInput?.parentElement;
+      if (dateCell) {
+        dateCell.classList.remove('has-time-set');
+      }
+      
+      if (timeIconBtn) {
+        timeIconBtn.classList.remove('has-time');
+        timeIconBtn.title = 'Set time';
+      }
+    }
   
   // Update status
   const statusSelect = li.querySelector('.status-select');
@@ -3063,10 +3396,13 @@ function loadMyTasks(filterUser = null, filterProject = null, dateFilter = null)
         const assigneeDisplay = taskLi.querySelector('.assignee-display');
         const taskText = taskLi.querySelector('.task-text')?.textContent || 'Untitled Task';
         const dateInput = taskLi.querySelector('.date-input');
+        const timeDisplay = taskLi.querySelector('.time-display');
         const statusSelect = taskLi.querySelector('.status-select');
         
         const assigneeText = assigneeDisplay?.textContent || 'Unassigned';
         const dueDate = dateInput?.value || '';
+        // Get time from data attribute
+        const dueTime = timeDisplay?.getAttribute('data-time') || '';
         
         // Apply date filter if specified
         if (dateFilter === 'dueToday') {
@@ -3098,6 +3434,7 @@ function loadMyTasks(filterUser = null, filterProject = null, dateFilter = null)
             taskId,
             text: taskText,
             dueDate: dueDate,
+            dueTime: dueTime,
             status: statusSelect?.value || 'Open',
             assignee: assigneeText
           });
@@ -3207,7 +3544,7 @@ function renderTasksInModal(filterUser = null, filterProject = null, dateFilter 
             <div>
               <span style="color: #666;">Due:</span>
               <span style="color: ${isOverdue ? '#ff6b6b' : '#000'}; font-weight: ${isOverdue ? 'bold' : 'normal'};">
-                ${task.dueDate || 'No date'}
+                ${task.dueDate || 'No date'}${task.dueTime ? ' at ' + formatTimeDisplay(task.dueTime) : ''}
               </span>
               ${isOverdue ? '<span style="color: #ff6b6b; margin-left: 0.25rem;">(OVERDUE)</span>' : ''}
             </div>

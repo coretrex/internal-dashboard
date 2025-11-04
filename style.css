@@ -4532,7 +4532,7 @@ body.presence-banner-visible #global-edit-button {
 /* Ensure boldness isn't overridden anywhere */
 .projects-body .subproject-header .subproject-title { font-weight:800 !important; }
 
-.projects-body .task-list { background:#ffffff; padding:8px 14px 14px 14px; border-top:1px solid #edf0f3; --task-grid: 28px minmax(250px, 1fr) 180px 130px 140px 50px; }
+.projects-body .task-list { background:#ffffff; padding:8px 14px 14px 14px; border-top:1px solid #edf0f3; --task-grid: 28px minmax(250px, 1fr) 180px 180px 140px 50px; }
 .projects-body .task-list .add-task-link { margin-bottom:8px; background:transparent; border:none; color:#4a78c2; font-weight:600; padding:0; cursor:pointer; display:inline-block; }
 .projects-body .task-list .add-task-link:hover { color:#2b63c7; text-decoration:underline; }
 .projects-body .completed-toggle { display:inline-block; margin-top:8px; color:#4a78c2; cursor:pointer; font-size:.9rem; }
@@ -4583,9 +4583,215 @@ body.presence-banner-visible #global-edit-button {
 
 .projects-body .task-input { width:100%; padding:4px 6px; border:1px solid #e0e3e7; border-radius:6px; font-size:.9rem; background:#f5f6f7; margin:0; transition: background .15s ease, border-color .15s ease; }
 .projects-body .task-input:focus { background:#ffffff; border-color:#c5c9d0; outline:none; }
+.projects-body .task-input.time-input::placeholder { color: #999; font-size: 0.8rem; }
+.projects-body .task-input.time-input::-webkit-calendar-picker-indicator { cursor: pointer; }
 
 .projects-body .task-date { position: relative; display: flex; align-items: center; gap: 4px; }
-.projects-body .task-date .task-input { flex: 1; min-width: 0; }
+.projects-body .task-date .date-input { flex: 1; min-width: 0; max-width: 140px; }
+/* Hide calendar icon when time is set */
+.projects-body .task-date.has-time-set .date-input::-webkit-calendar-picker-indicator,
+.projects-body .task-date:has(.time-display) .date-input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+.projects-body .task-date.has-time-set .date-input,
+.projects-body .task-date:has(.time-display) .date-input {
+  padding-right: 6px;
+}
+
+.date-display {
+  font-size: 0.9rem;
+  color: #202124;
+  padding: 2px 6px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.time-display {
+  font-size: 0.85rem;
+  color: #5f6368;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.time-picker-container {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid #e0e3e7;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  min-width: 200px;
+  animation: slideDownFade 0.2s ease;
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.time-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.time-picker-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.time-picker-section label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #5f6368;
+}
+
+.time-picker-section .time-hour-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e0e3e7;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.time-picker-section .time-hour-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2196F3;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.time-picker-section .time-hour-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2196F3;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.time-hour-display {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #2196F3;
+  text-align: center;
+  padding: 4px;
+}
+
+.time-minute-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.time-minute-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid #e0e3e7;
+  border-radius: 6px;
+  background: white;
+  color: #5f6368;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.time-minute-btn:hover {
+  border-color: #2196F3;
+  background: #f0f8ff;
+  color: #2196F3;
+}
+
+.time-minute-btn.active {
+  border-color: #2196F3;
+  background: #2196F3;
+  color: white;
+}
+
+.time-picker-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e3e7;
+}
+
+.time-picker-clear,
+.time-picker-save {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.time-picker-clear {
+  background: #f5f5f5;
+  color: #5f6368;
+}
+
+.time-picker-clear:hover {
+  background: #e8eaed;
+}
+
+.time-picker-save {
+  background: #2196F3;
+  color: white;
+}
+
+.time-picker-save:hover {
+  background: #1976D2;
+}
+
+.time-icon-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px 6px;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.time-icon-btn:hover {
+  background: #f1f3f4;
+  color: #6b7280;
+}
+
+.time-icon-btn.has-time {
+  color: #3b82f6;
+}
+
+.time-icon-btn.has-time:hover {
+  background: #eff6ff;
+  color: #2563eb;
+}
 
 .recurring-icon-btn {
   background: transparent;
@@ -5187,7 +5393,7 @@ body.presence-banner-visible #global-edit-button {
 }
 
 /* Task header (columns) */
-.task-list { --task-grid: 28px minmax(250px, 1fr) 180px 130px 140px 50px; }
+.task-list { --task-grid: 28px minmax(250px, 1fr) 180px 180px 140px 50px; }
 
 .task-header {
   display: grid;
