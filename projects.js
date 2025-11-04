@@ -492,7 +492,7 @@ function createTaskItem(taskData, podId, subId, taskId) {
     </div>
     <div class="task-date ${taskData.dueTime ? 'has-time-set' : ''}">
       <input class="task-input date-input" type="date" value="${safe(taskData.dueDate)}" style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;" />
-      ${taskData.dueDate ? `<span class="date-display" style="cursor: pointer; user-select: none;">${formatDateDisplay(taskData.dueDate)}</span>` : ''}
+      ${taskData.dueDate ? `<span class="date-display" style="cursor: pointer; user-select: none;">${formatDateDisplay(taskData.dueDate)}</span>` : '<span class="date-placeholder" style="cursor: pointer; user-select: none; color: #999; font-style: italic;">Add date</span>'}
       ${taskData.dueTime ? `
         <span class="time-display" data-time="${safe(taskData.dueTime)}">${formatTimeDisplay(taskData.dueTime)}</span>
         <button class="time-icon-btn has-time" type="button" title="Change time">
@@ -503,6 +503,9 @@ function createTaskItem(taskData, podId, subId, taskId) {
           <i class="fas fa-clock"></i>
         </button>
       `}
+      <button class="date-icon-btn ${taskData.dueDate ? 'has-date' : ''}" type="button" title="${taskData.dueDate ? 'Change date' : 'Add date'}">
+        <i class="fas fa-calendar"></i>
+      </button>
       <div class="time-picker-container" style="display: none;">
         <div class="time-picker">
           <div class="time-picker-section">
@@ -542,6 +545,8 @@ function createTaskItem(taskData, podId, subId, taskId) {
   const textSpan = li.querySelector('.task-text');
   const assigneeMulti = li.querySelector('.assignee-multiselect');
   const dateInput = li.querySelector('.date-input');
+  const datePlaceholder = li.querySelector('.date-placeholder');
+  const dateIconBtn = li.querySelector('.date-icon-btn');
   const timeIconBtn = li.querySelector('.time-icon-btn');
   const timeDisplay = li.querySelector('.time-display');
   const timePickerContainer = li.querySelector('.time-picker-container');
@@ -551,6 +556,31 @@ function createTaskItem(taskData, podId, subId, taskId) {
   const timePickerSave = li.querySelector('.time-picker-save');
   const timePickerClear = li.querySelector('.time-picker-clear');
   const statusSelect = li.querySelector('.status-select');
+  
+  // Function to open date picker
+  const openDatePicker = () => {
+    if (dateInput.showPicker) {
+      dateInput.showPicker();
+    } else {
+      dateInput.click();
+    }
+  };
+  
+  // Make date placeholder clickable
+  if (datePlaceholder) {
+    datePlaceholder.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openDatePicker();
+    });
+  }
+  
+  // Make calendar icon button clickable
+  if (dateIconBtn) {
+    dateIconBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openDatePicker();
+    });
+  }
   async function handleCompletionToggle(isCompleted) {
     // Capture row position BEFORE checkbox hides the row via CSS
     const liRect = li.getBoundingClientRect();
@@ -768,9 +798,16 @@ function createTaskItem(taskData, podId, subId, taskId) {
   });
   // Update date display when date changes
   const dateDisplay = li.querySelector('.date-display');
+  const dateCell = dateInput.parentElement;
   
   function updateDateDisplay() {
     if (dateInput.value) {
+      // Remove placeholder if it exists
+      const placeholder = dateCell.querySelector('.date-placeholder');
+      if (placeholder) {
+        placeholder.remove();
+      }
+      
       if (dateDisplay) {
         dateDisplay.textContent = formatDateDisplay(dateInput.value);
         dateDisplay.style.display = 'inline';
@@ -783,21 +820,53 @@ function createTaskItem(taskData, podId, subId, taskId) {
         // Insert after the hidden date input
         dateInput.insertAdjacentElement('afterend', newDateDisplay);
         // Make date display clickable to open date picker
-        newDateDisplay.addEventListener('click', () => {
-          dateInput.showPicker ? dateInput.showPicker() : dateInput.click();
+        newDateDisplay.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openDatePicker();
         });
       }
+      
+      // Update calendar button title and class
+      if (dateIconBtn) {
+        dateIconBtn.title = 'Change date';
+        dateIconBtn.classList.add('has-date');
+      }
     } else {
+      // Remove date display if it exists
       if (dateDisplay) {
         dateDisplay.remove();
+      }
+      
+      // Add placeholder if it doesn't exist
+      if (!dateCell.querySelector('.date-placeholder')) {
+        const newPlaceholder = document.createElement('span');
+        newPlaceholder.className = 'date-placeholder';
+        newPlaceholder.style.cursor = 'pointer';
+        newPlaceholder.style.userSelect = 'none';
+        newPlaceholder.style.color = '#999';
+        newPlaceholder.style.fontStyle = 'italic';
+        newPlaceholder.textContent = 'Add date';
+        dateInput.insertAdjacentElement('afterend', newPlaceholder);
+        // Make placeholder clickable
+        newPlaceholder.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openDatePicker();
+        });
+      }
+      
+      // Update calendar button title and class
+      if (dateIconBtn) {
+        dateIconBtn.title = 'Add date';
+        dateIconBtn.classList.remove('has-date');
       }
     }
   }
   
   // Make date display clickable to open date picker
   if (dateDisplay) {
-    dateDisplay.addEventListener('click', () => {
-      dateInput.showPicker ? dateInput.showPicker() : dateInput.click();
+    dateDisplay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openDatePicker();
     });
   }
   
@@ -943,7 +1012,6 @@ function createTaskItem(taskData, podId, subId, taskId) {
   }
   
   // Add recurring icon button next to date input
-  const dateCell = dateInput.parentElement;
   const recurringBtn = document.createElement('button');
   recurringBtn.className = 'recurring-icon-btn';
   recurringBtn.innerHTML = '<i class="fas fa-repeat"></i>';
@@ -2718,12 +2786,29 @@ function updateTaskElement(li, taskData, podId, subId) {
   // Update due date
   const dateInput = li.querySelector('.date-input');
   const dateDisplay = li.querySelector('.date-display');
+  const dateCell = dateInput?.parentElement;
+  const dateIconBtn = li.querySelector('.date-icon-btn');
+  
+  // Function to open date picker
+  const openDatePicker = () => {
+    if (dateInput?.showPicker) {
+      dateInput.showPicker();
+    } else {
+      dateInput?.click();
+    }
+  };
   
   if (dateInput && dateInput.value !== taskData.dueDate) {
     dateInput.value = taskData.dueDate || '';
     
     // Update or create date display
     if (taskData.dueDate) {
+      // Remove placeholder if it exists
+      const placeholder = dateCell?.querySelector('.date-placeholder');
+      if (placeholder) {
+        placeholder.remove();
+      }
+      
       if (dateDisplay) {
         dateDisplay.textContent = formatDateDisplay(taskData.dueDate);
         dateDisplay.style.display = 'inline';
@@ -2735,13 +2820,44 @@ function updateTaskElement(li, taskData, podId, subId) {
         newDateDisplay.style.userSelect = 'none';
         dateInput.insertAdjacentElement('afterend', newDateDisplay);
         // Make date display clickable
-        newDateDisplay.addEventListener('click', () => {
-          dateInput.showPicker ? dateInput.showPicker() : dateInput.click();
+        newDateDisplay.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openDatePicker();
         });
       }
+      
+      // Update calendar button title and class
+      if (dateIconBtn) {
+        dateIconBtn.title = 'Change date';
+        dateIconBtn.classList.add('has-date');
+      }
     } else {
+      // Remove date display if it exists
       if (dateDisplay) {
         dateDisplay.remove();
+      }
+      
+      // Add placeholder if it doesn't exist
+      if (dateCell && !dateCell.querySelector('.date-placeholder')) {
+        const newPlaceholder = document.createElement('span');
+        newPlaceholder.className = 'date-placeholder';
+        newPlaceholder.style.cursor = 'pointer';
+        newPlaceholder.style.userSelect = 'none';
+        newPlaceholder.style.color = '#999';
+        newPlaceholder.style.fontStyle = 'italic';
+        newPlaceholder.textContent = 'Add date';
+        dateInput.insertAdjacentElement('afterend', newPlaceholder);
+        // Make placeholder clickable
+        newPlaceholder.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openDatePicker();
+        });
+      }
+      
+      // Update calendar button title and class
+      if (dateIconBtn) {
+        dateIconBtn.title = 'Add date';
+        dateIconBtn.classList.remove('has-date');
       }
     }
   }

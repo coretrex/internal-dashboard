@@ -4793,6 +4793,36 @@ body.presence-banner-visible #global-edit-button {
   color: #2563eb;
 }
 
+.date-icon-btn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px 6px;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.date-icon-btn:hover {
+  background: #f1f3f4;
+  color: #6b7280;
+}
+
+.date-icon-btn.has-date {
+  color: #3b82f6;
+}
+
+.date-icon-btn.has-date:hover {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
 .recurring-icon-btn {
   background: transparent;
   border: none;
