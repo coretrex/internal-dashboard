@@ -2393,6 +2393,17 @@ document.addEventListener('DOMContentLoaded', () => {
     initTimerModal();
     // Check if we need to navigate to a task from a notification
     checkPendingNavigation();
+    // If another page requested to open notifications, do it now
+    try {
+      const shouldOpenNotifications = localStorage.getItem('openNotificationsOnLoad') === 'true';
+      if (shouldOpenNotifications && typeof openNotificationsModal === 'function') {
+        await openNotificationsModal();
+        localStorage.removeItem('openNotificationsOnLoad');
+      }
+    } catch (e) {
+      console.warn('Deferred notifications open failed:', e);
+      localStorage.removeItem('openNotificationsOnLoad');
+    }
   })();
 });
 

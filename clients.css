@@ -53,6 +53,11 @@
     display: grid;
 }
 
+.clients-container .input-section #addClientBtn {
+    grid-column: -2 / -1; /* force into the last column */
+    justify-self: end;    /* align to the right within its grid cell */
+}
+
 .input-field {
     width: 100%;
     padding: 0.5rem;
@@ -272,7 +277,8 @@
 .toggle-add-client {
     position: fixed;
     top: 20px;
-    left: 20px;
+    right: 20px;
+    left: auto;
     background: rgba(255, 255, 255, 0.1);
     color: white;
     padding: 8px 20px;

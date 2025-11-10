@@ -105,11 +105,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     console.log('Authentication check completed');
 
-    // Add navigation component
-    console.log('Adding navigation component...');
-    const navElement = document.createElement('nav-menu');
-    document.body.appendChild(navElement);
-    console.log('Navigation component added');
+    // Ensure a single global navigation component
+    console.log('Ensuring navigation component exists...');
+    if (!document.querySelector('nav-menu')) {
+        const navElement = document.createElement('nav-menu');
+        document.body.appendChild(navElement);
+        console.log('Navigation component added');
+    } else {
+        console.log('Navigation component already present');
+    }
 
     // --- MRR (Revenue) Thermometer Sync with Revenue KPI ---
     const mrrDefaults = 94000;
