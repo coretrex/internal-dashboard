@@ -5425,7 +5425,7 @@ body.presence-banner-visible #global-edit-button {
 .projects-body .drop-indicator { height:2px; background:#4a78c2; border-radius:2px; margin:6px 0; }
 
 /* Global Completed Tasks Section */
-.projects-body .global-completed-section { margin-top: 40px; padding-top: 24px; border-top: 2px solid #0d47a1; }
+.projects-body .global-completed-section { margin-top: 40px; padding-top: 24px; border-top: none; }
 .projects-body .global-completed-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .projects-body .global-completed-header h2 { color: #ffffff; font-size: 1.3rem; font-weight: 700; margin: 0; }
 .projects-body .global-completed-toggle { background: transparent; border: none; color: #ffffff; font-weight: 600; font-size: 1rem; cursor: pointer; padding: 8px 12px; border-radius: 8px; transition: background .2s; }
