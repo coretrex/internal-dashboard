@@ -42,7 +42,8 @@ const AVAILABLE_PAGES = [
     { id: 'goals', name: 'KPIs & Goals', icon: 'fas fa-bullseye' },
     { id: 'kpis', name: 'Call Metrics', icon: 'fas fa-chart-bar' },
     { id: 'prospects', name: 'Prospects', icon: 'fas fa-chart-line' },
-    { id: 'clients', name: 'Clients', icon: 'fas fa-users' }
+    { id: 'clients', name: 'Clients', icon: 'fas fa-users' },
+    { id: 'projects', name: 'Projects', icon: 'fas fa-tasks' }
 ];
 
 // User roles
