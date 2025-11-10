@@ -3571,7 +3571,8 @@ function renderCommentsList(comments) {
       const dt = c.createdAt?.toDate?.() || (c.timestamp ? new Date(c.timestamp) : null);
       when = dt ? getTimeAgo(dt) : '';
     } catch(_) {}
-    const canEdit = currentUserEmail && c.createdByEmail && c.createdByEmail.toLowerCase() === currentUserEmail.toLowerCase();
+    // Show edit/delete for all comments
+    const canEdit = true;
     const avatarUrl = c.createdByPhotoURL || '';
     const initials = (c.createdByName || 'U').split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
     const avatarEl = avatarUrl 
