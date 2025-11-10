@@ -150,6 +150,10 @@
         <div class="projects-drawer-body">
             <label class="projects-drawer-label" for="drawerLongDescription">Long Description</label>
             <textarea id="drawerLongDescription" class="projects-drawer-textarea" placeholder="Add a detailed description..."></textarea>
+            <div style="display:flex; gap:10px; margin-top:0.5rem; justify-content:flex-start;">
+                <button id="saveTaskDetailsBtn" class="save-comment-btn" style="background:#2196F3; color:#fff;">Save</button>
+                <button id="cancelTaskDetailsBtn" class="cancel-comment-btn">Cancel</button>
+            </div>
 
             <div class="projects-drawer-section">
                 <div class="projects-drawer-section-header">
@@ -188,10 +192,7 @@
                 </div>
             </div>
         </div>
-        <div class="projects-drawer-footer">
-            <button id="saveTaskDetailsBtn" class="save-comment-btn">Save</button>
-            <button id="cancelTaskDetailsBtn" class="cancel-comment-btn">Cancel</button>
-        </div>
+        <div class="projects-drawer-footer" style="display:none;"></div>
     </div>
 
     <!-- My Tasks Modal -->
