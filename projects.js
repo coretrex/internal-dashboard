@@ -3168,6 +3168,7 @@ function showConfirmModal(message) {
 // Task Drawer logic
 let currentDrawerContext = null;
 let uploadingFiles = new Map(); // Track ongoing uploads
+let activeCommentsUnsubscribe = null; // Active comments listener for drawer
 
 function initTaskDrawer() {
   const drawer = document.getElementById('taskDrawer');
@@ -3175,6 +3176,9 @@ function initTaskDrawer() {
   const cancelBtn = document.getElementById('cancelTaskDetailsBtn');
   const saveBtn = document.getElementById('saveTaskDetailsBtn');
   const fileInput = document.getElementById('attachmentFileInput');
+  const postCommentBtn = document.getElementById('postCommentBtn');
+  const newCommentTextarea = document.getElementById('newCommentTextarea');
+  const mentionSuggestions = document.getElementById('mentionSuggestions');
   
   if (!drawer) return;
   
@@ -3182,6 +3186,13 @@ function initTaskDrawer() {
     drawer.classList.add('hidden');
     currentDrawerContext = null;
     uploadingFiles.clear();
+    // Clean up comments listener and UI
+    if (typeof activeCommentsUnsubscribe === 'function') {
+      try { activeCommentsUnsubscribe(); } catch(_) {}
+      activeCommentsUnsubscribe = null;
+    }
+    if (mentionSuggestions) mentionSuggestions.style.display = 'none';
+    if (newCommentTextarea) newCommentTextarea.value = '';
   }
   
   if (closeBtn) closeBtn.addEventListener('click', close);
@@ -3231,6 +3242,38 @@ function initTaskDrawer() {
     if (container) await loadTasksInto(podId, subId, container);
     close();
   });
+
+  // Comments: Post button
+  if (postCommentBtn) {
+    postCommentBtn.addEventListener('click', async () => {
+      await postCurrentDrawerComment();
+    });
+  }
+
+  // Comments: Mention suggestions
+  if (newCommentTextarea) {
+    // Show suggestions when typing '@' and some query
+    newCommentTextarea.addEventListener('keyup', async (e) => {
+      await handleMentionSuggestions(e);
+    });
+    newCommentTextarea.addEventListener('keydown', (e) => {
+      // Hide suggestions on Escape
+      if (e.key === 'Escape' && mentionSuggestions && mentionSuggestions.style.display !== 'none') {
+        mentionSuggestions.style.display = 'none';
+      }
+      // Submit with Cmd/Ctrl+Enter
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        postCurrentDrawerComment();
+      }
+    });
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', (e) => {
+      if (mentionSuggestions && !mentionSuggestions.contains(e.target) && e.target !== newCommentTextarea) {
+        mentionSuggestions.style.display = 'none';
+      }
+    });
+  }
 }
 
 // Upload a file attachment - Simple base64 storage in Firestore (no CORS needed!)
@@ -3449,6 +3492,304 @@ async function refreshAttachmentsList(podId, subId, taskId) {
   }
 }
 
+// ---------- Comments Helpers ----------
+function escapeHtml(text) {
+  if (text == null) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function highlightMentions(text, mentions) {
+  if (!text) return '';
+  let safe = escapeHtml(text);
+  if (Array.isArray(mentions)) {
+    mentions.forEach(m => {
+      const name = (m.name || m.email || '').trim();
+      if (!name) return;
+      // Match @Name (basic, case-insensitive, word-boundary after)
+      const pattern = new RegExp(`@${name.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}(?=\\b)`, 'gi');
+      safe = safe.replace(pattern, (match) => `<span style="color:#2196F3; font-weight:600;">${escapeHtml(match)}</span>`);
+    });
+  }
+  return safe;
+}
+
+async function setupCommentsForTask(podId, subId, taskId) {
+  // Clean up previous
+  if (typeof activeCommentsUnsubscribe === 'function') {
+    try { activeCommentsUnsubscribe(); } catch(_) {}
+    activeCommentsUnsubscribe = null;
+  }
+  const listEl = document.getElementById('commentsList');
+  if (listEl) {
+    listEl.innerHTML = '<div style="padding: 0.75rem; color:#666; text-align:center;">Loading comments...</div>';
+  }
+  if (!podId || !subId || !taskId) return;
+  const podRef = doc(db, 'pods', podId);
+  const subRef = doc(podRef, 'subprojects', subId);
+  const taskRef = doc(subRef, 'tasks', taskId);
+  const commentsCol = collection(taskRef, 'comments');
+  const qy = query(commentsCol, orderBy('timestamp', 'asc'));
+  activeCommentsUnsubscribe = onSnapshot(qy, (snapshot) => {
+    const comments = [];
+    snapshot.forEach(d => {
+      const data = d.data() || {};
+      comments.push({
+        id: d.id,
+        text: data.text || '',
+        mentions: Array.isArray(data.mentions) ? data.mentions : [],
+        createdByName: data.createdByName || 'Unknown',
+        createdByEmail: data.createdByEmail || '',
+        createdAt: data.createdAt || null,
+        timestamp: data.timestamp || 0
+      });
+    });
+    renderCommentsList(comments);
+  }, (err) => {
+    console.error('[Comments] Listener error:', err);
+    if (listEl) {
+      listEl.innerHTML = '<div style="padding: 0.75rem; color:#c62828; text-align:center;">Failed to load comments</div>';
+    }
+  });
+}
+
+function renderCommentsList(comments) {
+  const listEl = document.getElementById('commentsList');
+  if (!listEl) return;
+  if (!comments || comments.length === 0) {
+    listEl.innerHTML = '<div style="padding: 0.75rem; color:#666; text-align:center;">No comments yet</div>';
+    return;
+  }
+  const currentUserEmail = localStorage.getItem('userEmail') || '';
+  const html = comments.map(c => {
+    let when = '';
+    try {
+      const dt = c.createdAt?.toDate?.() || (c.timestamp ? new Date(c.timestamp) : null);
+      when = dt ? getTimeAgo(dt) : '';
+    } catch(_) {}
+    const canEdit = currentUserEmail && c.createdByEmail && c.createdByEmail.toLowerCase() === currentUserEmail.toLowerCase();
+    const avatarUrl = c.createdByPhotoURL || '';
+    const initials = (c.createdByName || 'U').split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase();
+    const avatarEl = avatarUrl 
+      ? `<img src="${escapeHtml(avatarUrl)}" alt="avatar" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid #e0e0e0;" />`
+      : `<div style="width:24px; height:24px; border-radius:50%; background:#e0e0e0; color:#555; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; border:1px solid #d0d0d0;">${escapeHtml(initials)}</div>`;
+    return `
+      <div class="comment-item" data-comment-id="${escapeHtml(c.id)}" style="padding: 0.65rem 0.5rem; border-bottom: 1px solid #eee;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom: 6px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            ${avatarEl}
+            <div style="display:flex; align-items:baseline; gap:8px;">
+              <div style="font-weight:700; color:#333;">${escapeHtml(c.createdByName)}</div>
+              <div style="color:#999; font-size:0.8rem; white-space:nowrap;">${escapeHtml(when)}</div>
+            </div>
+          </div>
+          ${canEdit ? `
+            <div style="display:flex; gap:6px;">
+              <button class="comment-edit-btn" title="Edit" style="background:none; border:none; color:#2196F3; cursor:pointer; padding:4px;">
+                <i class="fas fa-pen"></i>
+              </button>
+              <button class="comment-delete-btn" title="Delete" style="background:none; border:none; color:#e74c3c; cursor:pointer; padding:4px;">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>` : ''}
+        </div>
+        <div class="comment-content" style="color:#222; line-height:1.6; word-break:break-word; font-size:0.95rem;">${highlightMentions(c.text, c.mentions)}</div>
+      </div>
+    `;
+  }).join('');
+  listEl.innerHTML = html;
+  // Scroll to bottom on new comments
+  listEl.scrollTop = listEl.scrollHeight;
+  // Wire up edit/delete handlers
+  listEl.querySelectorAll('.comment-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = btn.closest('.comment-item');
+      if (!item) return;
+      startInlineCommentEdit(item);
+    });
+  });
+  listEl.querySelectorAll('.comment-delete-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const item = btn.closest('.comment-item');
+      if (!item) return;
+      await deleteCommentById(item.getAttribute('data-comment-id'));
+    });
+  });
+}
+
+async function extractMentionsFromText(text) {
+  const users = await loadAssignableUsers();
+  const tokens = new Set();
+  // Capture @word tokens (first name, username-ish)
+  const re = /@([A-Za-z][\w'.-]*)/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    if (m[1]) tokens.add(m[1].toLowerCase());
+  }
+  if (tokens.size === 0) return [];
+  const matches = [];
+  users.forEach(u => {
+    const name = (u.name || '').trim();
+    const first = name ? name.split(' ')[0] : '';
+    const email = (u.email || '').split('@')[0];
+    const candidates = [first, name, email].filter(Boolean).map(s => s.toLowerCase());
+    const found = Array.from(tokens).some(t => candidates.some(c => c === t));
+    if (found) {
+      matches.push({ id: u.id, name: u.name || u.email || 'User', email: u.email || '' });
+    }
+  });
+  // Deduplicate by email/id
+  const seen = new Set();
+  return matches.filter(mit => {
+    const key = mit.email || mit.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function getActiveMentionRange(text, caretIndex) {
+  // Find the last '@' before caret that starts a mention and has no space until caret
+  let i = caretIndex - 1;
+  while (i >= 0) {
+    const ch = text[i];
+    if (ch === '@') {
+      // ensure start boundary (start of line or whitespace before)
+      if (i === 0 || /\s/.test(text[i - 1])) {
+        const query = text.slice(i + 1, caretIndex);
+        if (!/\s/.test(query)) {
+          return { start: i, end: caretIndex, query };
+        }
+      }
+      break;
+    }
+    if (/\s/.test(ch)) break;
+    i--;
+  }
+  return null;
+}
+
+async function handleMentionSuggestions(e) {
+  const textarea = e.target;
+  const dropdown = document.getElementById('mentionSuggestions');
+  if (!textarea || !dropdown) return;
+  const value = textarea.value;
+  const caret = textarea.selectionStart;
+  const range = getActiveMentionRange(value, caret);
+  if (!range || range.query.length === 0) {
+    dropdown.style.display = 'none';
+    return;
+  }
+  const users = await loadAssignableUsers();
+  const q = range.query.toLowerCase();
+  const results = users
+    .filter(u => {
+      const name = (u.name || '').toLowerCase();
+      const first = name.split(' ')[0] || '';
+      const email = (u.email || '').toLowerCase();
+      return name.includes(q) || first.includes(q) || email.includes(q);
+    })
+    .slice(0, 8);
+  if (results.length === 0) {
+    dropdown.style.display = 'none';
+    return;
+  }
+  dropdown.innerHTML = results.map(u => `
+    <div class="mention-option" data-user-id="${escapeHtml(u.id)}" data-user-name="${escapeHtml(u.name || u.email)}" 
+         style="padding:8px 10px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+      <i class="fas fa-at" style="color:#2196F3;"></i>
+      <div style="display:flex; flex-direction:column;">
+        <span style="font-weight:600; color:#333;">${escapeHtml(u.name || u.email)}</span>
+        ${u.email ? `<span style="font-size:0.8rem; color:#777;">${escapeHtml(u.email)}</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+  // Position dropdown just above the buttons (already absolute with bottom)
+  dropdown.style.display = 'block';
+  // Attach click handlers
+  dropdown.querySelectorAll('.mention-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const name = opt.getAttribute('data-user-name') || '';
+      if (!name) {
+        dropdown.style.display = 'none';
+        return;
+      }
+      // Replace the active mention range with @Full Name + space
+      const before = value.slice(0, range.start);
+      const after = value.slice(range.end);
+      const insert = '@' + name + ' ';
+      textarea.value = before + insert + after;
+      const newCaret = (before + insert).length;
+      textarea.setSelectionRange(newCaret, newCaret);
+      textarea.focus();
+      dropdown.style.display = 'none';
+    });
+  });
+}
+
+async function postCurrentDrawerComment() {
+  if (!currentDrawerContext) return;
+  const { podId, subId, taskId } = currentDrawerContext;
+  const textarea = document.getElementById('newCommentTextarea');
+  const dropdown = document.getElementById('mentionSuggestions');
+  if (!textarea || !podId || !subId || !taskId) return;
+  const text = (textarea.value || '').trim();
+  if (text.length === 0) return;
+  try {
+    // Resolve mentions from text
+    const mentions = await extractMentionsFromText(text);
+    // Resolve current user's photo
+    const currentUserEmail = localStorage.getItem('userEmail') || '';
+    let createdByPhotoURL = localStorage.getItem('userPhotoURL') || '';
+    try {
+      const users = await loadAssignableUsers();
+      const me = users.find(u => (u.email || '').toLowerCase() === currentUserEmail.toLowerCase());
+      if (me && me.photoURL) createdByPhotoURL = me.photoURL;
+    } catch(_) {}
+    const podRef = doc(db, 'pods', podId);
+    const subRef = doc(podRef, 'subprojects', subId);
+    const taskRef = doc(subRef, 'tasks', taskId);
+    const commentsCol = collection(taskRef, 'comments');
+    const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+    await addDoc(commentsCol, {
+      text,
+      mentions,
+      createdByName: currentUserName,
+      createdByEmail: currentUserEmail,
+      createdByPhotoURL,
+      createdAt: Timestamp.now(),
+      timestamp: Date.now()
+    });
+    // Notify mentioned users (skip self)
+    for (const m of mentions) {
+      const targetUserId = m.email || m.id;
+      if (targetUserId && targetUserId !== currentUserEmail) {
+        createNotification({
+          userId: targetUserId,
+          type: 'task_commented',
+          taskId,
+          taskText: document.getElementById('drawerTaskTitle')?.textContent || 'Task',
+          podId,
+          subprojectId: subId,
+          changeType: 'commented',
+          changedBy: currentUserName,
+          changes: { snippet: text.slice(0, 140) }
+        });
+      }
+    }
+    // Clear input and hide dropdown
+    textarea.value = '';
+    if (dropdown) dropdown.style.display = 'none';
+  } catch (e) {
+    console.error('[Comments] Error posting comment:', e);
+    alert('Failed to post comment. Please try again.');
+  }
+}
+
 async function openTaskDrawer({ podId, subId, taskId, title, longDescription = '', attachments = [] }) {
   const drawer = document.getElementById('taskDrawer');
   if (!drawer) return;
@@ -3481,8 +3822,111 @@ async function openTaskDrawer({ podId, subId, taskId, title, longDescription = '
   
   // Load attachments using the new file-based system
   await refreshAttachmentsList(podId, subId, taskId);
+  // Load comments and wire real-time updates
+  await setupCommentsForTask(podId, subId, taskId);
+  // Reset comment composer UI
+  const cta = document.getElementById('newCommentTextarea');
+  const suggestions = document.getElementById('mentionSuggestions');
+  if (cta) cta.value = '';
+  if (suggestions) suggestions.style.display = 'none';
   
   drawer.classList.remove('hidden');
+}
+
+// Inline edit comment
+function startInlineCommentEdit(commentItemEl) {
+  const contentEl = commentItemEl.querySelector('.comment-content');
+  if (!contentEl) return;
+  const originalHtml = contentEl.innerHTML;
+  const originalText = contentEl.textContent || '';
+  // Build editor
+  const editor = document.createElement('div');
+  editor.style.marginTop = '6px';
+  const textarea = document.createElement('textarea');
+  textarea.style.width = '100%';
+  textarea.style.minHeight = '70px';
+  textarea.style.boxSizing = 'border-box';
+  textarea.value = originalText;
+  const actions = document.createElement('div');
+  actions.style.display = 'flex';
+  actions.style.gap = '8px';
+  actions.style.marginTop = '6px';
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Save';
+  saveBtn.className = 'save-comment-btn';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.className = 'cancel-comment-btn';
+  actions.appendChild(saveBtn);
+  actions.appendChild(cancelBtn);
+  editor.appendChild(textarea);
+  editor.appendChild(actions);
+  // Replace
+  contentEl.innerHTML = '';
+  contentEl.appendChild(editor);
+  textarea.focus();
+  // Handlers
+  cancelBtn.addEventListener('click', () => {
+    contentEl.innerHTML = originalHtml;
+  });
+  saveBtn.addEventListener('click', async () => {
+    const newText = (textarea.value || '').trim();
+    if (newText.length === 0) {
+      contentEl.innerHTML = originalHtml;
+      return;
+    }
+    const commentId = commentItemEl.getAttribute('data-comment-id');
+    await updateCommentById(commentId, newText);
+  });
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      contentEl.innerHTML = originalHtml;
+    } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      saveBtn.click();
+    }
+  });
+}
+
+async function updateCommentById(commentId, newText) {
+  try {
+    if (!currentDrawerContext) return;
+    const { podId, subId, taskId } = currentDrawerContext;
+    if (!podId || !subId || !taskId || !commentId) return;
+    const mentions = await extractMentionsFromText(newText);
+    const podRef = doc(db, 'pods', podId);
+    const subRef = doc(podRef, 'subprojects', subId);
+    const taskRef = doc(subRef, 'tasks', taskId);
+    const commentRef = doc(taskRef, 'comments', commentId);
+    await updateDoc(commentRef, {
+      text: newText,
+      mentions,
+      editedAt: Timestamp.now(),
+      editedAtMs: Date.now()
+    });
+  } catch (e) {
+    console.error('[Comments] Error updating comment:', e);
+    alert('Failed to update comment. Please try again.');
+  }
+}
+
+async function deleteCommentById(commentId) {
+  try {
+    if (!currentDrawerContext) return;
+    const { podId, subId, taskId } = currentDrawerContext;
+    if (!podId || !subId || !taskId || !commentId) return;
+    const confirmed = await showConfirmModal('Delete this comment?');
+    if (!confirmed) return;
+    const podRef = doc(db, 'pods', podId);
+    const subRef = doc(podRef, 'subprojects', subId);
+    const taskRef = doc(subRef, 'tasks', taskId);
+    const commentRef = doc(taskRef, 'comments', commentId);
+    await deleteDoc(commentRef);
+  } catch (e) {
+    console.error('[Comments] Error deleting comment:', e);
+    alert('Failed to delete comment. Please try again.');
+  }
 }
 
 // ============ MY TASKS FUNCTIONALITY ============
@@ -4375,6 +4819,8 @@ async function openNotificationsModal() {
       let changeText = '';
       if (notif.changeType === 'assigned') {
         changeText = `<strong>${notif.changedBy}</strong> assigned you to a task`;
+      } else if (notif.changeType === 'commented') {
+        changeText = `<strong>${notif.changedBy}</strong> commented on a task`;
       } else if (notif.changeType === 'updated' && notif.changes?.fields) {
         const fields = notif.changes.fields.map(f => f.field).join(', ');
         changeText = `<strong>${notif.changedBy}</strong> updated ${fields}`;
