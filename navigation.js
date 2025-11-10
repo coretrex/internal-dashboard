@@ -3,7 +3,9 @@ class Navigation extends HTMLElement {
         super();
         
         // Get current page to set active state
-        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        const lastSegment = window.location.pathname.split('/').filter(Boolean).pop() || '';
+        const currentPage = lastSegment || 'index';
+        const currentSlug = currentPage.replace(/\.html$/i, '');
         
         // Get user access from localStorage
         let pageAccess = [];
@@ -64,7 +66,7 @@ class Navigation extends HTMLElement {
                     console.error('Sign out error:', err);
                 }
                 localStorage.clear();
-                window.location.href = 'index.html';
+                window.location.href = '/';
             });
             // Stash for sidebar insertion without flashing on page load
             this._prebuiltUserInfo = userInfoDiv;
@@ -72,11 +74,11 @@ class Navigation extends HTMLElement {
 
         // Define all possible pages
         const pages = [
-            { id: 'goals', href: 'goals.html', icon: 'fas fa-bullseye', label: 'L10' },
-            { id: 'kpis', href: 'kpis.html', icon: 'fas fa-chart-bar', label: 'Sales Metrics' },
-            { id: 'prospects', href: 'prospects.html', icon: 'fas fa-chart-line', label: 'Prospects' },
-            { id: 'clients', href: 'clients.html', icon: 'fas fa-users', label: 'Clients' },
-            { id: 'projects', href: 'projects.html', icon: 'fas fa-tasks', label: 'Projects' },
+            { id: 'goals', href: 'goals', icon: 'fas fa-bullseye', label: 'L10' },
+            { id: 'kpis', href: 'kpis', icon: 'fas fa-chart-bar', label: 'Sales Metrics' },
+            { id: 'prospects', href: 'prospects', icon: 'fas fa-chart-line', label: 'Prospects' },
+            { id: 'clients', href: 'clients', icon: 'fas fa-users', label: 'Clients' },
+            { id: 'projects', href: 'projects', icon: 'fas fa-tasks', label: 'Projects' },
         ];
 
         // Build navigation HTML
@@ -84,7 +86,7 @@ class Navigation extends HTMLElement {
         for (const page of pages) {
             if (pageAccess.includes(page.id) || isAdmin) {
                 navHtml += `
-                    <a href="${page.href}" class="nav-btn ${currentPage === page.href ? 'active' : ''}">
+                    <a href="${page.href}" class="nav-btn ${currentSlug === page.id ? 'active' : ''}">
                         <i class="${page.icon}"></i><span class="nav-label">${page.label}</span>
                     </a>
                 `;
@@ -244,7 +246,7 @@ class Navigation extends HTMLElement {
                                     console.error('Sign out error:', err);
                                 }
                                 localStorage.clear();
-                                window.location.href = 'index.html';
+                                window.location.href = '/';
                             });
                             navButtons.insertBefore(ui, navButtons.firstChild.nextSibling || navButtons.firstChild);
                         }
@@ -342,12 +344,12 @@ class Navigation extends HTMLElement {
                                 await window.openNotificationsModal();
                             } else {
                                 localStorage.setItem('openNotificationsOnLoad', 'true');
-                                window.location.href = 'projects.html';
+                                window.location.href = 'projects';
                             }
                         } catch (err) {
                             console.warn('Could not open notifications modal:', err);
                             localStorage.setItem('openNotificationsOnLoad', 'true');
-                            window.location.href = 'projects.html';
+                            window.location.href = 'projects';
                         }
                     });
                     const signout = navButtons.querySelector('.nav-signout-container');
@@ -361,8 +363,8 @@ class Navigation extends HTMLElement {
                 // Append Admin link just below Notifications (and above Sign Out) for admin users
                 if (isAdmin && !navButtons.querySelector('.nav-admin-link')) {
                     const adminLink = document.createElement('a');
-                    adminLink.className = `nav-btn nav-admin-link ${currentPage === 'admin.html' ? 'active' : ''}`;
-                    adminLink.href = 'admin.html';
+                    adminLink.className = `nav-btn nav-admin-link ${currentSlug === 'admin' ? 'active' : ''}`;
+                    adminLink.href = 'admin';
                     adminLink.innerHTML = '<i class="fas fa-shield-alt"></i><span class="nav-label">Admin</span>';
                     const signout = navButtons.querySelector('.nav-signout-container');
                     if (signout) {
@@ -389,7 +391,7 @@ class Navigation extends HTMLElement {
                             console.error('Sign out error:', err);
                         }
                         localStorage.clear();
-                        window.location.href = 'index.html';
+                        window.location.href = '/';
                     });
                     container.appendChild(btn);
                     navButtons.appendChild(container);

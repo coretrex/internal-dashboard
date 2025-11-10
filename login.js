@@ -77,11 +77,11 @@ async function handleSuccessfulAuth(user) {
         // Redirect to the first page the user actually has access to
         const pageOrder = ['goals', 'kpis', 'prospects', 'clients', 'projects'];
         const hrefByPage = {
-            goals: 'goals.html',
-            kpis: 'kpis.html',
-            prospects: 'prospects.html',
-            clients: 'clients.html',
-            projects: 'projects.html',
+            goals: 'goals',
+            kpis: 'kpis',
+            prospects: 'prospects',
+            clients: 'clients',
+            projects: 'projects',
         };
         const isAdmin = (userData.role === 'admin');
         const accessList = Array.isArray(userData.pageAccess) ? userData.pageAccess : [];
@@ -108,7 +108,7 @@ async function handleSuccessfulAuth(user) {
             alert('No page access assigned to your account. Please contact your administrator.');
             await signOut(auth);
             localStorage.clear();
-            window.location.href = 'index.html';
+            window.location.href = '/';
             return;
         }
         window.location.href = targetHref;

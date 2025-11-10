@@ -1041,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // PAGE GUARD
     if (!hasPageAccess('prospects')) {
         alert('Access denied. You do not have permission to view this page.');
-        window.location.href = 'index.html';
+        window.location.href = '/';
         return;
     }
 

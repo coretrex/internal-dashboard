@@ -51,7 +51,11 @@ class PresenceManager {
         // Get user info from localStorage
         this.userId = localStorage.getItem('userId') || this.generateUserId();
         this.userName = localStorage.getItem('userName') || 'Unknown User';
-        this.currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        {
+            const lastSegment = window.location.pathname.split('/').filter(Boolean).pop() || '';
+            const current = lastSegment || 'index';
+            this.currentPage = current.replace(/\.html$/i, '');
+        }
 
         // Store userId if not already stored
         if (!localStorage.getItem('userId')) {

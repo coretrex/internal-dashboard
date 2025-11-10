@@ -575,12 +575,13 @@ class PresenceUI {
     // Get page display name
     getPageDisplayName(page) {
         const pageNames = {
-            'goals.html': 'KPIs & Goals',
-            'kpis.html': 'Call Metrics',
-            'prospects.html': 'Prospects',
-            'clients.html': 'Clients',
-            'admin.html': 'Admin Panel',
-            'index.html': 'Login'
+            'goals': 'KPIs & Goals',
+            'kpis': 'Call Metrics',
+            'prospects': 'Prospects',
+            'clients': 'Clients',
+            'projects': 'Projects',
+            'admin': 'Admin Panel',
+            'index': 'Login'
         };
         return pageNames[page] || page;
     }

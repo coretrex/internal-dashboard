@@ -5,5 +5,13 @@
       "src": "**/*",
       "use": "@vercel/static"
     }
+  ],
+  "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/:path*.html",
+      "destination": "/:path*",
+      "permanent": true
+    }
   ]
 }

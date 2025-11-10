@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const userRole = localStorage.getItem('userRole');
     if (!isLoggedIn || userRole !== 'admin') {
         alert('Access denied. Admin privileges required.');
-        window.location.href = 'index.html';
+        window.location.href = '/';
         return;
     }
 
@@ -122,7 +122,7 @@ async function checkAdminAccess() {
         
         if (!isLoggedIn || userRole !== 'admin') {
             alert('Access denied. Admin privileges required.');
-            window.location.href = 'index.html';
+            window.location.href = '/';
             return;
         }
 
@@ -132,7 +132,7 @@ async function checkAdminAccess() {
         
     } catch (error) {
         console.error('Error checking admin access:', error);
-        window.location.href = 'index.html';
+        window.location.href = '/';
     }
 }
 
@@ -455,12 +455,12 @@ async function handleSignOut() {
         await signOut(auth);
         
         // Redirect to login
-        window.location.href = 'index.html';
+        window.location.href = '/';
     } catch (error) {
         console.error('Error signing out:', error);
         // Even if Firebase signout fails, clear localStorage and redirect
         localStorage.clear();
-        window.location.href = 'index.html';
+        window.location.href = '/';
     }
 }
 

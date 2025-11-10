@@ -375,7 +375,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // PAGE GUARD
     if (!hasPageAccess('clients')) {
         alert('Access denied. You do not have permission to view this page.');
-        window.location.href = 'index.html';
+        window.location.href = '/';
         return;
     }
 

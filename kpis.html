@@ -12,7 +12,7 @@
     <script>
         // Authentication check - redirect to login if not logged in
         if (!localStorage.getItem('isLoggedIn') || localStorage.getItem('isLoggedIn') !== 'true') {
-            window.location.href = 'index.html';
+            window.location.href = '/';
         }
     </script>
     <script type="module" src="kpi.js"></script>

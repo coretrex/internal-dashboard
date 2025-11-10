@@ -5127,12 +5127,13 @@ function showBrowserNotification() {
 // Navigate to a specific task
 function navigateToTask(podId, subprojectId, taskId) {
   // Check if we're on the projects page
-  const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+  const lastSegment = window.location.pathname.split('/').filter(Boolean).pop() || '';
+  const currentSlug = (lastSegment || 'index').replace(/\.html$/i, '');
   
-  if (currentPage !== 'projects.html') {
+  if (currentSlug !== 'projects') {
     // Store navigation intent and redirect to projects page
     sessionStorage.setItem('navigateToTask', JSON.stringify({ podId, subprojectId, taskId }));
-    window.location.href = 'projects.html';
+    window.location.href = 'projects';
     return;
   }
   
@@ -5335,10 +5336,11 @@ function initNotificationsModal() {
         e.stopPropagation();
         
         // Check if we're on the projects page
-        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-        if (currentPage !== 'projects.html') {
+        const lastSegment = window.location.pathname.split('/').filter(Boolean).pop() || '';
+        const currentSlug = (lastSegment || 'index').replace(/\.html$/i, '');
+        if (currentSlug !== 'projects') {
           // Redirect to projects page to view notifications
-          window.location.href = 'projects.html';
+          window.location.href = 'projects';
         } else {
           // Open modal if we're already on projects page
           openNotificationsModal();
