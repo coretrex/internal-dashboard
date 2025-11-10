@@ -727,8 +727,7 @@ h1 {
 }
 .nav-buttons.collapsed .nav-section-title,
 .nav-buttons.collapsed .nav-btn .nav-label,
-.nav-buttons.collapsed .user-info-widget,
-.nav-buttons.collapsed .nav-sound-toggle {
+.nav-buttons.collapsed .user-info-widget {
   display: none !important;
 }
 .nav-buttons.collapsed .nav-btn {
@@ -754,6 +753,17 @@ h1 {
 }
 .nav-buttons.collapsed .nav-collapse-btn i {
   font-size: 16px;
+}
+.nav-buttons.collapsed .nav-sound-toggle {
+  width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+.nav-buttons.collapsed .nav-sound-toggle i {
+  font-size: 16px !important;
 }
 .nav-buttons.collapsed .nav-signout-btn {
   font-size: 0;

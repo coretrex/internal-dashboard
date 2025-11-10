@@ -90,14 +90,7 @@ class Navigation extends HTMLElement {
                 `;
             }
         }
-        // Always show Admin Panel for admins
-        if (isAdmin) {
-            navHtml += `
-                <a href="admin.html" class="nav-btn ${currentPage === 'admin.html' ? 'active' : ''}">
-                    <i class="fas fa-shield-alt"></i><span class="nav-label">Admin</span>
-                </a>
-            `;
-        }
+        // Admin link will be appended near the bottom (after Notifications) if user is admin
         navHtml += '</div>';
         this.innerHTML = navHtml;
         
@@ -362,6 +355,20 @@ class Navigation extends HTMLElement {
                         navButtons.insertBefore(notifRow, signout);
                     } else {
                         navButtons.appendChild(notifRow);
+                    }
+                }
+
+                // Append Admin link just below Notifications (and above Sign Out) for admin users
+                if (isAdmin && !navButtons.querySelector('.nav-admin-link')) {
+                    const adminLink = document.createElement('a');
+                    adminLink.className = `nav-btn nav-admin-link ${currentPage === 'admin.html' ? 'active' : ''}`;
+                    adminLink.href = 'admin.html';
+                    adminLink.innerHTML = '<i class="fas fa-shield-alt"></i><span class="nav-label">Admin</span>';
+                    const signout = navButtons.querySelector('.nav-signout-container');
+                    if (signout) {
+                        navButtons.insertBefore(adminLink, signout);
+                    } else {
+                        navButtons.appendChild(adminLink);
                     }
                 }
 
