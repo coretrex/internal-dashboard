@@ -24,6 +24,38 @@
         .projects-top-nav #myTasksFilterBtn i {
             color: inherit;
         }
+        /* Completed Tasks area aligned with main content grid */
+        .projects-body .global-completed-section {
+            width: 95%;
+            max-width: 1600px;
+            margin: 24px auto 0 auto; /* align with .projects-grid container */
+            padding: 0;
+        }
+        .projects-body .global-completed-header {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; /* left align */
+        }
+        /* Make the toggle look like a prominent button */
+        .projects-body .global-completed-toggle {
+            background: #2196F3;
+            color: #ffffff;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.25);
+            transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+        }
+        .projects-body .global-completed-toggle:hover {
+            background: #1976D2;
+            box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+        }
+        .projects-body .global-completed-toggle:active {
+            transform: translateY(1px);
+        }
     </style>
     <script>
         // Authentication check - redirect to login if not logged in
@@ -71,7 +103,6 @@
         <!-- Global Completed Tasks Section -->
         <div id="globalCompletedSection" class="global-completed-section" style="display:none;">
             <div class="global-completed-header">
-                <h2>Completed Tasks</h2>
                 <button id="toggleGlobalCompleted" class="global-completed-toggle">Show completed tasks (0)</button>
             </div>
         </div>
