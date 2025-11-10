@@ -57,7 +57,8 @@ const podInfo = [
   { id: 'pod1', title: 'Pod 1', icon: 'fa-rocket' },
   { id: 'pod2', title: 'Pod 2', icon: 'fa-dumbbell' },
   { id: 'pod3', title: 'Pod 3', icon: 'fa-meteor' },
-  { id: 'sales', title: 'Sales', icon: 'fa-chart-line' }
+  { id: 'sales', title: 'Sales', icon: 'fa-chart-line' },
+  { id: 'billing', title: 'Billing', icon: 'fa-credit-card' }
 ];
 
 // In-memory registry of subprojects keyed by pod id
