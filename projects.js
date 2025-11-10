@@ -2971,11 +2971,8 @@ function refreshTopLinksSelection(podId, projectName) {
 function setProjectsHeader(title, icon = null) {
   const h1 = document.querySelector('.page-content h1');
   if (h1) {
-    if (icon) {
-      h1.innerHTML = `<i class="fas ${icon}"></i> ${title || 'Projects'}`;
-    } else {
-      h1.textContent = title || 'Projects';
-    }
+    // Always render plain text without an icon for a cleaner header
+    h1.textContent = title || 'Projects';
   }
 }
 

@@ -54,18 +54,20 @@ h1 {
 
 /* Projects page light theme override */
 .projects-body {
-  background: transparent; /* use global gradient */
+  background-color: transparent; /* allow global body gradient to show */
 }
 .projects-body h1 {
-  color: #202124;
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
+  font-size: 3.5rem;
+  font-weight: 800;
 }
 .projects-body h1 i {
   font-size: 1.8rem;
-  color: #4a78c2;
+  color: #ffffff;
 }
 
 /* Stats container */
@@ -4401,7 +4403,7 @@ body.presence-banner-visible #global-edit-button {
   align-items: center;
   gap: 0.4rem;
   padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #1976D2; /* solid lighter blue */
   color: white;
   border: none;
   border-radius: 8px;
@@ -4409,7 +4411,7 @@ body.presence-banner-visible #global-edit-button {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.25);
   position: relative;
 }
 
@@ -4427,7 +4429,7 @@ body.presence-banner-visible #global-edit-button {
 
 .my-tasks-filter-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+  box-shadow: 0 4px 12px rgba(13, 71, 161, 0.35);
 }
 
 .my-tasks-filter-btn.active {
@@ -4524,10 +4526,10 @@ body.presence-banner-visible #global-edit-button {
 .projects-body .projects-grid { display: grid; grid-template-columns: 1fr; gap: 18px; max-width: 1600px; width: 95%; margin: 0 auto; }
 .projects-body .projects-top-nav { display:flex; justify-content:center; align-items:center; gap:2rem; margin:6px 0 14px 0; }
 .projects-body .projects-top-links { display:flex; justify-content:center; align-items:center; gap:18px; }
-.projects-body .projects-top-links a { color:#4a78c2; text-decoration:none; font-weight:700; font-size:1.05rem; padding:6px 10px; border-radius:8px; transition: color .2s, background .2s; display:inline-flex; align-items:center; gap:8px; }
+.projects-body .projects-top-links a { color:#ffffff; text-decoration:none; font-weight:700; font-size:1.05rem; padding:6px 10px; border-radius:8px; transition: color .2s, background .2s; display:inline-flex; align-items:center; gap:8px; }
 .projects-body .projects-top-links a i { font-size:1rem; }
-.projects-body .projects-top-links a:hover { color:#2b63c7; background:rgba(74,120,194,.08); }
-.projects-body .projects-top-links a.active { color:#1f4fa3; background:rgba(74,120,194,.18); box-shadow:0 2px 8px rgba(74,120,194,.15); }
+.projects-body .projects-top-links a:hover { color:#ffffff; background:rgba(255,255,255,.12); }
+.projects-body .projects-top-links a.active { color:#ffffff; background:rgba(255,255,255,.2); box-shadow:0 2px 8px rgba(255,255,255,.15); }
 
 .projects-body .pod-card { background:#ffffff; border-radius:16px; box-shadow:0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06); padding:8px 0 6px 0; }
 .projects-body .add-subproject-link { background:transparent; border:none; color:#4a78c2; font-weight:700; padding:0 0 0 12px; cursor:pointer; display:inline-block; margin-bottom:8px; }
@@ -4920,38 +4922,104 @@ body.presence-banner-visible #global-edit-button {
 }
 
 .projects-kpi-block {
+  position: relative;
   flex: 1;
-  min-width: 150px;
-  background: #fef7e0;
-  border: 1px solid #f9efc7;
-  border-radius: 12px;
-  padding: 20px;
+  min-width: 280px;
+  background: rgba(255, 255, 255, 0.1) !important; /* glass effect like goals */
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 24px;
+  padding: 28px 32px 24px 32px;
   text-align: center;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  transition: box-shadow 0.25s, transform 0.18s;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .projects-kpi-block:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.22), 0 2.5px 12px rgba(0,0,0,0.22);
 }
 
 .projects-kpi-value {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #000000;
+  font-size: 3rem;
+  font-weight: 800;
+  color: #ffffff;
   line-height: 1;
   margin-bottom: 8px;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 12px rgba(41,121,255,0.12);
 }
 
 .projects-kpi-label {
-  font-size: 0.875rem;
-  color: #000000;
-  font-weight: 500;
-  text-transform: uppercase;
+  font-size: 1.1rem;
+  color: #e0e0e0;
+  font-weight: 700;
+  text-transform: none;
   letter-spacing: 0.5px;
 }
 
+/* Override special KPI variants to keep glass background on Projects page */
+.projects-body .projects-kpi-block.projects-kpi-clickable,
+.projects-body .projects-kpi-overdue,
+.projects-body .projects-kpi-block:last-child {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.projects-body .projects-kpi-overdue .projects-kpi-value {
+  color: #ff6b6b; /* keep emphasis but on glass card */
+}
+
+/* Colored outlines per KPI on Projects page */
+.projects-body #myTasksKpi {
+  border-color: rgba(76, 175, 80, 0.65) !important; /* green */
+}
+.projects-body #dueTodayKpi {
+  border-color: rgba(76, 175, 80, 0.65) !important; /* green */
+}
+.projects-body .projects-kpi-overdue {
+  border-color: rgba(255, 107, 107, 0.75) !important; /* red */
+}
+.projects-body #overdueKpi {
+  border-color: rgba(255, 107, 107, 0.85) !important; /* ensure red overrides clickable styles */
+}
+.projects-body .projects-kpi-block:last-child {
+  border-color: rgba(144, 202, 249, 0.65) !important; /* light blue for Total */
+}
+
+/* My Tasks KPI: solid deep purple background (no gradient/glass) */
+.projects-body #myTasksKpi {
+  background: #4a148c !important; /* deep purple */
+  border-color: #7e57c2 !important; /* complementary purple border */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: 0 8px 24px rgba(74, 20, 140, 0.35);
+}
+
+/* Due Today KPI: subtle green background and green accents */
+.projects-body #dueTodayKpi {
+  background: #2e7d32 !important; /* darker soft green */
+  border-color: #66bb6a !important; /* complementary green border */
+}
+.projects-body #dueTodayKpi .projects-kpi-value {
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+.projects-body #dueTodayKpi .projects-kpi-label {
+  color: #ffffff !important;
+}
+
+/* Overdue KPI: solid red background with white text */
+.projects-body #overdueKpi {
+  background: #d32f2f !important; /* darker soft red */
+  border-color: #e57373 !important; /* complementary red border */
+}
+.projects-body #overdueKpi .projects-kpi-value,
+.projects-body #overdueKpi .projects-kpi-label {
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
 /* Overdue block - subtle red background */
 .projects-kpi-overdue,
 .projects-kpi-overdue.projects-kpi-clickable {
@@ -5357,11 +5425,11 @@ body.presence-banner-visible #global-edit-button {
 .projects-body .drop-indicator { height:2px; background:#4a78c2; border-radius:2px; margin:6px 0; }
 
 /* Global Completed Tasks Section */
-.projects-body .global-completed-section { margin-top: 40px; padding-top: 24px; border-top: 2px solid #e9eaee; }
+.projects-body .global-completed-section { margin-top: 40px; padding-top: 24px; border-top: 2px solid #0d47a1; }
 .projects-body .global-completed-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.projects-body .global-completed-header h2 { color: #202124; font-size: 1.3rem; font-weight: 700; margin: 0; }
-.projects-body .global-completed-toggle { background: transparent; border: none; color: #4a78c2; font-weight: 600; font-size: 1rem; cursor: pointer; padding: 8px 12px; border-radius: 8px; transition: color .2s, background .2s; }
-.projects-body .global-completed-toggle:hover { color: #2b63c7; background: rgba(74,120,194,.08); text-decoration: underline; }
+.projects-body .global-completed-header h2 { color: #ffffff; font-size: 1.3rem; font-weight: 700; margin: 0; }
+.projects-body .global-completed-toggle { background: transparent; border: none; color: #ffffff; font-weight: 600; font-size: 1rem; cursor: pointer; padding: 8px 12px; border-radius: 8px; transition: background .2s; }
+.projects-body .global-completed-toggle:hover { background: rgba(255,255,255,.12); text-decoration: none; }
 
 /* Task Details Drawer */
 .projects-drawer.hidden { transform: translateX(100%); opacity: 0; pointer-events: none; }
