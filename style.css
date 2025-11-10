@@ -761,6 +761,8 @@ h1 {
   border-radius: 50% !important;
   justify-content: center !important;
   align-items: center !important;
+  margin: 0 auto !important; /* center horizontally in collapsed column */
+  align-self: center !important;
 }
 .nav-buttons.collapsed .nav-sound-toggle i {
   font-size: 16px !important;
