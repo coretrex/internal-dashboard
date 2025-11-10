@@ -74,7 +74,44 @@ async function handleSuccessfulAuth(user) {
         localStorage.setItem('userPhoto', user.photoURL || '');
         localStorage.setItem('userRole', userData.role);
         localStorage.setItem('userPageAccess', JSON.stringify(userData.pageAccess || []));
-        window.location.href = 'goals.html';
+        // Redirect to the first page the user actually has access to
+        const pageOrder = ['goals', 'kpis', 'prospects', 'clients', 'projects'];
+        const hrefByPage = {
+            goals: 'goals.html',
+            kpis: 'kpis.html',
+            prospects: 'prospects.html',
+            clients: 'clients.html',
+            projects: 'projects.html',
+        };
+        const isAdmin = (userData.role === 'admin');
+        const accessList = Array.isArray(userData.pageAccess) ? userData.pageAccess : [];
+        let targetHref = null;
+        if (isAdmin) {
+            // Admins: go to the first page in preferred order
+            for (const pageId of pageOrder) {
+                if (hrefByPage[pageId]) {
+                    targetHref = hrefByPage[pageId];
+                    break;
+                }
+            }
+        } else {
+            // Non-admins: go to the first allowed page in preferred order
+            for (const pageId of pageOrder) {
+                if (accessList.includes(pageId) && hrefByPage[pageId]) {
+                    targetHref = hrefByPage[pageId];
+                    break;
+                }
+            }
+        }
+        if (!targetHref) {
+            // No access assigned; sign out and return to login with an alert
+            alert('No page access assigned to your account. Please contact your administrator.');
+            await signOut(auth);
+            localStorage.clear();
+            window.location.href = 'index.html';
+            return;
+        }
+        window.location.href = targetHref;
     } catch (error) {
         console.error('Error handling authentication:', error);
         await signOut(auth);
