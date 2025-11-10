@@ -71,6 +71,29 @@ let timerInterval = null;
 let timerSeconds = 0;
 let timerPaused = false;
 let currentTimerTask = null;
+let originalDocumentTitle = document.title;
+
+function updateTabTitleForTimer() {
+  try {
+    if (currentTimerTask && typeof timerSeconds === 'number' && timerSeconds >= 0) {
+      const minutes = Math.floor(timerSeconds / 60);
+      const seconds = timerSeconds % 60;
+      const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      const icon = timerPaused ? '⏸' : '⏱';
+      const rawName = currentTimerTask.taskName || 'Task';
+      const shortName = rawName.length > 40 ? rawName.slice(0, 37) + '…' : rawName;
+      document.title = `${icon} ${timeStr} • ${shortName}`;
+    } else {
+      document.title = originalDocumentTitle;
+    }
+  } catch (_) {
+    // Ignore any errors updating the title
+  }
+}
+
+function resetTabTitle() {
+  try { document.title = originalDocumentTitle; } catch (_) {}
+}
 
 // Helper function to update task count for a subproject
 function updateTaskCount(subprojectCard) {
@@ -1415,6 +1438,8 @@ function updateTimerDisplay() {
   if (timerDisplay) {
     timerDisplay.textContent = display;
   }
+  // Also mirror the countdown in the browser tab title
+  updateTabTitleForTimer();
 }
 
 function stopTaskTimer() {
@@ -1428,6 +1453,9 @@ function stopTaskTimer() {
     timerModal.style.display = 'none';
   }
   
+  // Restore original tab title
+  resetTabTitle();
+  
   timerSeconds = 0;
   timerPaused = false;
   currentTimerTask = null;
@@ -1439,6 +1467,8 @@ function pauseTaskTimer() {
   if (pauseBtn) {
     pauseBtn.textContent = timerPaused ? 'Resume Timer' : 'Pause Timer';
   }
+  // Reflect pause/resume state in tab title
+  updateTabTitleForTimer();
 }
 
 async function completeTaskFromTimer() {
