@@ -101,6 +101,14 @@ class Navigation extends HTMLElement {
         navHtml += '</div>';
         this.innerHTML = navHtml;
         
+        // Apply saved collapsed state immediately to avoid flash on navigation
+        const initialNavButtons = this.querySelector('.nav-buttons');
+        if (initialNavButtons) {
+            if (localStorage.getItem('navCollapsed') === 'true') {
+                initialNavButtons.classList.add('collapsed');
+            }
+        }
+        
         // Ensure navigation is visible (sidebar layout)
         setTimeout(() => {
             const navButtons = this.querySelector('.nav-buttons');
