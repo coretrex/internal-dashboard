@@ -4996,6 +4996,11 @@ body.presence-banner-visible #global-edit-button {
   -webkit-backdrop-filter: none !important;
   box-shadow: 0 8px 24px rgba(74, 20, 140, 0.35);
 }
+.projects-body #myTasksKpi .projects-kpi-value,
+.projects-body #myTasksKpi .projects-kpi-label {
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
 
 /* Due Today KPI: subtle green background and green accents */
 .projects-body #dueTodayKpi {
