@@ -201,34 +201,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Add sign out functionality (optional - for testing)
-    const signOutButton = document.createElement('button');
-    signOutButton.textContent = 'Sign Out (Debug)';
-    signOutButton.style.cssText = `
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        background: #e74c3c;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        z-index: 1000;
-    `;
-    signOutButton.addEventListener('click', async () => {
-        try {
-            await signOut(auth);
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('userEmail');
-            localStorage.removeItem('userName');
-            localStorage.removeItem('userPhoto');
-            localStorage.removeItem('userRole');
-            localStorage.removeItem('userPageAccess');
-            window.location.reload();
-        } catch (error) {
-            console.error('Sign out error:', error);
-        }
-    });
-    document.body.appendChild(signOutButton);
+    // Only render this on the login page if a user is currently signed in
+    if (auth.currentUser) {
+        const signOutButton = document.createElement('button');
+        signOutButton.textContent = 'Sign Out (Debug)';
+        signOutButton.style.cssText = `
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            z-index: 1000;
+        `;
+        signOutButton.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userName');
+                localStorage.removeItem('userPhoto');
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('userPageAccess');
+                window.location.reload();
+            } catch (error) {
+                console.error('Sign out error:', error);
+            }
+        });
+        document.body.appendChild(signOutButton);
+    }
 });
