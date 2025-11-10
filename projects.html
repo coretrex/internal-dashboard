@@ -6,6 +6,25 @@
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="clients.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* My Tasks filter button styling */
+        .projects-top-nav #myTasksFilterBtn.my-tasks-filter-btn {
+            background: transparent;
+            border: 2px solid #fff;
+            color: #fff;
+        }
+        .projects-top-nav #myTasksFilterBtn.my-tasks-filter-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .projects-top-nav #myTasksFilterBtn.my-tasks-filter-btn.active {
+            background: #9C27B0; /* purple */
+            border-color: #9C27B0;
+            color: #fff;
+        }
+        .projects-top-nav #myTasksFilterBtn i {
+            color: inherit;
+        }
+    </style>
     <script>
         // Authentication check - redirect to login if not logged in
         if (!localStorage.getItem('isLoggedIn') || localStorage.getItem('isLoggedIn') !== 'true') {
