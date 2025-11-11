@@ -98,9 +98,10 @@ function formatSlackMessage(summary, tz, label) {
     lines.push('No tasks due today or overdue.');
   } else {
     summary.rows.forEach(r => {
-      lines.push(`- ${r.display}: ${r.dueToday} due today • ${r.overdue} overdue`);
+      // Bold assignee name, green circle for due today, red circle with bold number for overdue
+      lines.push(`- *${r.display}*: 🟢 ${r.dueToday} due today • 🔴 *${r.overdue}* overdue`);
     });
-    lines.push(`\nTotals: ${summary.totals.dueToday} due today • ${summary.totals.overdue} overdue`);
+    lines.push(`\nTotals: 🟢 ${summary.totals.dueToday} due today • 🔴 *${summary.totals.overdue}* overdue`);
   }
   return lines.join('\n');
 }
