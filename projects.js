@@ -561,8 +561,13 @@ function createTaskItem(taskData, podId, subId, taskId) {
         <option value="Awaiting Front-End Verification" ${statusLower==='awaiting front-end verification' ? 'selected' : ''}>Awaiting Front-End Verification</option>
       </select>
     </div>
-    <div class="task-actions">
-      <button class="action-btn delete-btn" title="Delete"><i class="fa-regular fa-trash-can"></i></button>
+    <div class="task-actions" style="display:flex; align-items:center; gap:4px; justify-content:flex-end; min-width:76px; padding-left:10px;">
+      <button class="action-btn duplicate-btn" title="Duplicate" style="background:#f5f7ff; border:1px solid #dbe3ff; color:#3f51b5; border-radius:8px; padding:6px 8px;">
+        <i class="fa-regular fa-clone"></i>
+      </button>
+      <button class="action-btn delete-btn" title="Delete" style="border-radius:8px; padding:6px 8px;">
+        <i class="fa-regular fa-trash-can"></i>
+      </button>
     </div>
   `;
   const checkbox = li.querySelector('.task-toggle');
@@ -1153,6 +1158,24 @@ function createTaskItem(taskData, podId, subId, taskId) {
       });
     }
   }
+  // Duplicate task handler
+  const duplicateBtn = li.querySelector('.duplicate-btn');
+  if (duplicateBtn) {
+    duplicateBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        const newTaskId = await duplicateTask(podId, subId, taskId);
+        if (newTaskId) {
+          setTimeout(() => {
+            highlightNewTask(newTaskId);
+          }, 400);
+        }
+      } catch (err) {
+        console.error('[Projects] Duplicate failed:', err);
+        alert('Failed to duplicate task. Please try again.');
+      }
+    });
+  }
   li.querySelector('.delete-btn').addEventListener('click', () => {
     showConfirmModal('Are you sure you want to delete this task?').then((ok) => {
       if (!ok) return;
@@ -1183,6 +1206,46 @@ function createTaskItem(taskData, podId, subId, taskId) {
   });
   
   return li;
+}
+
+// Create a duplicate of a task in Firestore (returns new task id)
+async function duplicateTask(podId, subId, taskId) {
+  if (!podId || !subId || !taskId) return null;
+  try {
+    const podRef = doc(db, 'pods', podId);
+    const subRef = doc(podRef, 'subprojects', subId);
+    const taskRef = doc(subRef, 'tasks', taskId);
+    const snap = await getDoc(taskRef);
+    if (!snap.exists()) return null;
+    const src = snap.data() || {};
+    const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+    const currentUserEmail = localStorage.getItem('userEmail') || '';
+    // Prepare cloned payload
+    const cloned = {
+      text: (src.text || 'Untitled') + ' (Copy)',
+      completed: false,
+      createdAt: Date.now(),
+      createdBy: currentUserName,
+      createdByEmail: currentUserEmail,
+      assignee: src.assignee || '',
+      assignees: Array.isArray(src.assignees) ? src.assignees : [],
+      dueDate: src.dueDate || '',
+      dueTime: src.dueTime || '',
+      status: src.status || 'Open',
+      longDescription: src.longDescription || '',
+      attachments: Array.isArray(src.attachments) ? src.attachments.map(a => ({ ...a })) : [],
+      recurring: src.recurring || null,
+      lastModifiedBy: currentUserName,
+      lastModifiedByEmail: currentUserEmail,
+      lastModifiedAt: Date.now()
+    };
+    const tasksCol = collection(subRef, 'tasks');
+    const newDoc = await addDoc(tasksCol, cloned);
+    return newDoc.id;
+  } catch (e) {
+    console.error('[Projects] Error duplicating task:', e);
+    throw e;
+  }
 }
 
 // Timer functions
