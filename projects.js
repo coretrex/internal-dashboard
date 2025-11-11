@@ -3797,6 +3797,27 @@ async function postCurrentDrawerComment() {
       createdAt: Timestamp.now(),
       timestamp: Date.now()
     });
+    // Slack: send a single channel message if others are mentioned
+    if (Array.isArray(mentions) && mentions.length > 0) {
+      try {
+        const taskTitle = document.getElementById('drawerTaskTitle')?.textContent || 'Task';
+        // Fire-and-forget; do not block UI
+        fetch('/api/notify-slack', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text,
+            mentions,
+            taskTitle,
+            podId,
+            subId,
+            taskId,
+            createdByName: currentUserName,
+            createdByEmail: currentUserEmail
+          })
+        }).catch(() => {});
+      } catch (_) {}
+    }
     // Notify mentioned users (skip self)
     for (const m of mentions) {
       const targetUserId = m.email || m.id;
