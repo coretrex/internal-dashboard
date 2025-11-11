@@ -3802,24 +3802,35 @@ async function postCurrentDrawerComment() {
       try {
         const taskTitle = document.getElementById('drawerTaskTitle')?.textContent || 'Task';
         // Fire-and-forget; do not block UI
-        fetch('/api/notify-slack', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text,
-            mentions,
-            taskTitle,
-            podId,
-            subId,
-            taskId,
-            createdByName: currentUserName,
-            createdByEmail: currentUserEmail
-          })
-        })
+        const sendNotify = async () => {
+          const trySend = async (url) => {
+            return await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text,
+                mentions,
+                taskTitle,
+                podId,
+                subId,
+                taskId,
+                createdByName: currentUserName,
+                createdByEmail: currentUserEmail
+              })
+            });
+          };
+          // Try extensionless (normal) first; if 404, fallback to .js
+          let resp = await trySend('/api/notify-slack');
+          if (resp && resp.status === 404) {
+            resp = await trySend('/api/notify-slack.js');
+          }
+          return resp;
+        };
+        sendNotify()
           .then(async (resp) => {
             if (!resp.ok) {
-              const bodyText = await resp.text().catch(() => '');
-              console.warn('[Slack] notify failed:', resp.status, bodyText);
+              const bodyText = await (resp ? resp.text().catch(() => '') : '');
+              console.warn('[Slack] notify failed:', resp ? resp.status : 'no-response', bodyText);
             } else {
               console.log('[Slack] notify ok');
             }

@@ -17,5 +17,8 @@
       "destination": "/:path*",
       "permanent": true
     }
+  ],
+  "rewrites": [
+    { "source": "/api/notify-slack", "destination": "/api/notify-slack.js" }
   ]
 }
