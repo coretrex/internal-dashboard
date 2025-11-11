@@ -121,9 +121,10 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
   try {
-    const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+    // Prefer a dedicated webhook for summaries; fallback to the default channel webhook
+    const webhookUrl = process.env.SLACK_SUMMARY_WEBHOOK_URL || process.env.SLACK_WEBHOOK_URL;
     if (!webhookUrl) {
-      return res.status(500).json({ error: 'Missing SLACK_WEBHOOK_URL' });
+      return res.status(500).json({ error: 'Missing SLACK_SUMMARY_WEBHOOK_URL or SLACK_WEBHOOK_URL' });
     }
     const tz = process.env.TIMEZONE || 'America/Chicago';
     // Initialize admin with better error surfacing

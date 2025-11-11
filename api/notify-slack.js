@@ -75,7 +75,8 @@ module.exports = async (req, res) => {
         "Moe Malugen": "U09H2FPPUDR",
         "Noah Mrok": "U05LS042YTE",
         "Robby Asbery": "U06GZSEUU1H",
-        "Stephen Fullington": "USED2J6HE"
+        "Stephen Fullington": "USED2J6HE",
+        "Nikki D.": "U098HE389FX"
       };
       const mergedMap = { ...fallback, ...idMap };
       const normalize = (s) => (s || '').trim().toLowerCase();
