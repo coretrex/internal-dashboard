@@ -679,6 +679,8 @@ function createTaskItem(taskData, podId, subId, taskId) {
           await addDoc(tasksCol, {
             text: latestTaskData.text,
             completed: false,
+            createdBy: currentUserName,
+            createdByEmail: currentUserEmail,
             assignee: latestTaskData.assignee || '',
             assignees: latestTaskData.assignees || [],
             dueDate: nextDueDate,
@@ -2256,10 +2258,14 @@ function initNewTaskModal() {
       const podRef = doc(db, 'pods', podId);
       const subRef = doc(podRef, 'subprojects', subId);
       const tasksCol = collection(subRef, 'tasks');
+      const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+      const currentUserEmail = localStorage.getItem('userEmail') || '';
       const taskDoc = await addDoc(tasksCol, { 
         text: taskName, 
         completed: false, 
-        createdAt: Date.now(), 
+        createdAt: Date.now(),
+        createdBy: currentUserName,
+        createdByEmail: currentUserEmail,
         assignee: '', 
         dueDate: '', 
         dueTime: '',
@@ -3841,6 +3847,17 @@ async function openTaskDrawer({ podId, subId, taskId, title, longDescription = '
       const data = snap.data();
       longDescription = data.longDescription || longDescription || '';
       attachments = data.attachments || attachments || [];
+      const createdByInfoEl = document.getElementById('taskCreatedByInfo');
+      const createdByNameEl = document.getElementById('taskCreatedByName');
+      if (createdByInfoEl && createdByNameEl) {
+        const createdByName = (data.createdBy || data.createdByName || data.lastModifiedBy || '').trim();
+        if (createdByName) {
+          createdByNameEl.textContent = createdByName;
+          createdByInfoEl.style.display = 'block';
+        } else {
+          createdByInfoEl.style.display = 'none';
+        }
+      }
     }
   } catch (_) {}
   
