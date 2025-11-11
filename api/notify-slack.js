@@ -55,7 +55,76 @@ module.exports = async (req, res) => {
       const errText = await resp.text().catch(() => '');
       return res.status(502).json({ error: 'Slack webhook failed', details: errText });
     }
-    return res.status(200).json({ ok: true });
+    // Optionally send DMs to mentioned users if a bot token is available
+    const botToken = process.env.SLACK_BOT_TOKEN;
+    if (botToken) {
+      // Build mapping from env or default hardcoded
+      let idMap = {};
+      try {
+        if (process.env.SLACK_DM_ID_MAP) {
+          idMap = JSON.parse(process.env.SLACK_DM_ID_MAP);
+        }
+      } catch (_) {}
+      // Fallback map (names -> Slack user IDs)
+      const fallback = {
+        "Bobby Browning": "U05FHUK9FJA",
+        "Brandon Reichert": "U03KSK78YLR",
+        "Darcie Fullington": "U01AHPVCHD0",
+        "Moe Malugen": "U09H2FPPUDR",
+        "Noah Mrok": "U05LS042YTE",
+        "Robby Asbery": "U06GZSEUU1H",
+        "Stephen Fullington": "USED2J6HE"
+      };
+      const mergedMap = { ...fallback, ...idMap };
+      const normalize = (s) => (s || '').trim().toLowerCase();
+      // Prepare DM text
+      const dmLines = [
+        `*You were mentioned by ${createdByDisplay}*`,
+        `• Task: “${taskTitle || 'Task'}”`,
+      ];
+      if (podDisplay) dmLines.push(`• Pod: ${podDisplay}`);
+      if (subDisplay) dmLines.push(`• Subproject: ${subDisplay}`);
+      if (taskLink) dmLines.push(`• Link: ${taskLink}`);
+      dmLines.push('', `> ${snippet}${truncated}`);
+      const dmText = dmLines.join('\n');
+      // For each mention, find an ID by name or email
+      const uniqueUserIds = new Set();
+      for (const m of mentions) {
+        const name = m?.name || '';
+        const email = (m?.email || '').toLowerCase();
+        const byName = mergedMap[name] || mergedMap[name?.trim()] || mergedMap[name?.toUpperCase()] || mergedMap[name?.toLowerCase()];
+        const byEmail = mergedMap[email];
+        const userId = byName || byEmail;
+        if (userId) uniqueUserIds.add(userId);
+      }
+      // Open DM and send message
+      for (const userId of uniqueUserIds) {
+        try {
+          // Open conversation (IM) to get channel id
+          const openResp = await fetch('https://slack.com/api/conversations.open', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json; charset=utf-8',
+              'Authorization': `Bearer ${botToken}`
+            },
+            body: JSON.stringify({ users: userId })
+          });
+          const openJson = await openResp.json();
+          const channelId = openJson?.channel?.id;
+          if (channelId) {
+            await fetch('https://slack.com/api/chat.postMessage', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Authorization': `Bearer ${botToken}`
+              },
+              body: JSON.stringify({ channel: channelId, text: dmText })
+            });
+          }
+        } catch (_) {}
+      }
+    }
+    return res.status(200).json({ ok: true, dmAttempted: !!process.env.SLACK_BOT_TOKEN });
   } catch (e) {
     console.error('notify-slack error', e);
     return res.status(500).json({ error: 'Internal Server Error' });
