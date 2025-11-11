@@ -495,12 +495,10 @@ function createTaskItem(taskData, podId, subId, taskId) {
   const hasDesc = !!(taskData.longDescription && String(taskData.longDescription).trim().length > 0);
   const hasAtch = Array.isArray(taskData.attachments) && taskData.attachments.length > 0;
   // (deprecated) detailsIcons removed in favor of a single comment icon
-  const isRecurring = taskData.recurring && taskData.recurring.isRecurring;
   li.innerHTML = `
     <div class="task-checkbox-cell"><input type="checkbox" class="task-toggle" ${isCompleted ? 'checked' : ''}></div>
     <div class="task-name-cell">
       <span class="task-text">${safe(taskData.text)}</span>
-      ${isRecurring ? `<span class=\"recurring-badge\" title=\"This task repeats ${taskData.recurring.frequency}\"><i class=\"fas fa-rotate\"></i></span>` : ''}
       ${hasDesc || hasAtch ? `<span class=\"task-comment-indicator\" title=\"This task has additional details\"><i class=\"fas fa-comment-dots\"></i></span>` : ''}
       <div class="task-timer-buttons">
         <button class="task-timer-btn" data-minutes="10" title="Start 10 minute timer">10m</button>
