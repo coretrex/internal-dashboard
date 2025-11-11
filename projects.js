@@ -3815,7 +3815,18 @@ async function postCurrentDrawerComment() {
             createdByName: currentUserName,
             createdByEmail: currentUserEmail
           })
-        }).catch(() => {});
+        })
+          .then(async (resp) => {
+            if (!resp.ok) {
+              const bodyText = await resp.text().catch(() => '');
+              console.warn('[Slack] notify failed:', resp.status, bodyText);
+            } else {
+              console.log('[Slack] notify ok');
+            }
+          })
+          .catch((err) => {
+            console.error('[Slack] notify error:', err);
+          });
       } catch (_) {}
     }
     // Notify mentioned users (skip self)
