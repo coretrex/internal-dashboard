@@ -2415,8 +2415,12 @@ document.addEventListener('DOMContentLoaded', () => {
     initSoundToggle();
     initMyTasksFilter();
     initTimerModal();
-    // Check if we need to navigate to a task from a notification
-    checkPendingNavigation();
+    // Check URL hash/query for deep link first; fall back to pending session nav
+    const navigatedViaUrl = await checkUrlForTaskNavigation();
+    if (!navigatedViaUrl) {
+      // Check if we need to navigate to a task from a notification
+      checkPendingNavigation();
+    }
     // If another page requested to open notifications, do it now
     try {
       const shouldOpenNotifications = localStorage.getItem('openNotificationsOnLoad') === 'true';
@@ -2430,6 +2434,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   })();
 });
+
+// Parse URL hash/query and navigate to task if present, returns true if handled
+async function checkUrlForTaskNavigation() {
+  try {
+    // Prefer hash params: #pod=...&sub=...&task=...
+    const rawHash = (window.location.hash || '').replace(/^#/, '');
+    const hashParams = new URLSearchParams(rawHash);
+    let podId = hashParams.get('pod');
+    let subId = hashParams.get('sub');
+    let taskId = hashParams.get('task');
+    // Fallback to query params ?pod=&sub=&task=
+    if (!podId && !subId && !taskId) {
+      const queryParams = new URLSearchParams(window.location.search || '');
+      podId = podId || queryParams.get('pod');
+      subId = subId || queryParams.get('sub');
+      taskId = taskId || queryParams.get('task');
+    }
+    if (podId && subId) {
+      // Defer slightly to allow initial listeners to settle
+      setTimeout(() => navigateToTask(podId, subId, taskId || ''), 800);
+      // Clean the hash to avoid re-triggering on refresh
+      try {
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      } catch (_) {}
+      return true;
+    }
+  } catch (e) {
+    console.warn('[DeepLink] Failed to parse URL for task navigation:', e);
+  }
+  return false;
+}
 
 // Firestore helpers
 async function ensureDefaultPods() {

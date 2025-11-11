@@ -30,7 +30,9 @@ module.exports = async (req, res) => {
     // Basic dashboard link (cannot deep link to drawer reliably without client code)
     const baseUrl = (process.env.DASHBOARD_BASE_URL || '').trim();
     const normalizedBase = baseUrl.replace(/\/+$/, '');
-    const taskLink = normalizedBase ? `${normalizedBase}/projects#task=${encodeURIComponent(taskId || '')}` : '';
+    const taskLink = normalizedBase
+      ? `${normalizedBase}/projects#pod=${encodeURIComponent(podId || '')}&sub=${encodeURIComponent(subId || '')}&task=${encodeURIComponent(taskId || '')}`
+      : '';
     const lines = [
       `*New comment mentioning ${mentionedDisplay}*`,
       `• Task: “${taskTitle || 'Task'}”`,
