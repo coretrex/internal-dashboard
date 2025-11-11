@@ -4797,8 +4797,8 @@ body.presence-banner-visible #global-edit-button {
 .projects-body .task-list .completed-list:not(.hidden) > li { display: grid !important; }
 .projects-body .task-list li:hover { background:#f7f8fa; border-radius:8px; }
 .projects-body .task-checkbox-cell { display:flex; align-items:center; justify-content:center; }
-.projects-body .task-name-cell { display:flex; align-items:center; gap: 6px; width: 100%; }
-.projects-body .task-name-cell .task-text { line-height: 1.1; flex-shrink: 0; }
+.projects-body .task-name-cell { display:flex; align-items:center; gap: 6px; width: 100%; min-width: 0; }
+.projects-body .task-name-cell .task-text { line-height: 1.1; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .recurring-badge {
   display: inline-flex;
@@ -6620,6 +6620,8 @@ body.presence-banner-visible #global-edit-button {
   gap: 4px;
   margin-left: auto;
   opacity: 1;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
 }
 
 .task-timer-btn {
@@ -6640,6 +6642,18 @@ body.presence-banner-visible #global-edit-button {
   border-color: #ced4da;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Responsive: preserve timer buttons, truncate long task text and optional icons */
+@media (max-width: 1200px) {
+  .projects-body .task-name-cell { min-width: 0; }
+  .projects-body .task-name-cell .task-text { max-width: 100%; }
+  .projects-body .task-name-cell .task-comment-indicator { display: none; }
+}
+
+@media (max-width: 992px) {
+  .projects-body .task-name-cell .recurring-badge { display: none; }
+  .task-timer-btn { padding: 3px 6px; font-size: 0.7rem; }
 }
 
 
