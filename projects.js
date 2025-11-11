@@ -3801,6 +3801,12 @@ async function postCurrentDrawerComment() {
     if (Array.isArray(mentions) && mentions.length > 0) {
       try {
         const taskTitle = document.getElementById('drawerTaskTitle')?.textContent || 'Task';
+        // Resolve friendly pod and subproject names
+        const podEntry = (Array.isArray(podInfo) ? podInfo.find(p => p.id === podId) : null);
+        const podName = podEntry ? (podEntry.title || podEntry.id) : (podId || '');
+        const subprojectsForPod = podToProjects.get(podId) || [];
+        const subEntry = subprojectsForPod.find(p => p.subprojectId === subId);
+        const subprojectName = subEntry ? subEntry.name : (subId || '');
         // Fire-and-forget; do not block UI
         const sendNotify = async () => {
           const trySend = async (url) => {
@@ -3812,7 +3818,9 @@ async function postCurrentDrawerComment() {
                 mentions,
                 taskTitle,
                 podId,
+                podName,
                 subId,
+                subprojectName,
                 taskId,
                 createdByName: currentUserName,
                 createdByEmail: currentUserEmail
