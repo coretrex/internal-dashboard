@@ -3806,7 +3806,20 @@ async function postCurrentDrawerComment() {
         const podName = podEntry ? (podEntry.title || podEntry.id) : (podId || '');
         const subprojectsForPod = podToProjects.get(podId) || [];
         const subEntry = subprojectsForPod.find(p => p.subprojectId === subId);
-        const subprojectName = subEntry ? subEntry.name : (subId || '');
+        let subprojectName = subEntry ? subEntry.name : '';
+        // Fallback: fetch subproject name from Firestore if not found in memory
+        if (!subprojectName) {
+          try {
+            const podRef = doc(db, 'pods', podId);
+            const subRef = doc(podRef, 'subprojects', subId);
+            const subSnap = await getDoc(subRef);
+            if (subSnap.exists()) {
+              const sd = subSnap.data() || {};
+              if (sd.name) subprojectName = sd.name;
+            }
+          } catch (_) {}
+        }
+        if (!subprojectName) subprojectName = subId || '';
         // Fire-and-forget; do not block UI
         const sendNotify = async () => {
           const trySend = async (url) => {
