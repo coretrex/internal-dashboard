@@ -1,0 +1,12 @@
+{
+  "name": "internal-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Internal dashboard serverless functions and static site",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "firebase-admin": "^12.6.0"
+  }
+}
+
+

@@ -20,5 +20,9 @@
   ],
   "rewrites": [
     { "source": "/api/notify-slack", "destination": "/api/notify-slack.js" }
+  ],
+  "crons": [
+    { "path": "/api/summary-slack", "schedule": "0 14 * * *" },
+    { "path": "/api/summary-slack", "schedule": "30 22 * * *" }
   ]
 }
