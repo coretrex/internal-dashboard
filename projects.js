@@ -3871,7 +3871,8 @@ async function postCurrentDrawerComment() {
                 subprojectName,
                 taskId,
                 createdByName: currentUserName,
-                createdByEmail: currentUserEmail
+                createdByEmail: currentUserEmail,
+                channelMessage: false
               })
             });
           };
