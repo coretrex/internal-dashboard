@@ -98,14 +98,16 @@ function formatSlackMessage(summary, tz, label) {
     lines.push('No tasks due today or overdue.');
   } else {
     summary.rows.forEach(r => {
-      lines.push(`- ${r.display}: ${r.dueToday} due today • ${r.overdue} overdue`);
+      // Bold assignee name, green circle for due today, red circle with bold number for overdue
+      lines.push(`- *${r.display}*: 🟢 ${r.dueToday} due today • 🔴 *${r.overdue}* overdue`);
     });
-    lines.push(`\nTotals: ${summary.totals.dueToday} due today • ${summary.totals.overdue} overdue`);
+    lines.push(`\nTotals: 🟢 ${summary.totals.dueToday} due today • 🔴 *${summary.totals.overdue}* overdue`);
   }
   return lines.join('\n');
 }
 
 module.exports = async (req, res) => {
+  const debug = (req.url || '').includes('debug=1');
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -124,10 +126,26 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: 'Missing SLACK_WEBHOOK_URL' });
     }
     const tz = process.env.TIMEZONE || 'America/Chicago';
-    initAdmin();
+    // Initialize admin with better error surfacing
+    try {
+      initAdmin();
+    } catch (e) {
+      if (debug) {
+        return res.status(500).json({ error: 'Admin init failed', message: String(e && e.message || e) });
+      }
+      throw e;
+    }
     const db = admin.firestore();
 
-    const summary = await buildSummary(db, tz);
+    let summary;
+    try {
+      summary = await buildSummary(db, tz);
+    } catch (e) {
+      if (debug) {
+        return res.status(500).json({ error: 'Firestore query failed', message: String(e && e.message || e) });
+      }
+      throw e;
+    }
     const now = new Date();
     const labelFmt = new Intl.DateTimeFormat('en-US', {
       timeZone: tz,
