@@ -4413,7 +4413,7 @@ function populateProjectFilter() {
 }
 
 // Function to open the My Tasks modal
-async function openMyTasksModal(dateFilter = null, modalTitle = 'Tasks') {
+async function openMyTasksModal(dateFilter = null, modalTitle = 'Tasks', initialProjectId = null) {
   const modal = document.getElementById('myTasksModal');
   const userFilter = document.getElementById('taskUserFilter');
   const projectFilter = document.getElementById('taskProjectFilter');
@@ -4441,7 +4441,22 @@ async function openMyTasksModal(dateFilter = null, modalTitle = 'Tasks') {
   if (filterContainer && dateFilter) {
     // For date filters, set user filter to "All Users" and project to "All Projects"
     if (userFilter) userFilter.value = '';
-    if (projectFilter) projectFilter.value = '';
+    if (projectFilter) {
+      // Robustly preselect the current project in the dropdown
+      const targetId = initialProjectId || '';
+      if (targetId) {
+        // Ensure an option exists for the project
+        let existing = Array.from(projectFilter.options).find(o => o.value === targetId);
+        if (!existing) {
+          const pod = Array.isArray(podInfo) ? podInfo.find(p => p.id === targetId) : null;
+          const title = pod ? (pod.title || targetId) : targetId;
+          projectFilter.add(new Option(title, targetId));
+        }
+      }
+      projectFilter.value = targetId;
+      // Trigger change so UI reflects the selection in any custom styling
+      projectFilter.dispatchEvent(new Event('change'));
+    }
   } else {
     // Set user dropdown to current user by default for My Tasks
     if (userFilter && !dateFilter) {
@@ -4462,9 +4477,10 @@ async function openMyTasksModal(dateFilter = null, modalTitle = 'Tasks') {
   modal.style.display = 'block';
   
   // Render tasks with current filters
+  const effectiveProjectId = dateFilter ? (initialProjectId || (projectFilter ? projectFilter.value || '' : '')) : (projectFilter ? projectFilter.value || '' : '');
   renderTasksInModal(
     userFilter ? userFilter.value || null : null,
-    projectFilter ? projectFilter.value || null : null,
+    effectiveProjectId || null,
     dateFilter,
     modalTitle
   );
@@ -4472,12 +4488,16 @@ async function openMyTasksModal(dateFilter = null, modalTitle = 'Tasks') {
 
 // Function to open modal for tasks due today
 async function openDueTodayModal() {
-  await openMyTasksModal('dueToday', 'Tasks Due Today');
+  const currentPodId = getCurrentVisiblePodId();
+  const title = currentPodId ? `Tasks Due Today – ${getPodTitleById(currentPodId)}` : 'Tasks Due Today';
+  await openMyTasksModal('dueToday', title, currentPodId);
 }
 
 // Function to open modal for overdue tasks
 async function openOverdueModal() {
-  await openMyTasksModal('overdue', 'Overdue Tasks');
+  const currentPodId = getCurrentVisiblePodId();
+  const title = currentPodId ? `Overdue Tasks – ${getPodTitleById(currentPodId)}` : 'Overdue Tasks';
+  await openMyTasksModal('overdue', title, currentPodId);
 }
 
 // Helper function to get status color
@@ -4492,6 +4512,20 @@ function getStatusColor(status) {
     case 'awaiting front-end verification': return '#00BCD4';
     default: return '#9E9E9E';
   }
+}
+
+// Helper: determine the currently visible pod (project)
+function getCurrentVisiblePodId() {
+  const visiblePod = Array.from(document.querySelectorAll('.pod-card')).find(pod => {
+    const style = pod.getAttribute('style');
+    return !style || !style.includes('display: none');
+  });
+  return visiblePod ? visiblePod.dataset.podId : null;
+}
+
+function getPodTitleById(podId) {
+  const pod = (Array.isArray(podInfo) ? podInfo.find(p => p.id === podId) : null);
+  return pod ? (pod.title || pod.id) : (podId || 'Projects');
 }
 
 // Initialize My Tasks modal event listeners
@@ -4522,8 +4556,9 @@ function initMyTasksModal() {
       
       // Determine date filter from modal title
       let dateFilter = null;
-      if (modalTitle === 'Tasks Due Today') dateFilter = 'dueToday';
-      else if (modalTitle === 'Overdue Tasks') dateFilter = 'overdue';
+      const titleLc = (modalTitle || '').toLowerCase();
+      if (titleLc.includes('tasks due today')) dateFilter = 'dueToday';
+      else if (titleLc.includes('overdue tasks')) dateFilter = 'overdue';
       
       console.log('[My Tasks] User filter changed to:', userFilterValue || 'All Users');
       renderTasksInModal(userFilterValue || '', projectFilterValue || '', dateFilter, modalTitle);
@@ -4540,8 +4575,9 @@ function initMyTasksModal() {
       
       // Determine date filter from modal title
       let dateFilter = null;
-      if (modalTitle === 'Tasks Due Today') dateFilter = 'dueToday';
-      else if (modalTitle === 'Overdue Tasks') dateFilter = 'overdue';
+      const titleLc = (modalTitle || '').toLowerCase();
+      if (titleLc.includes('tasks due today')) dateFilter = 'dueToday';
+      else if (titleLc.includes('overdue tasks')) dateFilter = 'overdue';
       
       console.log('[My Tasks] Project filter changed to:', projectFilterValue || 'All Projects');
       renderTasksInModal(userFilterValue || '', projectFilterValue || '', dateFilter, modalTitle);
