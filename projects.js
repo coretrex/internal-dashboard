@@ -4682,7 +4682,7 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
   let previousData = { ...taskData };
   let isFirstSnapshot = true; // Skip the first snapshot to avoid false notifications on load
   
-  const unsubscribe = onSnapshot(taskRef, (snapshot) => {
+  const unsubscribe = onSnapshot(taskRef, async (snapshot) => {
     if (!snapshot.exists()) return;
     
     const newData = snapshot.data();
@@ -4731,7 +4731,7 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
     );
     
     // Create notifications for newly assigned users
-    newlyAssigned.forEach(assignee => {
+    for (const assignee of newlyAssigned) {
       // Don't notify yourself OR the person who made the change
       if (assignee.email !== currentUserEmail && assignee.email !== changedByEmail) {
         // Use email as userId for consistency (same as what we check in listener)
@@ -4757,6 +4757,39 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
             assignedTo: assignee.name || assignee.email
           }
         });
+        // Also send Slack DM to the assignee (no channel message)
+        try {
+          const podEntry = (Array.isArray(podInfo) ? podInfo.find(p => p.id === podId) : null);
+          const podName = podEntry ? (podEntry.title || podEntry.id) : (podId || '');
+          const subprojectsForPod = podToProjects.get(podId) || [];
+          const subEntry = subprojectsForPod.find(p => p.subprojectId === subId);
+          let subprojectName = subEntry ? subEntry.name : '';
+          if (!subprojectName) {
+            try {
+              const podRef = doc(db, 'pods', podId);
+              const subRef = doc(podRef, 'subprojects', subId);
+              const subSnap = await getDoc(subRef);
+              if (subSnap.exists()) subprojectName = (subSnap.data() || {}).name || '';
+            } catch (_) {}
+          }
+          fetch('/api/notify-slack', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: `Task assigned to you: ${newData.text || 'Task'}`,
+              mentions: [{ name: assignee.name || '', email: assignee.email || '' }],
+              taskTitle: newData.text || 'Task',
+              podId,
+              podName,
+              subId,
+              subprojectName: subprojectName || subId,
+              taskId,
+              createdByName: changedByName,
+              createdByEmail: changedByEmail,
+              channelMessage: false
+            })
+          }).catch(() => {});
+        } catch (_) {}
       } else {
         console.log('[Notifications] Skipping self-notification for assignment', {
           assigneeEmail: assignee.email,
@@ -4764,7 +4797,7 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
           changedByEmail
         });
       }
-    });
+    }
     
     // Check for other changes that should notify assigned users
     const changedFields = [];
@@ -4821,7 +4854,7 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
         changedBy: changedByName
       });
       
-      newAssignees.forEach(assignee => {
+      for (const assignee of newAssignees) {
         // Don't notify the person who made the change
         if (assignee.email !== changedByEmail) {
           // Use email as userId for consistency
@@ -4844,10 +4877,44 @@ function setupTaskChangeListener(podId, subId, taskId, taskData) {
             changedBy: changedByName,
             changes: { fields: changedFields }
           });
+          // Also send Slack DM to the assignee (no channel message)
+          try {
+            const podEntry = (Array.isArray(podInfo) ? podInfo.find(p => p.id === podId) : null);
+            const podName = podEntry ? (podEntry.title || podEntry.id) : (podId || '');
+            const subprojectsForPod = podToProjects.get(podId) || [];
+            const subEntry = subprojectsForPod.find(p => p.subprojectId === subId);
+            let subprojectName = subEntry ? subEntry.name : '';
+            if (!subprojectName) {
+              try {
+                const podRef = doc(db, 'pods', podId);
+                const subRef = doc(podRef, 'subprojects', subId);
+                const subSnap = await getDoc(subRef);
+                if (subSnap.exists()) subprojectName = (subSnap.data() || {}).name || '';
+              } catch (_) {}
+            }
+            const changeSummary = changedFields.map(f => `${f.field}: ${f.old || ''} → ${f.new || ''}`).slice(0, 3).join(' | ');
+            fetch('/api/notify-slack', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: `Task updated: ${newData.text || 'Task'}${changeSummary ? ' • ' + changeSummary : ''}`,
+                mentions: [{ name: assignee.name || '', email: assignee.email || '' }],
+                taskTitle: newData.text || 'Task',
+                podId,
+                podName,
+                subId,
+                subprojectName: subprojectName || subId,
+                taskId,
+                createdByName: changedByName,
+                createdByEmail: changedByEmail,
+                channelMessage: false
+              })
+            }).catch(() => {});
+          } catch (_) {}
         } else {
           console.log('[Notifications] Skipping notification for person who made the change:', changedByName);
         }
-      });
+      }
     }
     
     // Update previous data for next comparison

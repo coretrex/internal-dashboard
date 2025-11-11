@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
     if (!webhookUrl) {
       return res.status(500).json({ error: 'Missing SLACK_WEBHOOK_URL' });
     }
-    const { text, mentions, taskTitle, podId, podName, subId, subprojectName, taskId, createdByName, createdByEmail } = req.body || {};
+    const { text, mentions, taskTitle, podId, podName, subId, subprojectName, taskId, createdByName, createdByEmail, channelMessage = true } = req.body || {};
     if (!text || !Array.isArray(mentions) || mentions.length === 0) {
       return res.status(400).json({ error: 'Invalid payload: requires text and non-empty mentions' });
     }
@@ -46,14 +46,16 @@ module.exports = async (req, res) => {
     const payload = {
       text: `${lines.join('\n')}\n\n> ${snippet}${truncated}`,
     };
-    const resp = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!resp.ok) {
-      const errText = await resp.text().catch(() => '');
-      return res.status(502).json({ error: 'Slack webhook failed', details: errText });
+    if (channelMessage) {
+      const resp = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        return res.status(502).json({ error: 'Slack webhook failed', details: errText });
+      }
     }
     // Optionally send DMs to mentioned users if a bot token is available
     const botToken = process.env.SLACK_BOT_TOKEN;
