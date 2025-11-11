@@ -1006,6 +1006,22 @@ function createTaskItem(taskData, podId, subId, taskId) {
       e.stopPropagation();
       if (timePickerContainer.style.display === 'none') {
         timePickerContainer.style.display = 'flex';
+        // Decide direction: open upward for bottom three visible tasks in this list
+        try {
+          const ul = li.parentElement;
+          if (ul) {
+            const visibleLis = Array.from(ul.querySelectorAll(':scope > li')).filter(row => row.style.display !== 'none');
+            const idx = visibleLis.indexOf(li);
+            const isBottomThree = idx >= Math.max(0, visibleLis.length - 3);
+            if (isBottomThree) {
+              timePickerContainer.classList.add('open-upward');
+            } else {
+              timePickerContainer.classList.remove('open-upward');
+            }
+          }
+        } catch (_) {
+          // ignore any measurement errors
+        }
         // Reset to current time or default
         if (taskData.dueTime) {
           const parsed = parseTime(taskData.dueTime);
@@ -1030,6 +1046,7 @@ function createTaskItem(taskData, podId, subId, taskId) {
         }, 0);
       } else {
         timePickerContainer.style.display = 'none';
+        timePickerContainer.classList.remove('open-upward');
         document.removeEventListener('click', closeTimePicker);
       }
     });

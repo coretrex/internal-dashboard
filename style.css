@@ -4870,10 +4870,30 @@ body.presence-banner-visible #global-edit-button {
   animation: slideDownFade 0.2s ease;
 }
 
+/* Open the time picker above when near the bottom of the list */
+.time-picker-container.open-upward {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 8px;
+  animation: slideUpFade 0.2s ease;
+}
+
 @keyframes slideDownFade {
   from {
     opacity: 0;
     transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
