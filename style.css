@@ -4829,6 +4829,8 @@ body.presence-banner-visible #global-edit-button {
 .projects-body .task-input.time-input::-webkit-calendar-picker-indicator { cursor: pointer; }
 
 .projects-body .task-date { position: relative; display: flex; align-items: center; gap: 4px; }
+.projects-body .task-date { min-width: 0; }
+.projects-body .task-status { padding-left: 6px; }
 .projects-body .task-date .date-input { flex: 1; min-width: 0; max-width: 140px; }
 /* Hide calendar icon when time is set */
 .projects-body .task-date.has-time-set .date-input::-webkit-calendar-picker-indicator,
@@ -5098,6 +5100,7 @@ body.presence-banner-visible #global-edit-button {
   border-radius: 4px;
   transition: all 0.2s;
   flex-shrink: 0;
+  margin-left: 4px;
 }
 
 .recurring-icon-btn:hover {
