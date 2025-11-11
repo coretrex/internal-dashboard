@@ -99,9 +99,9 @@ function formatSlackMessage(summary, tz, label) {
   } else {
     summary.rows.forEach(r => {
       // Bold assignee name on its own line, then counts on new lines
-      lines.push(`- *${r.display}*\n  🟢 ${r.dueToday} due today\n  🔴 *${r.overdue}* overdue\n`);
+      lines.push(`- *${r.display}*\n  :small_green_triangle: ${r.dueToday} due today\n  :small_red_triangle: *${r.overdue}* overdue\n`);
     });
-    lines.push(`\nTotals: 🟢 ${summary.totals.dueToday} due today • 🔴 *${summary.totals.overdue}* overdue`);
+    lines.push(`\nTotals: :small_green_triangle: ${summary.totals.dueToday} due today • :small_red_triangle: *${summary.totals.overdue}* overdue`);
   }
   return lines.join('\n');
 }
