@@ -72,6 +72,7 @@ module.exports = async (req, res) => {
         "Bobby Browning": "U05FHUK9FJA",
         "Brandon Reichert": "U03KSK78YLR",
         "Darcie Fullington": "U01AHPVCHD0",
+        "Darcie Chantele": "U01AHPVCHD0",
         "Moe Malugen": "U09H2FPPUDR",
         "Noah Mrok": "U05LS042YTE",
         "Robby Asbery": "U06GZSEUU1H",
