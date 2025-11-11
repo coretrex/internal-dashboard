@@ -19,7 +19,8 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/notify-slack", "destination": "/api/notify-slack.js" }
+    { "source": "/api/notify-slack", "destination": "/api/notify-slack.js" },
+    { "source": "/api/summary-slack", "destination": "/api/summary-slack.js" }
   ],
   "crons": [
     { "path": "/api/summary-slack", "schedule": "0 14 * * *" },
