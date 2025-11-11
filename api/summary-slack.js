@@ -99,7 +99,7 @@ function formatSlackMessage(summary, tz, label) {
   } else {
     summary.rows.forEach(r => {
       // Bold assignee name on its own line, then counts on new lines
-      lines.push(`- *${r.display}*\n  🟢 ${r.dueToday} due today\n  🔴 *${r.overdue}* overdue`);
+      lines.push(`- *${r.display}*\n  🟢 ${r.dueToday} due today\n  🔴 *${r.overdue}* overdue\n`);
     });
     lines.push(`\nTotals: 🟢 ${summary.totals.dueToday} due today • 🔴 *${summary.totals.overdue}* overdue`);
   }
