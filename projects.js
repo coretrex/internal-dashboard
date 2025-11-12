@@ -5,6 +5,7 @@ import {
   doc,
   getDocs,
   getDoc,
+  setDoc,
   getDocsFromServer,
   getDocFromServer,
   addDoc,
@@ -23,6 +24,26 @@ let app, db;
 let cachedUsers = null; // [{id, name, email, photoURL}]
 // Track tasks that were just marked completed to prevent flicker reappearance
 const pendingCompletedTaskIds = new Set();
+// Guard against duplicate recurring creations within a short window
+const recentRecurringCreations = new Map(); // taskId -> timestamp (ms)
+function shouldCreateNextRecurring(taskId) {
+  try {
+    const now = Date.now();
+    // Clean stale entries (> 10s)
+    for (const [tid, ts] of recentRecurringCreations.entries()) {
+      if (now - ts > 10000) recentRecurringCreations.delete(tid);
+    }
+    const last = recentRecurringCreations.get(taskId) || 0;
+    if (now - last < 3000) {
+      // Suppress duplicate within 3s
+      return false;
+    }
+    recentRecurringCreations.set(taskId, now);
+    return true;
+  } catch (_) {
+    return true;
+  }
+}
 // Store real-time listeners for cleanup
 const subprojectListeners = new Map(); // podId -> unsubscribe function
 const taskListeners = new Map(); // `${podId}_${subId}` -> unsubscribe function
@@ -669,7 +690,7 @@ function createTaskItem(taskData, podId, subId, taskId) {
       }
       
       // Handle recurring tasks - create next instance
-      if (latestTaskData.recurring && latestTaskData.recurring.isRecurring) {
+      if (latestTaskData.recurring && latestTaskData.recurring.isRecurring && shouldCreateNextRecurring(taskId)) {
         // Calculate from TODAY's date, not the task's original due date
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
@@ -678,8 +699,12 @@ function createTaskItem(taskData, podId, subId, taskId) {
           // Create a new task with the next due date
           const podRef = doc(db, 'pods', podId);
           const subRef = doc(podRef, 'subprojects', subId);
-          const tasksCol = collection(subRef, 'tasks');
-          await addDoc(tasksCol, {
+          // Determine creator for the new recurring instance
+          const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+          const currentUserEmail = localStorage.getItem('userEmail') || '';
+          // Use deterministic ID to prevent duplicates if triggered twice
+          const newTaskId = `${taskId || 'task'}__next__${nextDueDate}`;
+          await setDoc(doc(subRef, 'tasks', newTaskId), {
             text: latestTaskData.text,
             completed: false,
             createdBy: currentUserName,
@@ -694,6 +719,10 @@ function createTaskItem(taskData, podId, subId, taskId) {
             recurring: latestTaskData.recurring,
             createdAt: Date.now()
           });
+          // After real-time listener adds it, highlight the new task
+          setTimeout(() => {
+            try { highlightNewTask(newTaskId); } catch(_) {}
+          }, 500);
           // Real-time listener will automatically add the new task to the UI
         }
       }
@@ -1572,6 +1601,45 @@ async function completeTaskFromTimer() {
         lastModifiedByEmail: currentUserEmail,
         lastModifiedAt: Date.now()
       });
+      
+      // Recurring: create the next instance (mirror checkbox behavior)
+      try {
+        const snap = await getDoc(taskRef);
+        if (snap.exists()) {
+          const latestTaskData = snap.data() || {};
+          if (latestTaskData.recurring && latestTaskData.recurring.isRecurring && shouldCreateNextRecurring(taskId)) {
+            // Calculate next due date starting from today
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            const nextDueDate = calculateNextRecurringDate(todayStr, latestTaskData.recurring);
+            if (nextDueDate) {
+              // Use deterministic ID to prevent duplicates if triggered twice
+              const newTaskId = `${taskId || 'task'}__next__${nextDueDate}`;
+              await setDoc(doc(subRef, 'tasks', newTaskId), {
+                text: latestTaskData.text,
+                completed: false,
+                createdBy: currentUserName,
+                createdByEmail: currentUserEmail,
+                assignee: latestTaskData.assignee || '',
+                assignees: latestTaskData.assignees || [],
+                dueDate: nextDueDate,
+                dueTime: latestTaskData.dueTime || '',
+                status: latestTaskData.status || 'Open',
+                longDescription: latestTaskData.longDescription || '',
+                attachments: latestTaskData.attachments || [],
+                recurring: latestTaskData.recurring,
+                createdAt: Date.now()
+              });
+              // Optionally highlight when returning to the list
+              setTimeout(() => {
+                try { highlightNewTask(newTaskId); } catch(_) {}
+              }, 500);
+            }
+          }
+        }
+      } catch (recurringError) {
+        console.error('[Timer] Error creating next recurring task:', recurringError);
+      }
       
       // Play completion sound and show firework
       playCompletionSound();
