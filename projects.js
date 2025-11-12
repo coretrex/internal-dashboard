@@ -3368,6 +3368,7 @@ function showConfirmModal(message) {
 let currentDrawerContext = null;
 let uploadingFiles = new Map(); // Track ongoing uploads
 let activeCommentsUnsubscribe = null; // Active comments listener for drawer
+let activeSubtasksUnsubscribe = null; // Active subtasks listener for drawer
 
 function initTaskDrawer() {
   const drawer = document.getElementById('taskDrawer');
@@ -3389,6 +3390,11 @@ function initTaskDrawer() {
     if (typeof activeCommentsUnsubscribe === 'function') {
       try { activeCommentsUnsubscribe(); } catch(_) {}
       activeCommentsUnsubscribe = null;
+    }
+    // Clean up subtasks listener
+    if (typeof activeSubtasksUnsubscribe === 'function') {
+      try { activeSubtasksUnsubscribe(); } catch(_) {}
+      activeSubtasksUnsubscribe = null;
     }
     if (mentionSuggestions) mentionSuggestions.style.display = 'none';
     if (newCommentTextarea) newCommentTextarea.value = '';
@@ -3472,6 +3478,216 @@ function initTaskDrawer() {
         mentionSuggestions.style.display = 'none';
       }
     });
+  }
+}
+
+// Live Subtasks list for task drawer (CRUD on tasks/{taskId}/subtasks subcollection)
+async function setupSubtasksForTask(podId, subId, taskId) {
+  try {
+    const listEl = document.getElementById('subtasksList');
+    const addBtn = document.getElementById('addSubtaskBtn');
+    if (!listEl) return;
+    // Clear previous listener
+    if (typeof activeSubtasksUnsubscribe === 'function') {
+      try { activeSubtasksUnsubscribe(); } catch(_) {}
+      activeSubtasksUnsubscribe = null;
+    }
+    listEl.innerHTML = '';
+    // Build refs
+    const podRef = doc(db, 'pods', podId);
+    const subRef = doc(podRef, 'subprojects', subId);
+    const taskRef = doc(subRef, 'tasks', taskId);
+    const subtasksCol = collection(taskRef, 'subtasks');
+    const qRef = query(subtasksCol, orderBy('order', 'asc'));
+    // Subscribe
+    activeSubtasksUnsubscribe = onSnapshot(qRef, (snap) => {
+      listEl.innerHTML = '';
+      snap.forEach((docSnap) => {
+        const s = docSnap.data();
+        const sid = docSnap.id;
+        const li = document.createElement('li');
+        li.className = 'subtask-item';
+        li.dataset.subtaskId = sid;
+        li.setAttribute('draggable', 'true');
+        // Checkbox
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'task-toggle subtask-toggle';
+        cb.checked = !!s.completed;
+        // Text
+        const textSpan = document.createElement('span');
+        textSpan.className = 'subtask-text' + (s.completed ? ' completed' : '');
+        textSpan.textContent = s.text || '';
+        textSpan.contentEditable = 'true';
+        textSpan.spellcheck = false;
+        // Delete button (icon)
+        const delBtn = document.createElement('button');
+        delBtn.className = 'subtask-delete-btn';
+        delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        // Wire events
+        cb.addEventListener('change', async () => {
+          try {
+            await updateDoc(doc(subtasksCol, sid), {
+              completed: cb.checked,
+              completedAtMs: cb.checked ? Date.now() : null
+            });
+            if (cb.checked) {
+              textSpan.classList.add('completed');
+            } else {
+              textSpan.classList.remove('completed');
+            }
+          } catch (e) {
+            console.error('[Subtasks] Toggle failed:', e);
+          }
+        });
+        textSpan.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            textSpan.blur();
+          }
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            // Re-render will restore original via snapshot; just blur
+            textSpan.blur();
+          }
+        });
+        textSpan.addEventListener('blur', async () => {
+          const newText = (textSpan.textContent || '').trim();
+          const oldText = (s.text || '').trim();
+          if (newText.length === 0) {
+            textSpan.textContent = oldText;
+            return;
+          }
+          if (newText !== oldText) {
+            try {
+              await updateDoc(doc(subtasksCol, sid), {
+                text: newText,
+                editedAtMs: Date.now()
+              });
+            } catch (e) {
+              console.error('[Subtasks] Update text failed:', e);
+            }
+          }
+        });
+        delBtn.addEventListener('click', async () => {
+          try {
+            const confirmed = await showConfirmModal('Delete this subtask?');
+            if (!confirmed) return;
+            await deleteDoc(doc(subtasksCol, sid));
+          } catch (e) {
+            console.error('[Subtasks] Delete failed:', e);
+          }
+        });
+        // Drag behavior
+        li.addEventListener('dragstart', () => {
+          li.classList.add('dragging');
+        });
+        li.addEventListener('dragend', async () => {
+          li.classList.remove('dragging');
+          await persistSubtasksOrder();
+        });
+        // Compose
+        li.appendChild(cb);
+        li.appendChild(textSpan);
+        li.appendChild(delBtn);
+        listEl.appendChild(li);
+      });
+    });
+    // Drag-and-drop helpers (added once)
+    if (!listEl.dataset.dnd) {
+      listEl.dataset.dnd = '1';
+      const getAfterElement = (y) => {
+        const items = [...listEl.querySelectorAll('.subtask-item:not(.dragging)')];
+        return items.reduce((closest, child) => {
+          const box = child.getBoundingClientRect();
+          const offset = y - box.top - box.height / 2;
+          if (offset < 0 && offset > closest.offset) {
+            return { offset, element: child };
+          } else {
+            return closest;
+          }
+        }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+      };
+      listEl.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const afterElement = getAfterElement(e.clientY);
+        const dragging = listEl.querySelector('.subtask-item.dragging');
+        if (!dragging) return;
+        if (afterElement == null) {
+          listEl.appendChild(dragging);
+        } else {
+          listEl.insertBefore(dragging, afterElement);
+        }
+      });
+    }
+    // Persist order to Firestore according to current DOM order
+    async function persistSubtasksOrder() {
+      const items = [...listEl.querySelectorAll('.subtask-item')];
+      let index = 0;
+      for (const el of items) {
+        const id = el.dataset.subtaskId;
+        if (!id) continue;
+        try {
+          await updateDoc(doc(subtasksCol, id), { order: index++ });
+        } catch (e) {
+          console.error('[Subtasks] Persist order failed:', e);
+        }
+      }
+    }
+    // New input row handler
+    function beginNewSubtaskInput() {
+      // Avoid duplicates
+      const existing = listEl.querySelector('li.subtask-new');
+      if (existing) {
+        const exInput = existing.querySelector('input.subtask-input');
+        if (exInput) exInput.focus();
+        return;
+      }
+      const li = document.createElement('li');
+      li.className = 'subtask-item subtask-new';
+      const spacer = document.createElement('span');
+      spacer.className = 'subtask-spacer';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'Add a subtask...';
+      input.className = 'task-input subtask-input';
+      const addBtn = document.createElement('button');
+      addBtn.className = 'subtask-add-btn';
+      addBtn.textContent = 'Add';
+      li.appendChild(spacer); // spacer aligns with checkbox column
+      li.appendChild(input);
+      li.appendChild(addBtn);
+      listEl.prepend(li);
+      input.focus();
+      const cleanup = () => { try { li.remove(); } catch(_) {} };
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); cleanup(); }
+        if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); }
+      });
+      addBtn.addEventListener('click', async () => {
+        const text = (input.value || '').trim();
+        if (!text) { input.focus(); return; }
+        try {
+          const currentUserName = localStorage.getItem('userName') || localStorage.getItem('userEmail') || 'Unknown User';
+          await addDoc(subtasksCol, {
+            text,
+            completed: false,
+            order: Date.now(),
+            createdAt: Timestamp.now(),
+            createdAtMs: Date.now(),
+            createdBy: currentUserName
+          });
+          cleanup();
+        } catch (e) {
+          console.error('[Subtasks] Create failed:', e);
+        }
+      });
+    }
+    if (addBtn) {
+      addBtn.onclick = beginNewSubtaskInput;
+    }
+  } catch (e) {
+    console.error('[Subtasks] Setup error:', e);
   }
 }
 
@@ -4100,6 +4316,8 @@ async function openTaskDrawer({ podId, subId, taskId, title, longDescription = '
   await refreshAttachmentsList(podId, subId, taskId);
   // Load comments and wire real-time updates
   await setupCommentsForTask(podId, subId, taskId);
+  // Load subtasks and wire real-time updates
+  await setupSubtasksForTask(podId, subId, taskId);
   // Reset comment composer UI
   const cta = document.getElementById('newCommentTextarea');
   const suggestions = document.getElementById('mentionSuggestions');

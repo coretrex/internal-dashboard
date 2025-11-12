@@ -196,14 +196,26 @@
             <button id="closeTaskDrawer" class="projects-drawer-close" aria-label="Close">&times;</button>
         </div>
         <div class="projects-drawer-body">
+            <div id="taskCreatedByInfo" style="margin-top:0; margin-bottom:0.5rem; color:#64b5f6; font-size:0.85rem; display:none;">
+                Created by <span id="taskCreatedByName">Unknown</span>
+            </div>
             <label class="projects-drawer-label" for="drawerLongDescription">Long Description</label>
             <textarea id="drawerLongDescription" class="projects-drawer-textarea" placeholder="Add a detailed description..."></textarea>
-            <div style="display:flex; gap:10px; margin-top:0.5rem; justify-content:flex-start;">
+            <div style="display:flex; gap:10px; margin-top:0.5rem; justify-content:flex-end;">
                 <button id="saveTaskDetailsBtn" class="save-comment-btn" style="background:#2196F3; color:#fff;">Save</button>
-                <button id="cancelTaskDetailsBtn" class="cancel-comment-btn">Cancel</button>
             </div>
-            <div id="taskCreatedByInfo" style="margin-top:0.5rem; color:#666; font-size:0.85rem; display:none;">
-                Created by <span id="taskCreatedByName">Unknown</span>
+
+            <!-- Subtasks Section -->
+            <div class="projects-drawer-section" id="subtasksSection" style="margin-top: 0.5rem;">
+                <div class="projects-drawer-section-header" style="align-items:center;">
+                    <span>Subtasks</span>
+                    <button id="addSubtaskBtn" class="projects-drawer-add" style="cursor: pointer; margin: 0;">
+                        <i class="fas fa-plus" style="margin-right: 0.5rem;"></i>Add subtask
+                    </button>
+                </div>
+                <ul id="subtasksList" class="subtasks-list">
+                    <!-- Subtasks will be populated here -->
+                </ul>
             </div>
 
             <div class="projects-drawer-section">
@@ -237,7 +249,7 @@
                     <div id="mentionSuggestions" style="position: absolute; left: 8px; right: 8px; bottom: 56px; background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); z-index: 5; display: none; max-height: 220px; overflow-y: auto;">
                         <!-- options populated dynamically -->
                     </div>
-                    <div style="margin-top: 0.5rem; width: 100%;">
+                    <div style="margin-top: 0.5rem; width: 100%; display: flex; justify-content: flex-end;">
                         <button id="postCommentBtn" class="save-comment-btn" style="padding: 0.5rem 0.9rem; background:#f5f5f5; color:#2196F3; border:1px solid #e0e0e0; border-radius:8px; transition:background 0.2s, box-shadow 0.2s;"><i class="fas fa-paper-plane" style="margin-right: 0.4rem; color:#2196F3;"></i>Post</button>
                     </div>
                 </div>

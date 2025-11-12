@@ -5704,6 +5704,26 @@ body.presence-banner-visible #global-edit-button {
 .projects-drawer-footer #saveTaskDetailsBtn { background:#2979ff; border:none; color:#fff; }
 .projects-drawer-footer #saveTaskDetailsBtn:hover { background:#195dcc; }
 
+/* Task Drawer - Subtasks */
+.subtasks-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.subtask-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid #e9eaee; border-radius: 8px; background: #fff; }
+.subtask-item:hover { background: #f7f8fa; }
+.subtask-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subtask-text.completed { color: #9aa0a6; text-decoration: line-through; }
+.subtask-input { flex: 1; }
+.subtask-item.subtask-new { border-style: dashed; }
+/* Tiny blue Add button for subtasks */
+.subtask-add-btn { background:#2196F3; border:none; color:#fff; padding:4px 8px; border-radius:6px; font-size:.8rem; cursor:pointer; }
+.subtask-add-btn:hover { background:#1976D2; }
+/* Spacer to align with checkbox column */
+.subtask-spacer { width:16px; height:16px; display:inline-block; }
+/* Delete icon button for subtasks */
+.subtask-delete-btn { background:transparent; border:none; color:#9aa0a6; cursor:pointer; padding:4px; border-radius:6px; }
+.subtask-delete-btn i { color:#9aa0a6; }
+.subtask-delete-btn:hover i { color:#e74c3c; }
+.subtask-item[draggable="true"] { cursor: grab; }
+.subtask-item.dragging { opacity: .6; }
+
 /* Firework celebration (Bobby burst) */
 .projects-firework {
   position: fixed;
