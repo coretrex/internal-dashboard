@@ -79,7 +79,8 @@ const podInfo = [
   { id: 'pod2', title: 'Pod 2', icon: 'fa-dumbbell' },
   { id: 'pod3', title: 'Pod 3', icon: 'fa-meteor' },
   { id: 'sales', title: 'Sales', icon: 'fa-chart-line' },
-  { id: 'billing', title: 'Billing', icon: 'fa-credit-card' }
+  { id: 'billing', title: 'Billing', icon: 'fa-credit-card' },
+  { id: 'internal', title: 'Internal', icon: 'fa-building' }
 ];
 
 // In-memory registry of subprojects keyed by pod id
@@ -3276,7 +3277,7 @@ function triggerBobbyFirework(clientX, clientY) {
     const endY = -starSize * 1.5;
     const dx = endX - startX;
     const dy = endY - startY;
-    const duration = 4200; // slightly slower animation
+    const duration = 4800; // a little slower animation
     // Animate container (movement + fade)
     container.animate([
       { transform: 'translate(0,0) rotate(-20deg)', opacity: 1 },
