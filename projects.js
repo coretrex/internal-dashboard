@@ -133,9 +133,7 @@ function updateTaskCount(subprojectCard) {
     countSpan.style.display = taskCount > 0 ? 'inline-flex' : 'none';
     
     // Check if any visible tasks are overdue
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().split('T')[0];
+    const todayStr = getLocalTodayString();
     
     let hasOverdue = false;
     visibleTasks.forEach(taskLi => {
@@ -157,9 +155,7 @@ function updateTaskCount(subprojectCard) {
 // Helper function to update KPI values for the currently visible pod
 function updateKPIs() {
   // Get today's date in YYYY-MM-DD format
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = getLocalTodayString();
   
   let dueToday = 0;
   let overdue = 0;
@@ -506,6 +502,15 @@ function formatDateDisplay(dateStr) {
   return `${monthNames[month - 1]} ${day}`;
 }
 
+// Helper to get today's date string in local timezone (YYYY-MM-DD)
+function getLocalTodayString() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function createTaskItem(taskData, podId, subId, taskId) {
   const li = document.createElement('li');
   // Store task ID as data attribute for real-time updates
@@ -692,8 +697,7 @@ function createTaskItem(taskData, podId, subId, taskId) {
       // Handle recurring tasks - create next instance
       if (latestTaskData.recurring && latestTaskData.recurring.isRecurring && shouldCreateNextRecurring(taskId)) {
         // Calculate from TODAY's date, not the task's original due date
-        const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
+        const todayStr = getLocalTodayString();
         const nextDueDate = calculateNextRecurringDate(todayStr, latestTaskData.recurring);
         if (nextDueDate && podId && subId) {
           // Create a new task with the next due date
@@ -1609,8 +1613,7 @@ async function completeTaskFromTimer() {
           const latestTaskData = snap.data() || {};
           if (latestTaskData.recurring && latestTaskData.recurring.isRecurring && shouldCreateNextRecurring(taskId)) {
             // Calculate next due date starting from today
-            const today = new Date();
-            const todayStr = today.toISOString().split('T')[0];
+            const todayStr = getLocalTodayString();
             const nextDueDate = calculateNextRecurringDate(todayStr, latestTaskData.recurring);
             if (nextDueDate) {
               // Use deterministic ID to prevent duplicates if triggered twice
@@ -4222,9 +4225,7 @@ function loadMyTasks(filterUser = null, filterProject = null, dateFilter = null)
   console.log('[My Tasks] Checking all pods:', allPods.length);
   
   // Get today's date for date filtering
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = getLocalTodayString();
   
   allPods.forEach(podCard => {
     const podId = podCard.dataset.podId;
@@ -4366,7 +4367,7 @@ function renderTasksInModal(filterUser = null, filterProject = null, dateFilter 
       return;
     }
     
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalTodayString();
     
     let html = '';
     
