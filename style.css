@@ -4770,9 +4770,9 @@ body.presence-banner-visible #global-edit-button {
 /* When the accordion is closed, reduce bottom padding slightly to balance visual spacing */
 .projects-body .subproject-card:not(.expanded) .subproject-header { padding-bottom: 8px; }
 .projects-body .subproject-header .expand-control { color:#5f6368; }
-.projects-body .subproject-title { flex:1; color:#202124; font-weight:800; }
+.projects-body .subproject-title { flex:1; color:#202124; font-weight:400; }
 /* Ensure boldness isn't overridden anywhere */
-.projects-body .subproject-header .subproject-title { font-weight:800 !important; }
+.projects-body .subproject-header .subproject-title { font-weight:400 !important; }
 
 .projects-body .task-list { background:#ffffff; padding:8px 14px 14px 14px; border-top:1px solid #edf0f3; --task-grid: 28px minmax(250px, 1fr) 180px 180px 140px 50px; }
 .projects-body .task-list .add-task-link { margin-bottom:8px; background:transparent; border:none; color:#4a78c2; font-weight:600; padding:0; cursor:pointer; display:inline-block; }
@@ -4798,7 +4798,7 @@ body.presence-banner-visible #global-edit-button {
 .projects-body .task-list li:hover { background:#f7f8fa; border-radius:8px; }
 .projects-body .task-checkbox-cell { display:flex; align-items:center; justify-content:center; }
 .projects-body .task-name-cell { display:flex; align-items:center; gap: 6px; width: 100%; min-width: 0; }
-.projects-body .task-name-cell .task-text { line-height: 1.1; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.projects-body .task-name-cell .task-text { line-height: 1.1; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; }
 
 .recurring-badge {
   display: inline-flex;
