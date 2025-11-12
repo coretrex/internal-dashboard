@@ -1645,6 +1645,9 @@ async function completeTaskFromTimer() {
       }
       
       // Play completion sound and show firework
+      try {
+        triggerBobbyFirework(window.innerWidth / 2, window.innerHeight / 2);
+      } catch (_) {}
       playCompletionSound();
       
       // Stop timer
@@ -3226,32 +3229,69 @@ function playCompletionSound() {
 
 // Bobby firework effect
 function triggerBobbyFirework(clientX, clientY) {
-  const container = document.createElement('div');
-  container.className = 'projects-firework';
-  document.body.appendChild(container);
-  const num = 34; // more bobbies :)
-  for (let i = 0; i < num; i++) {
+  // Shooting star effect: a single Bobby image streaks across the page with a rainbow trail
+  try {
+    const starSize = 64; // bigger bobby image
+    const trailHeight = 14; // thicker rainbow
+    const trailWidth = 260; // longer trail
+    // Start from lower-left, slightly off-screen so it flies across the whole page
+    const startX = -starSize * 1.5;
+    const startY = window.innerHeight - starSize * 1.5;
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = startX + 'px';
+    container.style.top = startY + 'px';
+    container.style.width = starSize + 'px';
+    container.style.height = starSize + 'px';
+    container.style.pointerEvents = 'none';
+    container.style.zIndex = '10000';
+    container.style.transform = 'rotate(-20deg)';
+    container.style.willChange = 'transform, opacity';
+    // Rainbow trail
+    const trail = document.createElement('div');
+    trail.style.position = 'absolute';
+    trail.style.right = (starSize - 4) + 'px';
+    trail.style.top = '50%';
+    trail.style.transform = 'translateY(-50%)';
+    trail.style.height = trailHeight + 'px';
+    trail.style.width = trailWidth + 'px';
+    trail.style.borderRadius = '10px';
+    trail.style.background = 'linear-gradient(90deg,#ff0040,#ff7a00,#ffe600,#1cd80e,#0091ff,#7a00ff,#ff00ea)';
+    trail.style.filter = 'blur(2px)';
+    trail.style.opacity = '0.9';
+    // Star (Bobby)
     const img = document.createElement('img');
     img.src = 'bobby.png';
-    img.className = 'particle';
-    // Heart curve: scale and rotate so heart points upward
-    const t = (Math.PI * 2 * i) / num;
-    // Parametric heart
-    const hx = 16 * Math.pow(Math.sin(t), 3);
-    const hy = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
-    const scale = 10 + Math.random() * 3; // size of heart
-    const dx = hx * scale;
-    const dy = hy * scale;
-    const startX = clientX + (Math.random() * 12 - 6);
-    const startY = clientY + (Math.random() * 8 - 4);
-    img.style.setProperty('--x', startX + 'px');
-    img.style.setProperty('--y', startY + 'px');
-    img.style.setProperty('--dx', startX + dx + 'px');
-    img.style.setProperty('--dy', startY + dy + 'px');
+    img.alt = 'Bobby';
+    img.style.width = starSize + 'px';
+    img.style.height = starSize + 'px';
+    img.style.objectFit = 'contain';
+    img.style.filter = 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))';
+    img.style.transform = 'rotate(20deg)'; // counter slight container tilt for a playful angle
+    container.appendChild(trail);
     container.appendChild(img);
+    document.body.appendChild(container);
+    // Compute end position (off-screen, top-right)
+    const endX = window.innerWidth + starSize * 2.5;
+    const endY = -starSize * 1.5;
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const duration = 4200; // slightly slower animation
+    // Animate container (movement + fade)
+    container.animate([
+      { transform: 'translate(0,0) rotate(-20deg)', opacity: 1 },
+      { transform: `translate(${dx}px, ${dy}px) rotate(-20deg)`, opacity: 0.15 }
+    ], { duration, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'forwards' });
+    // Animate trail (shrink + fade)
+    trail.animate([
+      { width: trailWidth + 'px', opacity: 0.9 },
+      { width: '0px', opacity: 0 }
+    ], { duration, easing: 'linear', fill: 'forwards' });
+    // Cleanup after animation
+    setTimeout(() => { try { container.remove(); } catch(_) {} }, duration + 100);
+  } catch (_) {
+    // Fallback: do nothing if animation fails
   }
-  // cleanup
-  setTimeout(() => container.remove(), 3000);
 }
 
 // Persist the current DOM order of subprojects under a pod
