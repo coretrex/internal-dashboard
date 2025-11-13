@@ -2461,6 +2461,21 @@ body.ids-edit-mode .move-sprint-row-btn {
   background: #181c24;
   color: #fff;
 }
+.ids-type-select.type-inform {
+  background: linear-gradient(135deg, #1a263a 0%, #2d4a6a 100%) !important; /* blue */
+  color: #ffffff !important;
+  border-color: rgba(66, 165, 245, 0.5);
+}
+.ids-type-select.type-discuss {
+  background: linear-gradient(135deg, #3a2a1a 0%, #6a4a2d 100%) !important; /* amber/orange */
+  color: #ffffff !important;
+  border-color: rgba(255, 193, 7, 0.5);
+}
+.ids-type-select.type-solve {
+  background: linear-gradient(135deg, #1a3a26 0%, #2d6a3d 100%) !important; /* green */
+  color: #ffffff !important;
+  border-color: rgba(46, 204, 113, 0.5);
+}
 .ids-type-select option[value="Inform"] {
   background: linear-gradient(135deg, #1a3a26 0%, #2d5a3d 100%);
   color: #4fc3f7;

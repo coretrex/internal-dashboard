@@ -2828,6 +2828,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             idsBody.addEventListener('change', (e) => {
                 console.log('IDS: Table change detected');
                 if (e.target.matches('input, select')) {
+                    // Update dropdown color when type changes
+                    if (e.target.classList && e.target.classList.contains('ids-type-select')) {
+                        updateIdsTypeSelectAppearance(e.target);
+                    }
                     debouncedSaveIds();
                 }
             });
@@ -2840,6 +2844,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, true);
             
             console.log('IDS: Enhanced table event listeners added');
+        }
+    }
+
+    // Update IDS type select appearance based on value
+    function updateIdsTypeSelectAppearance(selectEl) {
+        if (!selectEl) return;
+        selectEl.classList.remove('type-inform', 'type-discuss', 'type-solve');
+        const val = (selectEl.value || '').toLowerCase();
+        if (val === 'inform') {
+            selectEl.classList.add('type-inform');
+        } else if (val === 'discuss') {
+            selectEl.classList.add('type-discuss');
+        } else if (val === 'solve') {
+            selectEl.classList.add('type-solve');
         }
     }
 
@@ -3182,6 +3200,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </td>
             `;
             idsBody.appendChild(row);
+            // Apply initial color to dropdown and bind change handler
+            const typeSelect = row.querySelector('.ids-type-select');
+            if (typeSelect) {
+                updateIdsTypeSelectAppearance(typeSelect);
+                typeSelect.addEventListener('change', () => updateIdsTypeSelectAppearance(typeSelect));
+            }
         });
         
         console.log('IDS: Table rendered with', Object.keys(idsData).length, 'rows');
