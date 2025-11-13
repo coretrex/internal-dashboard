@@ -75,7 +75,7 @@ class Navigation extends HTMLElement {
         // Define all possible pages
         const pages = [
             { id: 'goals', href: 'goals', icon: 'fas fa-bullseye', label: 'L10' },
-            { id: 'kpis', href: 'kpis', icon: 'fas fa-chart-bar', label: 'Sales Metrics' },
+            { id: 'kpis', href: 'kpis', icon: 'fas fa-chart-bar', label: 'Leads' },
             { id: 'prospects', href: 'prospects', icon: 'fas fa-chart-line', label: 'Prospects' },
             { id: 'clients', href: 'clients', icon: 'fas fa-users', label: 'Clients' },
             { id: 'projects', href: 'projects', icon: 'fas fa-tasks', label: 'Projects' },
@@ -86,7 +86,7 @@ class Navigation extends HTMLElement {
         for (const page of pages) {
             if (pageAccess.includes(page.id) || isAdmin) {
                 navHtml += `
-                    <a href="${page.href}" class="nav-btn ${currentSlug === page.id ? 'active' : ''}">
+                    <a href="${page.href}" class="nav-btn ${currentSlug === page.id ? 'active' : ''}" title="${page.label}" aria-label="${page.label}" data-tooltip="${page.label}">
                         <i class="${page.icon}"></i><span class="nav-label">${page.label}</span>
                     </a>
                 `;
@@ -112,6 +112,83 @@ class Navigation extends HTMLElement {
                 navButtons.style.visibility = 'visible';
                 navButtons.style.opacity = '1';
                 navButtons.classList.add('chrome-nav-fix');
+                
+                // Inject CSS-based tooltips for collapsed state
+                if (!document.getElementById('nav-collapsed-tooltips-style')) {
+                    try {
+                        const style = document.createElement('style');
+                        style.id = 'nav-collapsed-tooltips-style';
+                        style.textContent = `
+                            .nav-buttons.collapsed .nav-btn { position: relative; }
+                            .nav-buttons.collapsed .nav-btn .nav-label { display: none !important; }
+                            /* JS-driven tooltip styles */
+                            #nav-tooltip {
+                                position: fixed;
+                                background: rgba(30, 34, 44, 0.92);
+                                color: #fff;
+                                border-radius: 8px;
+                                padding: 6px 10px;
+                                white-space: nowrap;
+                                pointer-events: none;
+                                box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+                                z-index: 3000;
+                                font-size: 0.9rem;
+                                transform: translateY(-50%);
+                                display: none;
+                            }
+                            #nav-tooltip::before {
+                                content: '';
+                                position: absolute;
+                                left: -12px;
+                                top: 50%;
+                                transform: translateY(-50%);
+                                border: 6px solid transparent;
+                                border-right-color: rgba(30, 34, 44, 0.92);
+                            }
+                        `;
+                        document.head.appendChild(style);
+                    } catch (e) {
+                        console.warn('Could not inject tooltip styles:', e);
+                    }
+                }
+                // Create a single tooltip element in the document
+                if (!document.getElementById('nav-tooltip')) {
+                    const tooltip = document.createElement('div');
+                    tooltip.id = 'nav-tooltip';
+                    document.body.appendChild(tooltip);
+                }
+                // Delegate hover events to show tooltip only when collapsed
+                const tooltipEl = document.getElementById('nav-tooltip');
+                const showTooltip = (anchorEl) => {
+                    if (!tooltipEl || !anchorEl || !navButtons.classList.contains('collapsed')) return;
+                    const label = anchorEl.getAttribute('data-tooltip') || anchorEl.getAttribute('aria-label') || '';
+                    if (!label) return;
+                    const rect = anchorEl.getBoundingClientRect();
+                    tooltipEl.textContent = label;
+                    tooltipEl.style.left = `${Math.round(rect.right + 10)}px`;
+                    tooltipEl.style.top = `${Math.round(rect.top + rect.height / 2)}px`;
+                    tooltipEl.style.display = 'block';
+                };
+                const hideTooltip = () => {
+                    if (!tooltipEl) return;
+                    tooltipEl.style.display = 'none';
+                };
+                // Mouse events
+                navButtons.addEventListener('mouseover', (e) => {
+                    const anchor = e.target && e.target.closest ? e.target.closest('.nav-btn') : null;
+                    if (!anchor || !navButtons.contains(anchor)) return;
+                    showTooltip(anchor);
+                });
+                navButtons.addEventListener('mousemove', (e) => {
+                    const anchor = e.target && e.target.closest ? e.target.closest('.nav-btn') : null;
+                    if (!anchor || !navButtons.contains(anchor)) return;
+                    showTooltip(anchor);
+                });
+                navButtons.addEventListener('mouseout', () => {
+                    hideTooltip();
+                });
+                window.addEventListener('scroll', hideTooltip, { passive: true });
+                window.addEventListener('resize', hideTooltip);
                 
                 // Insert a top avatar at the very top of the menu
                 if (!navButtons.querySelector('.nav-top-avatar')) {
@@ -403,6 +480,9 @@ class Navigation extends HTMLElement {
                     const adminLink = document.createElement('a');
                     adminLink.className = `nav-btn nav-admin-link ${currentSlug === 'admin' ? 'active' : ''}`;
                     adminLink.href = 'admin';
+                    adminLink.title = 'Admin';
+                    adminLink.setAttribute('aria-label', 'Admin');
+                    adminLink.setAttribute('data-tooltip', 'Admin');
                     adminLink.innerHTML = '<i class="fas fa-shield-alt"></i><span class="nav-label">Admin</span>';
                     const signout = navButtons.querySelector('.nav-signout-container');
                     if (signout) {
