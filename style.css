@@ -644,6 +644,9 @@ h1 {
   position: relative;
   cursor: pointer;
 }
+.nav-buttons:not(.collapsed) .nav-top-avatar {
+  display: none;
+}
 .nav-top-avatar img {
   width: 64px;
   height: 64px;
