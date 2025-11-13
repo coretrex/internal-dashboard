@@ -2408,14 +2408,14 @@ body.ids-edit-mode .move-sprint-row-btn {
   color: #fff;
   font-weight: 700;
   padding: 14px 10px;
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid rgba(0,33,113,0.6);
   text-align: center;
 }
 .ids-table td {
   background: transparent;
   color: #f3f3f3;
   padding: 8px 10px;
-  border-bottom: 1px solid #222;
+  border-bottom: 1px solid rgba(0,33,113,0.5);
   text-align: center;
   min-width: 60px;
   transition: background 0.2s;
