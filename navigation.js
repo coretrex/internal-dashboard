@@ -113,6 +113,39 @@ class Navigation extends HTMLElement {
                 navButtons.style.opacity = '1';
                 navButtons.classList.add('chrome-nav-fix');
                 
+                // Insert a top avatar at the very top of the menu
+                if (!navButtons.querySelector('.nav-top-avatar')) {
+                    try {
+                        let userPhotoTop = localStorage.getItem('userPhoto') || '';
+                        if (!userPhotoTop) {
+                            userPhotoTop = 'https://cdn.pixabay.com/photo/2017/01/06/19/15/raccoon-1956987_1280.jpg';
+                        }
+                        const topAvatar = document.createElement('div');
+                        topAvatar.className = 'nav-top-avatar';
+                        topAvatar.innerHTML = `<img src="${userPhotoTop}" alt="Profile">`;
+                        navButtons.insertBefore(topAvatar, navButtons.firstChild || null);
+                        // Clicking the avatar opens Notifications
+                        topAvatar.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            try {
+                                if (typeof window.openNotificationsModal === 'function') {
+                                    await window.openNotificationsModal();
+                                } else {
+                                    localStorage.setItem('openNotificationsOnLoad', 'true');
+                                    window.location.href = 'projects';
+                                }
+                            } catch (err) {
+                                console.warn('Could not open notifications modal from avatar:', err);
+                                localStorage.setItem('openNotificationsOnLoad', 'true');
+                                window.location.href = 'projects';
+                            }
+                        });
+                    } catch (e) {
+                        console.warn('Could not insert top avatar:', e);
+                    }
+                }
+
                 // Add collapse/expand control (we will position it at the bottom later)
                 if (!navButtons.querySelector('.nav-collapse-btn')) {
                     const collapseBtn = document.createElement('button');
@@ -147,8 +180,9 @@ class Navigation extends HTMLElement {
                         if (img) img.removeAttribute('style');
                         // Re-arrange structure for sidebar: put name on one line, bell on next line
                         const bell = userInfo.querySelector('.notification-bell-container');
+                        const badge = userInfo.querySelector('#notificationBadge');
                         const welcome = userInfo.querySelector('.welcome-message');
-                        if (bell && welcome && img) {
+                        if (welcome && img) {
                             // Create header row (photo + welcome)
                             const headerRow = document.createElement('div');
                             headerRow.className = 'user-header-row';
@@ -156,16 +190,30 @@ class Navigation extends HTMLElement {
                             headerRow.appendChild(welcome);
                             // Remove originals from root
                             userInfo.insertBefore(headerRow, userInfo.firstChild);
-                            // Detach bell for later placement at end of menu list
-                            bell.remove();
-                            // Store bell on instance for later insertion
-                            this._navBell = bell;
+                            // Move badge to top avatar and remove bell icon
+                            try {
+                                const topAvatar = navButtons.querySelector('.nav-top-avatar');
+                                if (badge && topAvatar) {
+                                    badge.style.position = 'absolute';
+                                    badge.style.top = '-2px';
+                                    badge.style.right = '-2px';
+                                    topAvatar.appendChild(badge);
+                                }
+                            } catch {}
+                            if (bell) {
+                                bell.remove();
+                            }
                         }
                         // Insert as first element in the sidebar
-                        if (navButtons.firstChild) {
-                            navButtons.insertBefore(userInfo, navButtons.firstChild);
+                        const topAvatar = navButtons.querySelector('.nav-top-avatar');
+                        if (topAvatar) {
+                            navButtons.insertBefore(userInfo, topAvatar.nextSibling || null);
                         } else {
-                            navButtons.appendChild(userInfo);
+                            if (navButtons.firstChild) {
+                                navButtons.insertBefore(userInfo, navButtons.firstChild);
+                            } else {
+                                navButtons.appendChild(userInfo);
+                            }
                         }
                     } catch (e) {
                         console.warn('Could not move user info widget into navigation:', e);
@@ -179,20 +227,37 @@ class Navigation extends HTMLElement {
                             const img = ui.querySelector('img');
                             if (img) img.removeAttribute('style');
                             const bell = ui.querySelector('.notification-bell-container');
+                            const badge = ui.querySelector('#notificationBadge');
                             const welcome = ui.querySelector('.welcome-message');
-                            if (bell && welcome && img) {
+                            if (welcome && img) {
                                 const headerRow = document.createElement('div');
                                 headerRow.className = 'user-header-row';
                                 headerRow.appendChild(img);
                                 headerRow.appendChild(welcome);
                                 ui.insertBefore(headerRow, ui.firstChild);
-                                bell.remove();
-                                this._navBell = bell;
+                                // Move badge to top avatar and remove bell icon
+                                try {
+                                    const topAvatar = navButtons.querySelector('.nav-top-avatar');
+                                    if (badge && topAvatar) {
+                                        badge.style.position = 'absolute';
+                                        badge.style.top = '-2px';
+                                        badge.style.right = '-2px';
+                                        topAvatar.appendChild(badge);
+                                    }
+                                } catch {}
+                                if (bell) {
+                                    bell.remove();
+                                }
                             }
-                            if (navButtons.firstChild) {
-                                navButtons.insertBefore(ui, navButtons.firstChild);
+                            const topAvatar = navButtons.querySelector('.nav-top-avatar');
+                            if (topAvatar) {
+                                navButtons.insertBefore(ui, topAvatar.nextSibling || null);
                             } else {
-                                navButtons.appendChild(ui);
+                                if (navButtons.firstChild) {
+                                    navButtons.insertBefore(ui, navButtons.firstChild);
+                                } else {
+                                    navButtons.appendChild(ui);
+                                }
                             }
                         } catch (err) {
                             console.warn('Deferred move of user info failed:', err);
@@ -309,7 +374,12 @@ class Navigation extends HTMLElement {
                                     ui.removeAttribute('style');
                                     const img = ui.querySelector('img');
                                     if (img) img.removeAttribute('style');
-                                    navButtons.insertBefore(ui, navButtons.firstChild || null);
+                                    const topAvatar = navButtons.querySelector('.nav-top-avatar');
+                                    if (topAvatar) {
+                                        navButtons.insertBefore(ui, topAvatar.nextSibling || null);
+                                    } else {
+                                        navButtons.insertBefore(ui, navButtons.firstChild || null);
+                                    }
                                 } catch {}
                             }
                         });
@@ -326,39 +396,7 @@ class Navigation extends HTMLElement {
                     navButtons.insertBefore(title, firstLink || null);
                 }
 
-                // Place notifications at the end of the menu list
-                if (this._navBell && !navButtons.querySelector('.nav-notifications')) {
-                    const notifRow = document.createElement('a');
-                    notifRow.className = 'nav-btn nav-notifications';
-                    notifRow.href = '#';
-                    notifRow.appendChild(this._navBell);
-                    const label = document.createElement('span');
-                    label.className = 'nav-label';
-                    label.textContent = 'Notifications';
-                    notifRow.appendChild(label);
-                    notifRow.addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        try {
-                            if (typeof window.openNotificationsModal === 'function') {
-                                await window.openNotificationsModal();
-                            } else {
-                                localStorage.setItem('openNotificationsOnLoad', 'true');
-                                window.location.href = 'projects';
-                            }
-                        } catch (err) {
-                            console.warn('Could not open notifications modal:', err);
-                            localStorage.setItem('openNotificationsOnLoad', 'true');
-                            window.location.href = 'projects';
-                        }
-                    });
-                    const signout = navButtons.querySelector('.nav-signout-container');
-                    if (signout) {
-                        navButtons.insertBefore(notifRow, signout);
-                    } else {
-                        navButtons.appendChild(notifRow);
-                    }
-                }
+                // Notifications now handled by clicking the top avatar; bell icon removed
 
                 // Append Admin link just below Notifications (and above Sign Out) for admin users
                 if (isAdmin && !navButtons.querySelector('.nav-admin-link')) {

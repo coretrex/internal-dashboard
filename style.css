@@ -635,6 +635,29 @@ h1 {
   contain: layout style paint;
 }
 
+/* Top avatar at the very top of the nav */
+.nav-top-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0 8px 0;
+  position: relative;
+  cursor: pointer;
+}
+.nav-top-avatar img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.9);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+}
+.nav-top-avatar .notification-badge {
+  position: absolute !important;
+  top: 2px !important;
+  right: 2px !important;
+}
+
 .nav-btn {
   padding: 10px 12px;
   border: none;
@@ -766,6 +789,20 @@ h1 {
 }
 .nav-buttons.collapsed .nav-sound-toggle i {
   font-size: 16px !important;
+}
+
+/* Collapsed size for top avatar */
+.nav-buttons.collapsed .nav-top-avatar {
+  padding: 4px 0;
+}
+.nav-buttons.collapsed .nav-top-avatar img {
+  width: 36px;
+  height: 36px;
+  border-width: 1.5px;
+}
+.nav-buttons.collapsed .nav-top-avatar .notification-badge {
+  top: -4px !important;
+  right: -4px !important;
 }
 .nav-buttons.collapsed .nav-signout-btn {
   font-size: 0;
