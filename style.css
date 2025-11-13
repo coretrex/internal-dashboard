@@ -2077,7 +2077,7 @@ tr.completed button:disabled {
 }
 
 .kpi-tracker-table {
-  background: #181c24;
+  background: linear-gradient(135deg, #0d47a1 0%, #002171 100%);
   color: #f3f3f3;
   border-radius: 12px;
   border-collapse: separate;
@@ -2088,7 +2088,7 @@ tr.completed button:disabled {
   overflow: hidden;
 }
 .kpi-tracker-table th {
-  background: #23272f;
+  background: transparent;
   color: #fff;
   font-weight: 700;
   padding: 14px 10px;
@@ -2096,7 +2096,7 @@ tr.completed button:disabled {
   text-align: center;
 }
 .kpi-tracker-table td {
-  background: #23272f;
+  background: transparent;
   color: #f3f3f3;
   padding: 8px 10px;
   border-bottom: 1px solid #222;
@@ -2106,11 +2106,11 @@ tr.completed button:disabled {
 }
 .kpi-tracker-table td[contenteditable="true"]:focus {
   outline: 2px solid #2979ff;
-  background: #222b3a;
+  background: rgba(41,121,255,0.13);
   color: #fff;
 }
 .kpi-tracker-table tr:hover td {
-  background: #222b3a;
+  background: rgba(41,121,255,0.10);
 }
 .kpi-tracker-table td:first-child, .kpi-tracker-table th:first-child {
   text-align: left;
@@ -2378,7 +2378,7 @@ body.ids-edit-mode .move-sprint-row-btn {
 }
 
 .ids-container {
-  background: #181c24;
+  background: linear-gradient(135deg, #0d47a1 0%, #002171 100%);
   border-radius: 18px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.18);
   padding: 2.2rem 2.5rem 2.5rem 2.5rem;
@@ -2393,7 +2393,7 @@ body.ids-edit-mode .move-sprint-row-btn {
   letter-spacing: 0.01em;
 }
 .ids-table {
-  background: #23272f;
+  background: linear-gradient(135deg, #0d47a1 0%, #002171 100%);
   color: #f3f3f3;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.18);
@@ -2404,7 +2404,7 @@ body.ids-edit-mode .move-sprint-row-btn {
   border-spacing: 0;
 }
 .ids-table th {
-  background: #23272f;
+  background: transparent;
   color: #fff;
   font-weight: 700;
   padding: 14px 10px;
@@ -2412,7 +2412,7 @@ body.ids-edit-mode .move-sprint-row-btn {
   text-align: center;
 }
 .ids-table td {
-  background: #23272f;
+  background: transparent;
   color: #f3f3f3;
   padding: 8px 10px;
   border-bottom: 1px solid #222;
@@ -2422,11 +2422,11 @@ body.ids-edit-mode .move-sprint-row-btn {
 }
 .ids-table td[contenteditable="true"]:focus {
   outline: 2px solid #2979ff;
-  background: #222b3a;
+  background: rgba(41,121,255,0.13);
   color: #fff;
 }
 .ids-table tr:hover td {
-  background: #222b3a;
+  background: rgba(41,121,255,0.10);
 }
 .ids-table th:nth-child(1), .ids-table td:nth-child(1),
 .ids-table th:nth-child(2), .ids-table td:nth-child(2),
@@ -2508,7 +2508,7 @@ body.ids-edit-mode .move-sprint-row-btn {
 }
 
 .monthly-sprints-container {
-  background: #181c24;
+  background: linear-gradient(135deg, #0d47a1 0%, #002171 100%);
   border-radius: 18px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.18);
   padding: 2.2rem 2.5rem 2.5rem 2.5rem;
@@ -2517,7 +2517,7 @@ body.ids-edit-mode .move-sprint-row-btn {
 }
 
 .todos-container {
-  background: #181c24;
+  background: linear-gradient(135deg, #0d47a1 0%, #002171 100%);
   border-radius: 18px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.18);
   padding: 2.2rem 2.5rem 2.5rem 2.5rem;
@@ -4439,7 +4439,7 @@ body.presence-banner-visible #global-edit-button {
 
 /* Google Sheets Integration Styles */
 .google-sheets-container {
-    background: #23272f;
+    background: linear-gradient(135deg, #0d47a1 0%, #002171 100%);
     border-radius: 12px;
     padding: 24px;
     color: #f3f3f3;
