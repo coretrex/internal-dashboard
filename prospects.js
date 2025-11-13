@@ -352,7 +352,9 @@ function addProspectToTable(data, docId) {
     // Add follow-ups toggle handlers
     const followupToggles = newRow.querySelectorAll('.followup-toggle');
     followupToggles.forEach(toggle => {
-        toggle.addEventListener('click', async () => {
+        toggle.addEventListener('click', async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
             try {
                 const key = toggle.dataset.key;
                 const newValue = !toggle.classList.contains('active');
@@ -937,6 +939,7 @@ function sortProspectsByStatus() {
 // Load prospects from Firebase
 async function loadProspects() {
     try {
+        const prevScrollY = window.scrollY || 0;
         const tbody = prospectsTable.querySelector("tbody");
         tbody.innerHTML = ''; // Clear existing rows
         
@@ -1028,6 +1031,8 @@ async function loadProspects() {
         createCollapsibleSection(lostProspects, 'Lost Prospects', 'lost-prospects-header');
 
         updateStatistics();
+        // Restore scroll position to prevent page jumping to top after rebuild
+        window.scrollTo(0, prevScrollY);
     } catch (error) {
         console.error("Error loading prospects:", error);
     }
