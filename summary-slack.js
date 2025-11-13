@@ -93,15 +93,18 @@ async function buildSummary(db, tz) {
 
 function formatSlackMessage(summary, tz, label) {
   const lines = [];
-  lines.push(`*Task Summary (${label} ${tz})*`);
-  if (summary.rows.length === 0) {
-    lines.push('No tasks due today or overdue.');
+  lines.push(`*Overdue Task Summary (${label} ${tz})*`);
+  // Only include people with overdue tasks
+  const overdueRows = Array.isArray(summary.rows) ? summary.rows.filter(r => (r.overdue || 0) > 0) : [];
+  if (overdueRows.length === 0) {
+    lines.push('No overdue tasks.');
   } else {
-    summary.rows.forEach(r => {
-      // Bold assignee name on its own line, then counts on new lines
-      lines.push(`- *${r.display}*\n  :large_green_circle: ${r.dueToday} due today\n  :red_circle: *${r.overdue}* overdue\n`);
+    overdueRows.forEach(r => {
+      // Bold assignee name on its own line, show only overdue count
+      lines.push(`- *${r.display}*\n  :red_circle: *${r.overdue}* overdue\n`);
     });
-    lines.push(`\nTotals: :large_green_circle: ${summary.totals.dueToday} due today • :red_circle: *${summary.totals.overdue}* overdue`);
+    const totalOverdue = overdueRows.reduce((sum, r) => sum + (r.overdue || 0), 0);
+    lines.push(`\nTotals: :red_circle: *${totalOverdue}* overdue`);
   }
   return lines.join('\n');
 }
