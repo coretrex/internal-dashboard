@@ -9,6 +9,164 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* Good News Timer - Glassmorphism and Modern UI */
+        #goodNewsTimerModal.good-news-modal {
+            background: radial-gradient(1200px 600px at 15% 10%, rgba(0, 140, 255, 0.12), transparent 60%),
+                        radial-gradient(1200px 600px at 85% 90%, rgba(255, 20, 147, 0.10), transparent 60%),
+                        rgba(10, 12, 22, 0.35);
+            -webkit-backdrop-filter: blur(10px) saturate(120%);
+            backdrop-filter: blur(10px) saturate(120%);
+            padding: 4vh 2vw; /* give breathing room to avoid viewport edge clipping */
+            overflow: hidden; /* prevent brief scrollbars on highlight scale */
+            overscroll-behavior: contain; /* avoid scroll chaining to viewport */
+        }
+        #goodNewsTimerModal.good-news-modal .good-news-modal-content {
+            background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.06));
+            border: 1px solid rgba(255,255,255,0.18);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.08);
+            -webkit-backdrop-filter: blur(14px) saturate(140%);
+            backdrop-filter: blur(14px) saturate(140%);
+            border-radius: 20px;
+            padding: 24px 24px 56px 24px;
+            max-width: 1100px;
+            width: 96%;
+            max-height: 92vh;
+            overflow: hidden; /* ensure no internal scrollbar shows during highlight */
+            transform: translateY(8px);
+            opacity: 0;
+            transition: opacity 220ms ease, transform 220ms ease;
+        }
+        #goodNewsTimerModal.good-news-modal.visible .good-news-modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        /* Layout for the timer section */
+        #goodNewsTimerModal .timer-wheel-container {
+            display: grid;
+            grid-template-columns: 1.1fr 1fr;
+            gap: 20px;
+            overflow: visible; /* allow inner effects without creating scrollbars */
+        }
+        @media (max-width: 820px) {
+            #goodNewsTimerModal .timer-wheel-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        /* Names strip */
+        #goodNewsTimerModal .names-display-wrapper {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            border-radius: 14px;
+            padding: 12px;
+            overflow: visible;
+        }
+        #goodNewsTimerModal .names-display {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            row-gap: 10px;
+            overflow: visible; /* avoid scrollbar during highlight scale */
+            scrollbar-width: none; /* hide scrollbar in Firefox if any */
+        }
+        #goodNewsTimerModal .names-display::-webkit-scrollbar { display: none; }
+        #goodNewsTimerModal .name-item {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: #e8eef9;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+            transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+            white-space: nowrap;
+        }
+        #goodNewsTimerModal .name-item.highlighted {
+            transform: scale(1.04);
+            box-shadow: 0 8px 24px rgba(41, 121, 255, 0.35), 0 0 0 1px rgba(41,121,255,0.45) inset;
+            background: linear-gradient(135deg, rgba(41,121,255,0.35), rgba(108,99,255,0.30));
+            border-color: rgba(41,121,255,0.55);
+            animation: goodNewsGlowPulse 0.6s ease-in-out infinite alternate;
+        }
+        #goodNewsTimerModal .name-item.selected {
+            transform: scale(1.06);
+            background: linear-gradient(135deg, rgba(46,204,113,0.35), rgba(39,174,96,0.30));
+            border-color: rgba(46,204,113,0.65);
+            box-shadow: 0 12px 28px rgba(46,204,113,0.35), 0 0 0 1px rgba(46,204,113,0.55) inset;
+        }
+        @keyframes goodNewsGlowPulse {
+            0% {
+                box-shadow: 0 8px 24px rgba(41, 121, 255, 0.35), 0 0 0 1px rgba(41,121,255,0.45) inset;
+                filter: brightness(1);
+            }
+            100% {
+                box-shadow: 0 12px 34px rgba(108, 99, 255, 0.45), 0 0 0 1px rgba(108,99,255,0.55) inset;
+                filter: brightness(1.06);
+            }
+        }
+        /* Controls area */
+        #goodNewsTimerModal .timer-controls {
+            background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 14px;
+            padding: 16px;
+            display: grid;
+            grid-template-rows: auto auto auto;
+            gap: 12px;
+            align-content: start;
+        }
+        #goodNewsTimerModal .current-person-display h3 {
+            margin: 0 0 6px 0;
+            color: #eaf1ff;
+            letter-spacing: 0.3px;
+        }
+        #goodNewsTimerModal .timer-display-large {
+            font-variant-numeric: tabular-nums;
+            font-size: 48px;
+            font-weight: 800;
+            color: #ffffff;
+            text-shadow: 0 2px 14px rgba(0,0,0,0.25);
+            letter-spacing: 1px;
+        }
+        /* Buttons */
+        #goodNewsTimerModal .spin-btn,
+        #goodNewsTimerModal .skip-btn,
+        #goodNewsTimerModal .next-btn {
+            border: 0;
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease, background 120ms ease;
+            color: #fff;
+        }
+        #goodNewsTimerModal .spin-btn {
+            background: linear-gradient(135deg, #2979ff, #6c63ff);
+            box-shadow: 0 10px 20px rgba(41, 121, 255, 0.25);
+        }
+        #goodNewsTimerModal .skip-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ff9966);
+            box-shadow: 0 10px 20px rgba(255, 107, 107, 0.25);
+        }
+        #goodNewsTimerModal .next-btn {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            box-shadow: 0 10px 20px rgba(46, 204, 113, 0.25);
+        }
+        #goodNewsTimerModal .spin-btn:hover,
+        #goodNewsTimerModal .skip-btn:hover,
+        #goodNewsTimerModal .next-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.05);
+        }
+        #goodNewsTimerModal .spin-btn:active,
+        #goodNewsTimerModal .skip-btn:active,
+        #goodNewsTimerModal .next-btn:active {
+            transform: translateY(0);
+            filter: brightness(0.98);
+        }
+        /* Keep Good News trigger button default styles (no overrides here) */
+    </style>
     <script>
         // Authentication check - redirect to login if not logged in
         if (!localStorage.getItem('isLoggedIn') || localStorage.getItem('isLoggedIn') !== 'true') {
@@ -341,7 +499,7 @@
     </div>
 
     <!-- Good News Timer Modal -->
-    <div id="goodNewsTimerModal" class="modal">
+    <div id="goodNewsTimerModal" class="modal good-news-modal">
         <div class="modal-content good-news-modal-content">
             <span class="close" id="closeGoodNewsTimerModal">&times;</span>
             <div class="modal-body">

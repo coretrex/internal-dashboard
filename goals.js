@@ -3984,7 +3984,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Event listeners
             this.openBtn.addEventListener('click', () => this.openModal());
             this.closeBtn.addEventListener('click', () => this.closeModal());
-            this.spinBtn.addEventListener('click', () => this.spinWheel());
+            this.spinBtn.addEventListener('click', () => {
+                // If timer is running or the button says "Pick Again", behave like "Next Person"
+                if (this.isRunning || (this.spinBtn.textContent && this.spinBtn.textContent.toLowerCase().includes('again'))) {
+                    this.nextPerson();
+                } else {
+                    this.spinWheel();
+                }
+            });
             this.skipBtn.addEventListener('click', () => this.skipPerson());
             this.nextBtn.addEventListener('click', () => this.nextPerson());
             
@@ -4002,11 +4009,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         openModal() {
             this.modal.style.display = 'block';
+            // Allow paint, then animate in
+            requestAnimationFrame(() => {
+                this.modal.classList.add('visible');
+            });
             document.body.style.overflow = 'hidden'; // Prevent background scrolling
         }
         
         closeModal() {
-            this.modal.style.display = 'none';
+            // Animate out then hide
+            this.modal.classList.remove('visible');
+            setTimeout(() => {
+                this.modal.style.display = 'none';
+            }, 220);
             document.body.style.overflow = 'auto'; // Restore scrolling
             this.endTimer(false); // Stop timer if running, but don't play sound
             this.usedThisRound = []; // Reset the round when modal is closed
