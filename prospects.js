@@ -79,6 +79,61 @@ function convertToYYYYMMDD(formattedDate) {
     return date.toISOString().split('T')[0];
 }
 
+// New: Format any supported date input to MM/DD (e.g., 08/31)
+function formatToMMDD(value) {
+    if (!value) return '';
+    // If value is ISO (YYYY-MM-DD)
+    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) {
+        const [, mm, dd] = value.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+        return `${mm}/${dd}`;
+    }
+    // If value is like "January 1st"
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const ordinalMatch = /^(January|February|March|April|May|June|July|August|September|October|November|December)\\s+(\\d{1,2})(?:st|nd|rd|th)?$/;
+    const m = value.match(ordinalMatch);
+    if (m) {
+        const monthIndex = monthNames.indexOf(m[1]);
+        const day = String(parseInt(m[2], 10)).padStart(2, '0');
+        const mm = String(monthIndex + 1).padStart(2, '0');
+        return `${mm}/${day}`;
+    }
+    // Fallback try Date parsing
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) {
+        const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+        const dd = String(parsed.getDate()).padStart(2, '0');
+        return `${mm}/${dd}`;
+    }
+    return '';
+}
+
+// New: Normalize various date inputs to ISO YYYY-MM-DD for data-date attributes
+function toISODate(value) {
+    if (!value) return '';
+    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return value;
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const ordinalMatch = /^(January|February|March|April|May|June|July|August|September|October|November|December)\\s+(\\d{1,2})(?:st|nd|rd|th)?$/;
+    const m = value.match(ordinalMatch);
+    if (m) {
+        const monthIndex = monthNames.indexOf(m[1]);
+        const day = String(parseInt(m[2], 10)).padStart(2, '0');
+        const year = new Date().getFullYear();
+        const mm = String(monthIndex + 1).padStart(2, '0');
+        return `${year}-${mm}-${day}`;
+    }
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString().split('T')[0];
+    }
+    return '';
+}
+
 // Statistics function
 function updateStatistics() {
     // Update prospect count - only count In-Progress prospects
@@ -94,7 +149,7 @@ function updateStatistics() {
     // Update prospect MRR - only sum revenue from In-Progress prospects
     let totalRevenue = 0;
     inProgressProspects.forEach(row => {
-        const revenueCell = row.cells[7]; // Revenue is in column 7 (index 7)
+        const revenueCell = row.cells[6]; // Revenue is in column 7 (index 6 after layout change)
         if (revenueCell) {
             const revenue = parseFloat(revenueCell.textContent.replace(/[^0-9.-]/g, '')) || 0;
             totalRevenue += revenue;
@@ -111,7 +166,7 @@ function updateStatistics() {
     const today = new Date();
     
     inProgressProspects.forEach(row => {
-        const createdDateCell = row.cells[8]; // Created Date is in column 8 (index 8)
+        const createdDateCell = row.cells[7]; // Created Date is now column index 7
         if (createdDateCell) {
             // Try to get the date from dataset first, then from text content
             let dateString = createdDateCell.dataset.date;
@@ -165,7 +220,6 @@ async function addProspect() {
     const dueDate = document.getElementById('dueDate').value;
     const signatureExpected = document.getElementById('signatureExpected').value;
     const leadSource = document.getElementById('leadSource').value;
-    const salesLead = document.getElementById('salesLead').value;
     const revenue = parseFloat(document.getElementById('revenue').value) || 0;
     const createdDate = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
 
@@ -181,10 +235,15 @@ async function addProspect() {
             dueDate,
             signatureExpected,
             leadSource,
-            salesLead,
             revenueValue: revenue,
             createdDate,
-            status: 'In-Progress'
+            status: 'In-Progress',
+            postProposalChecklist: {
+                called: false,
+                voicemail: false,
+                texted: false,
+                emailed: false
+            }
         });
 
         addProspectToTable({
@@ -193,10 +252,15 @@ async function addProspect() {
             dueDate,
             signatureExpected,
             leadSource,
-            salesLead,
             revenueValue: revenue,
             createdDate,
-            status: 'In-Progress'
+            status: 'In-Progress',
+            postProposalChecklist: {
+                called: false,
+                voicemail: false,
+                texted: false,
+                emailed: false
+            }
         }, docRef.id);
 
         // Clear form
@@ -227,12 +291,17 @@ function addProspectToTable(data, docId) {
         <td><span class="hot-lead ${data.isHotLead ? 'active' : ''}" title="Hot">🔥</span></td>
         <td>${data.prospectName}</td>
         <td>${data.nextSteps}</td>
-        <td class="${data.dueDate <= todayString ? 'overdue' : ''}" data-date="${data.dueDate}">${formatDateWithOrdinal(data.dueDate)}</td>
-        <td data-date="${data.signatureExpected}">${formatDateWithOrdinal(data.signatureExpected)}</td>
+        <td class="${data.dueDate <= todayString ? 'overdue' : ''}" data-date="${data.dueDate}">${formatToMMDD(data.dueDate)}</td>
+        <td data-date="${toISODate(data.signatureExpected)}">${formatToMMDD(data.signatureExpected)}</td>
         <td>${data.leadSource || 'N/A'}</td>
-        <td>${data.salesLead}</td>
         <td>$${data.revenueValue.toLocaleString()}</td>
-        <td data-date="${data.createdDate || new Date().toISOString().split('T')[0]}">${formatDateWithOrdinal(data.createdDate || new Date().toISOString().split('T')[0])}</td>
+        <td data-date="${data.createdDate || new Date().toISOString().split('T')[0]}">${formatToMMDD(data.createdDate || new Date().toISOString().split('T')[0])}</td>
+        <td class="followups">
+            <span class="followup-toggle ${data.postProposalChecklist?.emailed ? 'active' : ''}" data-key="emailed" title="Email Sent"><i class="fas fa-envelope"></i></span>
+            <span class="followup-toggle ${data.postProposalChecklist?.called ? 'active' : ''}" data-key="called" title="Called"><i class="fas fa-phone"></i></span>
+            <span class="followup-toggle ${data.postProposalChecklist?.voicemail ? 'active' : ''}" data-key="voicemail" title="Left Voicemail"><i class="fas fa-voicemail"></i></span>
+            <span class="followup-toggle ${data.postProposalChecklist?.texted ? 'active' : ''}" data-key="texted" title="Text Sent"><i class="fas fa-comment-dots"></i></span>
+        </td>
         <td>
             <select class="status-dropdown">
                 <option value="In-Progress" ${(data.status || 'In-Progress') === 'In-Progress' ? 'selected' : ''}>In-Progress</option>
@@ -272,12 +341,30 @@ function addProspectToTable(data, docId) {
                 status: newStatus
             });
             updateRowStatusClass(newRow, newStatus);
-            sortProspectsByStatus();
-            updateStatistics();
+            // Rebuild list for consistent grouping
+            await loadProspects();
         } catch (error) {
             console.error("Error updating status:", error);
             alert("Error updating status: " + error.message);
         }
+    });
+
+    // Add follow-ups toggle handlers
+    const followupToggles = newRow.querySelectorAll('.followup-toggle');
+    followupToggles.forEach(toggle => {
+        toggle.addEventListener('click', async () => {
+            try {
+                const key = toggle.dataset.key;
+                const newValue = !toggle.classList.contains('active');
+                const updatePayload = {};
+                updatePayload[`postProposalChecklist.${key}`] = newValue;
+                await updateDoc(doc(db, "prospects", docId), updatePayload);
+                toggle.classList.toggle('active');
+            } catch (error) {
+                console.error("Error updating follow-up:", error);
+                alert("Error updating follow-up: " + error.message);
+            }
+        });
     });
 
     // Add edit button functionality
@@ -292,9 +379,8 @@ function addProspectToTable(data, docId) {
             dueDate: cells[3].dataset.date,  // Get the original date from data attribute
             signatureExpected: cells[4].dataset.date,  // Get the original date from data attribute
             leadSource: cells[5].textContent,
-            salesLead: cells[6].textContent,
-            revenueValue: parseFloat(cells[7].textContent.replace(/[$,]/g, '')),
-            createdDate: cells[8].dataset.date || new Date().toISOString().split('T')[0],
+            revenueValue: parseFloat(cells[6].textContent.replace(/[$,]/g, '')),
+            createdDate: cells[7].dataset.date || new Date().toISOString().split('T')[0],
             status: cells[9].querySelector('select').value
         };
 
@@ -313,14 +399,8 @@ function addProspectToTable(data, docId) {
                 <option value="Door Knock" ${currentData.leadSource === 'Door Knock' ? 'selected' : ''}>Door Knock</option>
             </select>
         `;
-        cells[6].innerHTML = `
-            <select class="editable-input">
-                <option value="Robby" ${currentData.salesLead === 'Robby' ? 'selected' : ''}>Robby</option>
-                <option value="Greyson" ${currentData.salesLead === 'Greyson' ? 'selected' : ''}>Greyson</option>
-            </select>
-        `;
-        cells[7].innerHTML = `<input type="number" class="editable-input" value="${currentData.revenueValue}">`;
-        cells[8].innerHTML = `<input type="date" class="editable-input" value="${currentData.createdDate}">`;
+        cells[6].innerHTML = `<input type="number" class="editable-input" value="${currentData.revenueValue}">`;
+        cells[7].innerHTML = `<input type="date" class="editable-input" value="${currentData.createdDate}">`;
 
         // Replace edit/delete buttons with save/cancel buttons
         cells[10].innerHTML = `
@@ -338,9 +418,8 @@ function addProspectToTable(data, docId) {
                     dueDate: cells[3].querySelector('input').value,
                     signatureExpected: cells[4].querySelector('input').value,
                     leadSource: cells[5].querySelector('select').value,
-                    salesLead: cells[6].querySelector('select').value,
-                    revenueValue: parseFloat(cells[7].querySelector('input').value) || 0,
-                    createdDate: cells[8].querySelector('input').value, // Allow editing the created date
+                    revenueValue: parseFloat(cells[6].querySelector('input').value) || 0,
+                    createdDate: cells[7].querySelector('input').value, // Allow editing the created date
                     status: currentData.status
                 };
 
@@ -353,13 +432,13 @@ function addProspectToTable(data, docId) {
                 cells[2].textContent = updatedData.nextSteps;
                 cells[3].className = updatedData.dueDate <= todayString ? 'overdue' : '';
                 cells[3].dataset.date = updatedData.dueDate;
-                cells[3].textContent = formatDateWithOrdinal(updatedData.dueDate);
+                cells[3].textContent = formatToMMDD(updatedData.dueDate);
                 cells[4].dataset.date = updatedData.signatureExpected;
-                cells[4].textContent = formatDateWithOrdinal(updatedData.signatureExpected);
+                cells[4].textContent = formatToMMDD(updatedData.signatureExpected);
                 cells[5].textContent = updatedData.leadSource || 'N/A';
-                cells[6].textContent = updatedData.salesLead;
-                cells[7].textContent = `$${updatedData.revenueValue.toLocaleString()}`;
-                cells[8].textContent = formatDateWithOrdinal(updatedData.createdDate);
+                cells[6].textContent = `$${updatedData.revenueValue.toLocaleString()}`;
+                cells[7].dataset.date = updatedData.createdDate;
+                cells[7].textContent = formatToMMDD(updatedData.createdDate);
                 
                 // Restore the original action buttons
                 cells[10].innerHTML = `
@@ -387,13 +466,13 @@ function addProspectToTable(data, docId) {
             cells[2].textContent = currentData.nextSteps;
             cells[3].className = currentData.dueDate <= todayString ? 'overdue' : '';
             cells[3].dataset.date = currentData.dueDate;
-            cells[3].textContent = formatDateWithOrdinal(currentData.dueDate);
+            cells[3].textContent = formatToMMDD(currentData.dueDate);
             cells[4].dataset.date = currentData.signatureExpected;
-            cells[4].textContent = formatDateWithOrdinal(currentData.signatureExpected);
+            cells[4].textContent = formatToMMDD(currentData.signatureExpected);
             cells[5].textContent = currentData.leadSource;
-            cells[6].textContent = currentData.salesLead;
-            cells[7].textContent = `$${currentData.revenueValue.toLocaleString()}`;
-            cells[8].textContent = formatDateWithOrdinal(currentData.createdDate);
+            cells[6].textContent = `$${currentData.revenueValue.toLocaleString()}`;
+            cells[7].dataset.date = currentData.createdDate;
+            cells[7].textContent = formatToMMDD(currentData.createdDate);
             
             // Restore the original action buttons
             cells[10].innerHTML = `
@@ -553,9 +632,8 @@ function attachRowEventListeners(row, docId, data) {
             dueDate: cells[3].dataset.date,
             signatureExpected: cells[4].dataset.date,
             leadSource: cells[5].textContent,
-            salesLead: cells[6].textContent,
-            revenueValue: parseFloat(cells[7].textContent.replace(/[$,]/g, '')),
-            createdDate: cells[8].dataset.date || new Date().toISOString().split('T')[0],
+            revenueValue: parseFloat(cells[6].textContent.replace(/[$,]/g, '')),
+            createdDate: cells[7].dataset.date || new Date().toISOString().split('T')[0],
             status: cells[9].querySelector('select').value
         };
 
@@ -573,14 +651,8 @@ function attachRowEventListeners(row, docId, data) {
                 <option value="Door Knock" ${currentData.leadSource === 'Door Knock' ? 'selected' : ''}>Door Knock</option>
             </select>
         `;
-        cells[6].innerHTML = `
-            <select class="editable-input">
-                <option value="Robby" ${currentData.salesLead === 'Robby' ? 'selected' : ''}>Robby</option>
-                <option value="Greyson" ${currentData.salesLead === 'Greyson' ? 'selected' : ''}>Greyson</option>
-            </select>
-        `;
-        cells[7].innerHTML = `<input type="number" class="editable-input" value="${currentData.revenueValue}">`;
-        cells[8].innerHTML = `<input type="date" class="editable-input" value="${currentData.createdDate}">`;
+        cells[6].innerHTML = `<input type="number" class="editable-input" value="${currentData.revenueValue}">`;
+        cells[7].innerHTML = `<input type="date" class="editable-input" value="${currentData.createdDate}">`;
 
         cells[10].innerHTML = `
             <button class="action-btn save-btn" title="Save"><i class="fas fa-save"></i></button>
@@ -597,9 +669,8 @@ function attachRowEventListeners(row, docId, data) {
                 dueDate: cells[3].querySelector('input').value,
                 signatureExpected: cells[4].querySelector('input').value,
                 leadSource: cells[5].querySelector('select').value,
-                salesLead: cells[6].querySelector('select').value,
-                revenueValue: parseFloat(cells[7].querySelector('input').value) || 0,
-                createdDate: cells[8].querySelector('input').value, // Allow editing the created date
+                revenueValue: parseFloat(cells[6].querySelector('input').value) || 0,
+                createdDate: cells[7].querySelector('input').value, // Allow editing the created date
                 status: currentData.status
             };
 
@@ -611,13 +682,13 @@ function attachRowEventListeners(row, docId, data) {
             cells[2].textContent = updatedData.nextSteps;
             cells[3].className = updatedData.dueDate <= todayString ? 'overdue' : '';
             cells[3].dataset.date = updatedData.dueDate;
-            cells[3].textContent = formatDateWithOrdinal(updatedData.dueDate);
+            cells[3].textContent = formatToMMDD(updatedData.dueDate);
             cells[4].dataset.date = updatedData.signatureExpected;
-            cells[4].textContent = formatDateWithOrdinal(updatedData.signatureExpected);
+            cells[4].textContent = formatToMMDD(updatedData.signatureExpected);
             cells[5].textContent = updatedData.leadSource || 'N/A';
-            cells[6].textContent = updatedData.salesLead;
-            cells[7].textContent = `$${updatedData.revenueValue.toLocaleString()}`;
-            cells[8].textContent = formatDateWithOrdinal(updatedData.createdDate);
+            cells[6].textContent = `$${updatedData.revenueValue.toLocaleString()}`;
+            cells[7].dataset.date = updatedData.createdDate;
+            cells[7].textContent = formatToMMDD(updatedData.createdDate);
             
             cells[10].innerHTML = `
                 <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
@@ -636,13 +707,13 @@ function attachRowEventListeners(row, docId, data) {
             cells[2].textContent = currentData.nextSteps;
             cells[3].className = currentData.dueDate <= todayString ? 'overdue' : '';
             cells[3].dataset.date = currentData.dueDate;
-            cells[3].textContent = formatDateWithOrdinal(currentData.dueDate);
+            cells[3].textContent = formatToMMDD(currentData.dueDate);
             cells[4].dataset.date = currentData.signatureExpected;
-            cells[4].textContent = formatDateWithOrdinal(currentData.signatureExpected);
+            cells[4].textContent = formatToMMDD(currentData.signatureExpected);
             cells[5].textContent = currentData.leadSource;
-            cells[6].textContent = currentData.salesLead;
-            cells[7].textContent = `$${currentData.revenueValue.toLocaleString()}`;
-            cells[8].textContent = formatDateWithOrdinal(currentData.createdDate);
+            cells[6].textContent = `$${currentData.revenueValue.toLocaleString()}`;
+            cells[7].dataset.date = currentData.createdDate;
+            cells[7].textContent = formatToMMDD(currentData.createdDate);
             
             cells[10].innerHTML = `
                 <button class="action-btn edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
@@ -871,9 +942,8 @@ async function loadProspects() {
         
         const querySnapshot = await getDocs(collection(db, "prospects"));
         
-        // Create arrays for each status and sales lead
-        const robbyProspects = [];
-        const greysonProspects = [];
+        // Create arrays for each status
+        const inProgressProspects = [];
         const wonProspects = [];
         const stalledProspects = [];
         const lostProspects = [];
@@ -886,46 +956,30 @@ async function loadProspects() {
                 stalledProspects.push({ ...data, id: doc.id });
             } else if (data.status === 'Lost') {
                 lostProspects.push({ ...data, id: doc.id });
-            } else if (data.salesLead === 'Robby') {
-                robbyProspects.push({ ...data, id: doc.id });
-            } else if (data.salesLead === 'Greyson') {
-                greysonProspects.push({ ...data, id: doc.id });
+            } else {
+                inProgressProspects.push({ ...data, id: doc.id });
             }
         });
 
-        // Sort each array by status
-        const sortByStatus = (a, b) => {
-            const statusPriority = {
-                'In-Progress': 0,
-                'Lost': 1
-            };
-            return statusPriority[a.status] - statusPriority[b.status];
+        // Helper to convert mixed date values to comparable timestamps
+        const toTs = (value) => {
+            const iso = toISODate(value) || value;
+            const d = new Date((iso || '') + (iso && iso.length === 10 ? 'T00:00:00' : ''));
+            const t = d.getTime();
+            return isNaN(t) ? Number.POSITIVE_INFINITY : t;
         };
 
-        robbyProspects.sort(sortByStatus);
-        greysonProspects.sort(sortByStatus);
+        // Sort all groups by nearest due date ascending
+        const sortByDueDateAsc = (a, b) => toTs(a.dueDate) - toTs(b.dueDate);
+        inProgressProspects.sort(sortByDueDateAsc);
+        wonProspects.sort(sortByDueDateAsc);
+        stalledProspects.sort(sortByDueDateAsc);
+        lostProspects.sort(sortByDueDateAsc);
 
-        // Add Robby's prospects with header
-        if (robbyProspects.length > 0) {
-            const robbyHeader = document.createElement('tr');
-            robbyHeader.innerHTML = `<td colspan="11" class="pod-header">Robby's Prospects</td>`;
-            tbody.appendChild(robbyHeader);
-            
-            robbyProspects.forEach(prospect => {
-                addProspectToTable(prospect, prospect.id);
-            });
-        }
-
-        // Add Greyson's prospects with header
-        if (greysonProspects.length > 0) {
-            const greysonHeader = document.createElement('tr');
-            greysonHeader.innerHTML = `<td colspan="11" class="pod-header">Greyson's Prospects</td>`;
-            tbody.appendChild(greysonHeader);
-            
-            greysonProspects.forEach(prospect => {
-                addProspectToTable(prospect, prospect.id);
-            });
-        }
+        // Add In-Progress prospects (visible)
+        inProgressProspects.forEach(prospect => {
+            addProspectToTable(prospect, prospect.id);
+        });
 
         // Helper function to create collapsible section
         const createCollapsibleSection = (prospects, title, className) => {

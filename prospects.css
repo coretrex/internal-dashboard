@@ -102,19 +102,19 @@
     max-width: 100px;
 }
 
-.dashboard-table th:nth-child(7), /* Sales Lead */
+.dashboard-table th:nth-child(7), /* Revenue */
 .dashboard-table td:nth-child(7) {
-    max-width: 80px;
-}
-
-.dashboard-table th:nth-child(8), /* Revenue */
-.dashboard-table td:nth-child(8) {
     max-width: 100px;
 }
 
-.dashboard-table th:nth-child(9), /* Created Date */
-.dashboard-table td:nth-child(9) {
+.dashboard-table th:nth-child(8), /* Created Date */
+.dashboard-table td:nth-child(8) {
     max-width: 120px;
+}
+
+.dashboard-table th:nth-child(9), /* Follow-ups */
+.dashboard-table td:nth-child(9) {
+    max-width: 180px;
 }
 
 .dashboard-table th:nth-child(10), /* Status */
@@ -401,4 +401,39 @@
 .stalled-prospects-header.expanded .collapsible-toggle i,
 .lost-prospects-header.expanded .collapsible-toggle i {
     transform: rotate(90deg);
+}
+
+/* Follow-ups column */
+.followups {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.followup-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.followup-toggle:hover {
+    background: #f2f4f7;
+}
+
+.followup-toggle.active {
+    background: #28a745;
+    border-color: #28a745;
+    color: #fff;
+}
+
+.followup-toggle i {
+    font-size: 0.85rem;
 }
