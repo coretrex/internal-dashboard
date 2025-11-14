@@ -82,55 +82,69 @@ function convertToYYYYMMDD(formattedDate) {
 // New: Format any supported date input to MM/DD (e.g., 08/31)
 function formatToMMDD(value) {
     if (!value) return '';
-    // If value is ISO (YYYY-MM-DD)
-    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) {
-        const [, mm, dd] = value.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+    
+    // If value is ISO (YYYY-MM-DD) - parse as string to avoid timezone issues
+    const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+        const [, yyyy, mm, dd] = isoMatch;
         return `${mm}/${dd}`;
     }
+    
     // If value is like "January 1st"
     const monthNames = [
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    const ordinalMatch = /^(January|February|March|April|May|June|July|August|September|October|November|December)\\s+(\\d{1,2})(?:st|nd|rd|th)?$/;
-    const m = value.match(ordinalMatch);
-    if (m) {
-        const monthIndex = monthNames.indexOf(m[1]);
-        const day = String(parseInt(m[2], 10)).padStart(2, '0');
+    const ordinalMatch = value.match(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?$/);
+    if (ordinalMatch) {
+        const monthIndex = monthNames.indexOf(ordinalMatch[1]);
+        const day = String(parseInt(ordinalMatch[2], 10)).padStart(2, '0');
         const mm = String(monthIndex + 1).padStart(2, '0');
         return `${mm}/${day}`;
     }
-    // Fallback try Date parsing
-    const parsed = new Date(value);
-    if (!isNaN(parsed.getTime())) {
-        const mm = String(parsed.getMonth() + 1).padStart(2, '0');
-        const dd = String(parsed.getDate()).padStart(2, '0');
+    
+    // If value is already in MM/DD format
+    const mmddMatch = value.match(/^(\d{1,2})\/(\d{1,2})$/);
+    if (mmddMatch) {
+        const mm = mmddMatch[1].padStart(2, '0');
+        const dd = mmddMatch[2].padStart(2, '0');
         return `${mm}/${dd}`;
     }
+    
     return '';
 }
 
 // New: Normalize various date inputs to ISO YYYY-MM-DD for data-date attributes
 function toISODate(value) {
     if (!value) return '';
-    if (/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return value;
+    
+    // If already in ISO format
+    const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) return value;
+    
+    // If value is like "January 1st"
     const monthNames = [
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    const ordinalMatch = /^(January|February|March|April|May|June|July|August|September|October|November|December)\\s+(\\d{1,2})(?:st|nd|rd|th)?$/;
-    const m = value.match(ordinalMatch);
-    if (m) {
-        const monthIndex = monthNames.indexOf(m[1]);
-        const day = String(parseInt(m[2], 10)).padStart(2, '0');
+    const ordinalMatch = value.match(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?$/);
+    if (ordinalMatch) {
+        const monthIndex = monthNames.indexOf(ordinalMatch[1]);
+        const day = String(parseInt(ordinalMatch[2], 10)).padStart(2, '0');
         const year = new Date().getFullYear();
         const mm = String(monthIndex + 1).padStart(2, '0');
         return `${year}-${mm}-${day}`;
     }
-    const parsed = new Date(value);
-    if (!isNaN(parsed.getTime())) {
-        return parsed.toISOString().split('T')[0];
+    
+    // If value is in MM/DD format
+    const mmddMatch = value.match(/^(\d{1,2})\/(\d{1,2})$/);
+    if (mmddMatch) {
+        const year = new Date().getFullYear();
+        const mm = mmddMatch[1].padStart(2, '0');
+        const dd = mmddMatch[2].padStart(2, '0');
+        return `${year}-${mm}-${dd}`;
     }
+    
     return '';
 }
 
