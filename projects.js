@@ -1049,7 +1049,14 @@ function createTaskItem(taskData, podId, subId, taskId) {
         newTimeDisplay.className = 'time-display';
         newTimeDisplay.textContent = formatTimeDisplay(timeString);
         newTimeDisplay.setAttribute('data-time', timeString);
-        dateInput.insertAdjacentElement('afterend', newTimeDisplay);
+        
+        // Insert after date display (or after date input if no date display exists)
+        const currentDateDisplay = li.querySelector('.date-display');
+        if (currentDateDisplay) {
+          currentDateDisplay.insertAdjacentElement('afterend', newTimeDisplay);
+        } else {
+          dateInput.insertAdjacentElement('afterend', newTimeDisplay);
+        }
         
         // Add click handler to new time display
         newTimeDisplay.addEventListener('click', (ev) => {
@@ -3230,8 +3237,13 @@ function updateTaskElement(li, taskData, podId, subId) {
         newTimeDisplay.className = 'time-display';
         newTimeDisplay.textContent = formatTimeDisplay(taskData.dueTime);
         newTimeDisplay.setAttribute('data-time', taskData.dueTime);
+        
+        // Insert after date display (or after date input if no date display exists)
         const dateInput = li.querySelector('.date-input');
-        if (dateInput) {
+        const currentDateDisplay = li.querySelector('.date-display');
+        if (currentDateDisplay) {
+          currentDateDisplay.insertAdjacentElement('afterend', newTimeDisplay);
+        } else if (dateInput) {
           dateInput.insertAdjacentElement('afterend', newTimeDisplay);
         }
       }
