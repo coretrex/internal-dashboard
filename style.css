@@ -4899,17 +4899,45 @@ body.presence-banner-visible #global-edit-button {
 
 .date-display {
   font-size: 0.9rem;
-  color: #202124;
-  padding: 2px 6px;
+  color: #1a73e8;
+  padding: 4px 10px;
   white-space: nowrap;
   font-weight: 500;
+  background: linear-gradient(135deg, #e8f0fe 0%, #f0f7ff 100%);
+  border: 1px solid #d2e3fc;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.date-display:hover {
+  background: linear-gradient(135deg, #d2e3fc 0%, #e8f0fe 100%);
+  border-color: #aecbfa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(26, 115, 232, 0.1);
 }
 
 .time-display {
   font-size: 0.85rem;
-  color: #5f6368;
-  padding: 2px 6px;
+  color: #137333;
+  padding: 4px 10px;
   white-space: nowrap;
+  font-weight: 500;
+  background: linear-gradient(135deg, #e6f4ea 0%, #f0f9f4 100%);
+  border: 1px solid #c6e1c6;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+}
+
+.time-display:hover {
+  background: linear-gradient(135deg, #c6e1c6 0%, #e6f4ea 100%);
+  border-color: #a8dba8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(19, 115, 51, 0.1);
 }
 
 .time-picker-container {

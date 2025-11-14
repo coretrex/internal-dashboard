@@ -544,17 +544,16 @@ function createTaskItem(taskData, podId, subId, taskId) {
       ${taskData.dueDate ? `<span class="date-display" style="cursor: pointer; user-select: none;">${formatDateDisplay(taskData.dueDate)}</span>` : '<span class="date-placeholder" style="cursor: pointer; user-select: none; color: #999; font-style: italic;">Add date</span>'}
       ${taskData.dueTime ? `
         <span class="time-display" data-time="${safe(taskData.dueTime)}">${formatTimeDisplay(taskData.dueTime)}</span>
-        <button class="time-icon-btn has-time" type="button" title="Change time">
-          <i class="fas fa-clock"></i>
-        </button>
       ` : `
         <button class="time-icon-btn" type="button" title="Set time">
           <i class="fas fa-clock"></i>
         </button>
       `}
-      <button class="date-icon-btn ${taskData.dueDate ? 'has-date' : ''}" type="button" title="${taskData.dueDate ? 'Change date' : 'Add date'}">
-        <i class="fas fa-calendar"></i>
-      </button>
+      ${!taskData.dueDate ? `
+        <button class="date-icon-btn" type="button" title="Add date">
+          <i class="fas fa-calendar"></i>
+        </button>
+      ` : ''}
       <div class="time-picker-container" style="display: none;">
         <div class="time-picker">
           <div class="time-picker-section">
@@ -889,10 +888,10 @@ function createTaskItem(taskData, podId, subId, taskId) {
         });
       }
       
-      // Update calendar button title and class
-      if (dateIconBtn) {
-        dateIconBtn.title = 'Change date';
-        dateIconBtn.classList.add('has-date');
+      // Remove calendar button when date is set
+      const currentDateIconBtn = li.querySelector('.date-icon-btn');
+      if (currentDateIconBtn) {
+        currentDateIconBtn.remove();
       }
     } else {
       // Remove date display if it exists
@@ -917,10 +916,25 @@ function createTaskItem(taskData, podId, subId, taskId) {
         });
       }
       
-      // Update calendar button title and class
-      if (dateIconBtn) {
-        dateIconBtn.title = 'Add date';
-        dateIconBtn.classList.remove('has-date');
+      // Add calendar button if it doesn't exist when no date is set
+      const currentDateIconBtn = li.querySelector('.date-icon-btn');
+      if (!currentDateIconBtn && dateCell) {
+        const newDateIconBtn = document.createElement('button');
+        newDateIconBtn.className = 'date-icon-btn';
+        newDateIconBtn.type = 'button';
+        newDateIconBtn.title = 'Add date';
+        newDateIconBtn.innerHTML = '<i class="fas fa-calendar"></i>';
+        newDateIconBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openDatePicker();
+        });
+        // Find time picker container to insert before it
+        const timePickerContainer = dateCell.querySelector('.time-picker-container');
+        if (timePickerContainer) {
+          dateCell.insertBefore(newDateIconBtn, timePickerContainer);
+        } else {
+          dateCell.appendChild(newDateIconBtn);
+        }
       }
     }
   }
@@ -930,6 +944,44 @@ function createTaskItem(taskData, podId, subId, taskId) {
     dateDisplay.addEventListener('click', (e) => {
       e.stopPropagation();
       openDatePicker();
+    });
+  }
+  
+  // Make time display clickable to open time picker
+  if (timeDisplay) {
+    timeDisplay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (timePickerContainer) {
+        const isVisible = timePickerContainer.style.display === 'flex' || timePickerContainer.style.display === 'block';
+        timePickerContainer.style.display = isVisible ? 'none' : 'flex';
+        if (!isVisible) {
+          // Decide direction: open upward for bottom three visible tasks in this list
+          try {
+            const ul = li.parentElement;
+            if (ul) {
+              const visibleLis = Array.from(ul.querySelectorAll(':scope > li')).filter(row => row.style.display !== 'none');
+              const idx = visibleLis.indexOf(li);
+              const isBottomThree = idx >= Math.max(0, visibleLis.length - 3);
+              if (isBottomThree) {
+                timePickerContainer.classList.add('open-upward');
+              } else {
+                timePickerContainer.classList.remove('open-upward');
+              }
+            }
+          } catch (_) {
+            // ignore any measurement errors
+          }
+          // Reset to current time or default
+          if (taskData.dueTime) {
+            const parsed = parseTime(taskData.dueTime);
+            currentHour = parsed.hour;
+            currentMinute = parsed.minute;
+          }
+          document.addEventListener('click', closeTimePicker);
+        } else {
+          document.removeEventListener('click', closeTimePicker);
+        }
+      }
     });
   }
   
@@ -948,9 +1000,12 @@ function createTaskItem(taskData, podId, subId, taskId) {
   
   // Close time picker when clicking outside (only for this specific task)
   const closeTimePicker = (e) => {
+    const currentTimeIconBtn = li.querySelector('.time-icon-btn');
+    const currentTimeDisplay = li.querySelector('.time-display');
     if (timePickerContainer && timePickerContainer.style.display !== 'none' && 
         !timePickerContainer.contains(e.target) && 
-        !timeIconBtn?.contains(e.target)) {
+        !currentTimeIconBtn?.contains(e.target) &&
+        !currentTimeDisplay?.contains(e.target)) {
       timePickerContainer.style.display = 'none';
       document.removeEventListener('click', closeTimePicker);
     }
@@ -983,17 +1038,32 @@ function createTaskItem(taskData, podId, subId, taskId) {
       quickSave('dueTime', timeString);
       
       // Update UI to show time display
-      if (timeDisplay) {
-        timeDisplay.textContent = formatTimeDisplay(timeString);
-        timeDisplay.setAttribute('data-time', timeString);
-        timeDisplay.style.display = 'inline';
+      let newTimeDisplay = li.querySelector('.time-display');
+      if (newTimeDisplay) {
+        newTimeDisplay.textContent = formatTimeDisplay(timeString);
+        newTimeDisplay.setAttribute('data-time', timeString);
+        newTimeDisplay.style.display = 'inline';
       } else {
         // Create time display if it doesn't exist
-        const newTimeDisplay = document.createElement('span');
+        newTimeDisplay = document.createElement('span');
         newTimeDisplay.className = 'time-display';
         newTimeDisplay.textContent = formatTimeDisplay(timeString);
         newTimeDisplay.setAttribute('data-time', timeString);
         dateInput.insertAdjacentElement('afterend', newTimeDisplay);
+        
+        // Add click handler to new time display
+        newTimeDisplay.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          if (timePickerContainer) {
+            const isVisible = timePickerContainer.style.display === 'flex' || timePickerContainer.style.display === 'block';
+            timePickerContainer.style.display = isVisible ? 'none' : 'flex';
+            if (!isVisible) {
+              document.addEventListener('click', closeTimePicker);
+            } else {
+              document.removeEventListener('click', closeTimePicker);
+            }
+          }
+        });
       }
       
       // Add class to date cell to hide calendar icon
@@ -1002,9 +1072,10 @@ function createTaskItem(taskData, podId, subId, taskId) {
         dateCell.classList.add('has-time-set');
       }
       
-      if (timeIconBtn) {
-        timeIconBtn.classList.add('has-time');
-        timeIconBtn.title = `Time: ${formatTimeDisplay(timeString)}`;
+      // Remove clock icon when time is set
+      const currentTimeIconBtn = li.querySelector('.time-icon-btn');
+      if (currentTimeIconBtn) {
+        currentTimeIconBtn.remove();
       }
       
       timePickerContainer.style.display = 'none';
@@ -1019,8 +1090,9 @@ function createTaskItem(taskData, podId, subId, taskId) {
       quickSave('dueTime', '');
       
       // Remove time display
-      if (timeDisplay) {
-        timeDisplay.remove();
+      const currentTimeDisplay = li.querySelector('.time-display');
+      if (currentTimeDisplay) {
+        currentTimeDisplay.remove();
       }
       
       // Remove class from date cell to show calendar icon again
@@ -1029,9 +1101,40 @@ function createTaskItem(taskData, podId, subId, taskId) {
         dateCell.classList.remove('has-time-set');
       }
       
-      if (timeIconBtn) {
-        timeIconBtn.classList.remove('has-time');
-        timeIconBtn.title = 'Set time';
+      // Add clock icon button back when time is cleared
+      const currentTimeIconBtn = li.querySelector('.time-icon-btn');
+      if (!currentTimeIconBtn && dateCell) {
+        const newTimeIconBtn = document.createElement('button');
+        newTimeIconBtn.className = 'time-icon-btn';
+        newTimeIconBtn.type = 'button';
+        newTimeIconBtn.title = 'Set time';
+        newTimeIconBtn.innerHTML = '<i class="fas fa-clock"></i>';
+        
+        // Find where to insert the button (before date icon or time picker)
+        const dateIconBtn = dateCell.querySelector('.date-icon-btn');
+        const timePickerContainer = dateCell.querySelector('.time-picker-container');
+        
+        if (dateIconBtn) {
+          dateCell.insertBefore(newTimeIconBtn, dateIconBtn);
+        } else if (timePickerContainer) {
+          dateCell.insertBefore(newTimeIconBtn, timePickerContainer);
+        } else {
+          dateCell.appendChild(newTimeIconBtn);
+        }
+        
+        // Add click event to open time picker
+        newTimeIconBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          if (timePickerContainer) {
+            const isVisible = timePickerContainer.style.display === 'flex' || timePickerContainer.style.display === 'block';
+            timePickerContainer.style.display = isVisible ? 'none' : 'flex';
+            if (!isVisible) {
+              document.addEventListener('click', closeTimePicker);
+            } else {
+              document.removeEventListener('click', closeTimePicker);
+            }
+          }
+        });
       }
       
       timePickerContainer.style.display = 'none';
@@ -3062,10 +3165,9 @@ function updateTaskElement(li, taskData, podId, subId) {
         });
       }
       
-      // Update calendar button title and class
+      // Remove calendar button when date is set
       if (dateIconBtn) {
-        dateIconBtn.title = 'Change date';
-        dateIconBtn.classList.add('has-date');
+        dateIconBtn.remove();
       }
     } else {
       // Remove date display if it exists
@@ -3090,10 +3192,24 @@ function updateTaskElement(li, taskData, podId, subId) {
         });
       }
       
-      // Update calendar button title and class
-      if (dateIconBtn) {
-        dateIconBtn.title = 'Add date';
-        dateIconBtn.classList.remove('has-date');
+      // Add calendar button if it doesn't exist when no date is set
+      if (!dateIconBtn && dateCell) {
+        const newDateIconBtn = document.createElement('button');
+        newDateIconBtn.className = 'date-icon-btn';
+        newDateIconBtn.type = 'button';
+        newDateIconBtn.title = 'Add date';
+        newDateIconBtn.innerHTML = '<i class="fas fa-calendar"></i>';
+        newDateIconBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openDatePicker();
+        });
+        // Find time picker container to insert before it
+        const timePickerContainer = dateCell.querySelector('.time-picker-container');
+        if (timePickerContainer) {
+          dateCell.insertBefore(newDateIconBtn, timePickerContainer);
+        } else {
+          dateCell.appendChild(newDateIconBtn);
+        }
       }
     }
   }
@@ -3127,9 +3243,9 @@ function updateTaskElement(li, taskData, podId, subId) {
         dateCell.classList.add('has-time-set');
       }
       
+      // Remove clock icon when time is set
       if (timeIconBtn) {
-        timeIconBtn.classList.add('has-time');
-        timeIconBtn.title = `Time: ${formatTimeDisplay(taskData.dueTime)}`;
+        timeIconBtn.remove();
       }
     } else {
       // No time set - remove display if it exists
@@ -3144,9 +3260,35 @@ function updateTaskElement(li, taskData, podId, subId) {
         dateCell.classList.remove('has-time-set');
       }
       
-      if (timeIconBtn) {
-        timeIconBtn.classList.remove('has-time');
-        timeIconBtn.title = 'Set time';
+      // Add clock icon button if it doesn't exist when no time is set
+      if (!timeIconBtn && dateCell) {
+        const newTimeIconBtn = document.createElement('button');
+        newTimeIconBtn.className = 'time-icon-btn';
+        newTimeIconBtn.type = 'button';
+        newTimeIconBtn.title = 'Set time';
+        newTimeIconBtn.innerHTML = '<i class="fas fa-clock"></i>';
+        
+        // Find where to insert the button (before date icon or time picker)
+        const dateIconBtn = dateCell.querySelector('.date-icon-btn');
+        const timePickerContainer = dateCell.querySelector('.time-picker-container');
+        
+        if (dateIconBtn) {
+          dateCell.insertBefore(newTimeIconBtn, dateIconBtn);
+        } else if (timePickerContainer) {
+          dateCell.insertBefore(newTimeIconBtn, timePickerContainer);
+        } else {
+          dateCell.appendChild(newTimeIconBtn);
+        }
+        
+        // Add click event to open time picker
+        const timePickerContainer2 = dateCell.querySelector('.time-picker-container');
+        if (timePickerContainer2) {
+          newTimeIconBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isVisible = timePickerContainer2.style.display === 'block';
+            timePickerContainer2.style.display = isVisible ? 'none' : 'block';
+          });
+        }
       }
     }
   
